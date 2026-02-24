@@ -1,0 +1,237 @@
+#include <iostream>
+#include <cstring>
+#include <cmath>
+#include "imgui.h"
+#include "imgui_impl_sdl3.h"
+#include "imgui_impl_sdlrenderer3.h"
+#include "SDL3/SDL.h"
+#include "SDL3/SDL_main.h"
+#include "nfd.h"
+
+/// @brief SDL + ImGui platform for rendering and input
+class UIPlatform
+{
+private:
+    unsigned int* frameBuffer = nullptr;
+    int windowWidth;
+    int windowHeight;
+    int textureWidth;
+    int textureHeight;
+    SDL_Window* window = nullptr;
+    SDL_Renderer* renderer = nullptr;
+    SDL_Texture* texture = nullptr;
+    
+public:
+    
+    /// @brief 
+    /// @param title Title of SDL window created, appears at top
+    /// @param windowWidth SDL window width including UI
+    /// @param windowHeight SDL window height including UI
+    /// @param textureWidth Width of CHIP-8 texture
+    /// @param textureHeight Height of CHIP-8 texture
+    UIPlatform(char* title, int windowWidth, int windowHeight, int textureWidth, int textureHeight)
+    {
+        // SDL Initializations
+        if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
+        {
+            SDL_GetError();
+            std::cerr << "SDL failed to initialize\n";
+        }
+
+        mainScale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
+        SDL_WindowFlags windowFlags = SDL_WINDOW_RESIZABLE;
+
+        window = SDL_CreateWindow(title, (int)windowWidth*mainScale, (int)windowHeight*mainScale, windowFlags);
+        if (!window)
+        {
+            SDL_GetError();
+            std::cerr << "SDL failed to initialize the window\n";
+        }
+        this->windowWidth = windowWidth*mainScale;
+        this->windowHeight = windowHeight*mainScale;
+        
+        renderer = SDL_CreateRenderer(window, NULL);
+        if (!renderer)
+        {
+            SDL_GetError();
+            std::cerr << "SDL failed to initialize the renderer\n";
+        }
+
+        SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+        SDL_ShowWindow(window);
+        
+        texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888,
+            SDL_TEXTUREACCESS_STREAMING, textureWidth, textureHeight);
+        if (!texture)
+        {
+            SDL_GetError();
+            std::cerr << "SDL failed to initialize the texture\n";
+        }
+        this->textureWidth = textureWidth;
+        this->textureHeight = textureHeight;
+        // Sets texture scale mode to nearest, making it pixel perfect instead of blurry
+        SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
+
+        // Allocate framebuffer
+        frameBuffer = (unsigned int*)calloc(textureWidth * textureHeight, sizeof(unsigned int));
+        if (!frameBuffer)
+        {
+            SDL_GetError();
+            std::cerr << "SDL failed to allocate framebuffer\n";
+        }
+        this->textureScale = textureScale;
+        SDL_Log("SDL Initialized\n");
+
+        // ImGui Initialization
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+        ImGuiIO& io = ImGui::GetIO(); (void)io;
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
+
+        ImFontConfig fontConfig;
+        ImFont* roboto = io.Fonts->AddFontFromFileTTF("fonts/Roboto/Roboto-Regular.ttf", 16.0f * mainScale, &fontConfig);
+
+        // Setup Dear ImGui style
+        ImGui::StyleColorsDark();
+
+        // Setup scaling
+        ImGuiStyle& style = ImGui::GetStyle();
+        style.ScaleAllSizes(mainScale);        // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
+        style.FontScaleDpi = mainScale;        // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
+
+        // Setup Platform/Renderer backends
+        ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
+        ImGui_ImplSDLRenderer3_Init(renderer);
+
+        // Initialize NFD
+        if (NFD_Init() != NFD_OKAY)
+        {
+            SDL_Log("Native File Dialog failed to initialize\n");
+        }
+    }
+
+    ~UIPlatform()
+    {
+        NFD_Quit();
+        ImGui_ImplSDLRenderer3_Shutdown();
+        ImGui_ImplSDL3_Shutdown();
+        ImGui::DestroyContext();
+        SDL_DestroyTexture(texture);
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+    }
+
+    /// @brief Render the UI and emulation display
+    void renderUI(Chip8 &chip8)
+    {
+        // Start ImGui frame
+        ImGui_ImplSDLRenderer3_NewFrame();
+        ImGui_ImplSDL3_NewFrame();
+        ImGui::NewFrame();
+        ImGuiWindowFlags flags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse;
+        // Set ImGui window to match viewport (SDL window)
+        int currWindowWidth, currWindowHeight;
+        SDL_GetWindowSizeInPixels(window, &windowWidth, &windowHeight);
+        // ImGui::SetNextWindowSize(ImVec2(currWindowWidth, currWindowHeight));
+        // ImVec2 availSize = ImVec2((float)currWindowWidth, (float)currWindowHeight);
+       
+
+        
+        SDL_RenderTexture(renderer, texture, NULL, NULL);
+       
+
+        // Try to render UI at target frame rate
+        static Uint64 lastFrameTime = SDL_GetTicks();
+        Uint64 frameStartTime = SDL_GetTicks();
+        Uint64 frameDuration = frameStartTime - lastFrameTime;
+        Uint64 targetFrameDuration = static_cast<Uint64>(1000.0f / frameRate);
+        if (frameDuration < targetFrameDuration)
+        {
+            SDL_Delay(static_cast<Uint32>(targetFrameDuration - frameDuration));
+        }
+        lastFrameTime = SDL_GetTicks();
+
+        ImGui::Render();
+        ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
+        SDL_RenderPresent(renderer);
+        // Clear renderer for next frame
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
+        SDL_RenderClear(renderer);
+    }
+
+    /// @brief Write data to frameBuffer
+    /// @param display 
+    void writeToBuffer(unsigned int* display)
+    {
+        for (int i = 0, c = 0; i < textureHeight; i++)
+        {
+            for (int j = 0; j < textureWidth; j++, c++)
+            {
+                frameBuffer[c] = display[j + i*textureWidth];
+            }
+        }
+    }
+
+    /// @brief Process input events
+    /// @param keys 
+    /// @param prevKeys 
+    /// @param pause 
+    /// @param nextCycle 
+    /// @return True when quit 
+    bool processInput(unsigned char* keys, unsigned char* prevKeys, bool& pause, bool& nextCycle)
+    {
+        // Before processing this frame/cycle, set prevKeys to keys
+        for (int i = 0; i < 16; i++)
+        {
+            prevKeys[i] = keys[i];
+        }
+
+        bool quit = false;
+        SDL_Event e;
+
+        while (SDL_PollEvent(&e))
+        {
+            ImGui_ImplSDL3_ProcessEvent(&e);
+            switch(e.type)
+            {
+                case SDL_EVENT_QUIT:
+                    quit = true;
+                    break;
+                case SDL_EVENT_KEY_DOWN:
+                {
+                    switch (e.key.scancode)
+                    {
+                        case SDL_SCANCODE_ESCAPE:
+                            quit = true;
+                            break;
+                    }
+                }
+                break;
+
+                case SDL_EVENT_KEY_UP:
+                {
+                    switch (e.key.scancode)
+                    {
+                        // TODO
+                    }
+                }
+                break;
+            }
+        }
+        
+        return quit;
+    }
+
+    unsigned int vec4ToRGBA(ImVec4 vec4)
+    {
+        unsigned int r = vec4.x * 255;
+        unsigned int g = vec4.y * 255;
+        unsigned int b = vec4.z * 255;
+        unsigned int a = vec4.w * 255;
+        unsigned int val = (r << 24) | g << 16 | b << 8 | a;
+        return val;
+    }
+};
