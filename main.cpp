@@ -8,10 +8,24 @@
 
 int main(int argc, char *argv[])
 {
+    const int DISPLAY_WIDTH = 160;
+    const int DISPLAY_HEIGHT = 144;
     char displayTitle[128] = "SeaBoy!";
+    
     
     // Create emulation / debug window
     UIPlatform platform(displayTitle, 1280, 720, DISPLAY_WIDTH, DISPLAY_HEIGHT);
+
+    bool running = true;
+    while (running)
+    {
+        if (!platform.processInput())
+        {
+            running = false;
+        }
+        platform.renderUI();
+
+    }
     
    
 

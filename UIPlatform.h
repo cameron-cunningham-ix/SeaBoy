@@ -15,8 +15,11 @@ private:
     unsigned int* frameBuffer = nullptr;
     int windowWidth;
     int windowHeight;
+    float mainScale;
+    float frameRate;
     int textureWidth;
     int textureHeight;
+
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
     SDL_Texture* texture = nullptr;
@@ -27,8 +30,8 @@ public:
     /// @param title Title of SDL window created, appears at top
     /// @param windowWidth SDL window width including UI
     /// @param windowHeight SDL window height including UI
-    /// @param textureWidth Width of CHIP-8 texture
-    /// @param textureHeight Height of CHIP-8 texture
+    /// @param textureWidth Width of texture
+    /// @param textureHeight Height of texture
     UIPlatform(char* title, int windowWidth, int windowHeight, int textureWidth, int textureHeight)
     {
         // SDL Initializations
@@ -79,7 +82,7 @@ public:
             SDL_GetError();
             std::cerr << "SDL failed to allocate framebuffer\n";
         }
-        this->textureScale = textureScale;
+        // this->textureScale = textureScale;
         SDL_Log("SDL Initialized\n");
 
         // ImGui Initialization
@@ -125,7 +128,7 @@ public:
     }
 
     /// @brief Render the UI and emulation display
-    void renderUI(Chip8 &chip8)
+    void renderUI()
     {
         // Start ImGui frame
         ImGui_ImplSDLRenderer3_NewFrame();
@@ -176,20 +179,10 @@ public:
     }
 
     /// @brief Process input events
-    /// @param keys 
-    /// @param prevKeys 
-    /// @param pause 
-    /// @param nextCycle 
-    /// @return True when quit 
-    bool processInput(unsigned char* keys, unsigned char* prevKeys, bool& pause, bool& nextCycle)
+    /// @return True when running 
+    bool processInput()
     {
-        // Before processing this frame/cycle, set prevKeys to keys
-        for (int i = 0; i < 16; i++)
-        {
-            prevKeys[i] = keys[i];
-        }
-
-        bool quit = false;
+        bool running = true;
         SDL_Event e;
 
         while (SDL_PollEvent(&e))
@@ -198,14 +191,14 @@ public:
             switch(e.type)
             {
                 case SDL_EVENT_QUIT:
-                    quit = true;
+                    running = false;
                     break;
                 case SDL_EVENT_KEY_DOWN:
                 {
                     switch (e.key.scancode)
                     {
                         case SDL_SCANCODE_ESCAPE:
-                            quit = true;
+                            running = false;
                             break;
                     }
                 }
@@ -222,7 +215,7 @@ public:
             }
         }
         
-        return quit;
+        return running;
     }
 
     unsigned int vec4ToRGBA(ImVec4 vec4)
