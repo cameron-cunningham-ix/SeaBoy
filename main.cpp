@@ -4,7 +4,7 @@
 #include <time.h>
 #include "SDL3/SDL.h"
 #include "SDL3/SDL_main.h"
-#include "UIPlatform.h"
+#include "src/ui/UIPlatform.h"
 
 int main(int argc, char *argv[])
 {

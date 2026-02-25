@@ -27,7 +27,7 @@ All library dependencies (SDL3, Dear ImGui, Native File Dialog Extended) are fet
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/<your-username>/SeaBoy.git
+git clone https://github.com/cameron-cunningham-ix/SeaBoy.git
 cd SeaBoy
 
 # 2. Configure (defaults to Release)
@@ -64,13 +64,13 @@ SeaBoy/
 ├── UIPlatform.h          # SDL3 + ImGui window, renderer, input
 ├── CMakeLists.txt
 ├── fonts/
-│   └── Roboto/           # Roboto-Regular.ttf (bundled)
+│   └── Roboto/           # Roboto-Regular font
 ├── src/
 │   ├── core/             # CPU, MMU, PPU, APU, Timer, Joypad, GameBoy
 │   ├── cartridge/        # Header parsing + MBC0–5
 │   ├── ui/               # DebuggerUI, SettingsUI
 │   └── util/             # Bits.h, Logger.h
-├── tests/                # Spec-driven unit tests
+├── tests/                # Unit tests
 ├── specs/                # Markdown spec files per component
 ├── roms/                 # ROMs (gitignored)
 └── info/                 # Reference docs and Pan Docs snapshots
