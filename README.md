@@ -71,8 +71,6 @@ SeaBoy/
 │   ├── ui/               # DebuggerUI, SettingsUI
 │   └── util/             # Bits.h, Logger.h
 ├── tests/                # Unit tests
-├── specs/                # Markdown spec files per component
-├── roms/                 # ROMs (gitignored)
 └── info/                 # Reference docs and Pan Docs snapshots
 ```
 
@@ -89,8 +87,8 @@ SeaBoy/
 - [Pan Docs](https://gbdev.io/pandocs/) - primary hardware reference
 - [GBZ80 instruction set](https://rgbds.gbdev.io/docs/v1.0.1/gbz80.7)
 - [Opcode table](https://www.pastraiser.com/cpu/gameboy/gameboy_opcodes.html)
-- [Blargg test ROMs](https://gbdev.gg/wiki/articles/Test_ROMs)
-- [mooneye-gb tests](https://github.com/Gekkio/mooneye-gb)
+- [Blargg test ROMs](https://github.com/retrio/gb-test-roms)
+- [mooneye-gb tests](https://github.com/Gekkio/mooneye-test-suite/)
 
 ## License
 
