@@ -167,7 +167,7 @@ public:
 
     /// @brief Write data to frameBuffer
     /// @param display 
-    void writeToBuffer(unsigned int* display)
+    void writeToBuffer(const uint32_t* display)
     {
         for (int i = 0, c = 0; i < textureHeight; i++)
         {

@@ -1,0 +1,51 @@
+#pragma once
+#ifndef GAMEBOY_H
+#define GAMEBOY_H
+
+#include <cstdint>
+#include <string>
+
+#include "CPU.hpp"
+#include "MMU.hpp"
+
+// GameBoy - top-level orchestrator
+// Owns all hardware components by value; drives the emulation loop.
+// UIPlatform interacts only through tick() and getFrameBuffer().
+// PanDocs.1 - System overview
+
+namespace SeaBoy
+{
+    // T-cycles per frame: 154 lines × 456 T-cycles/line
+    // PanDocs.4.5 - LCD Status Registers & PanDocs.4.8 Rendering
+    constexpr uint32_t TCYCLES_PER_FRAME = 70224;
+
+    class GameBoy
+    {
+    public:
+        GameBoy();
+
+        // Load a ROM file from disk. Returns true on success.
+        bool loadROM(const std::string& path);
+
+        // Execute one instruction and advance all subsystems by the resulting T-cycles.
+        // Returns T-cycles consumed. Caller accumulates until TCYCLES_PER_FRAME.
+        [[nodiscard]] uint32_t tick();
+
+        // Returns the 160×144 RGBA framebuffer produced by the PPU.
+        // Pointer is valid for the lifetime of this GameBoy instance.
+        // Buffer contains zeros until PPU is implemented.
+        [[nodiscard]] const uint32_t* getFrameBuffer() const { return m_frameBuffer; }
+
+    private:
+        // Member declaration order determines construction order.
+        // MMU must be constructed before CPU (CPU holds MMU&).
+        MMU m_mmu;
+        CPU m_cpu;
+
+        // Stub framebuffer - 160×144 RGBA pixels (replaced by PPU output later)
+        uint32_t m_frameBuffer[160 * 144]{};
+    };
+
+}
+
+#endif

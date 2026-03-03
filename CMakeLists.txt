@@ -70,10 +70,28 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(nfd)
 
 # -----------------------------
+# nlohmann/json (header-only, used by sm83_runner)
+# -----------------------------
+FetchContent_Declare(
+  nlohmann_json
+  GIT_REPOSITORY https://github.com/nlohmann/json.git
+  GIT_TAG v3.11.3
+  GIT_SHALLOW TRUE
+)
+set(JSON_BuildTests OFF CACHE BOOL "" FORCE)
+set(JSON_Install    OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(nlohmann_json)
+
+# -----------------------------
 # Executable
 # -----------------------------
 add_executable(SeaBoy
   main.cpp
+  src/core/MMU.cpp
+  src/core/CPU.cpp
+  src/core/GameBoy.cpp
+  src/core/opcodes/Opcodes.cpp
+  src/core/opcodes/OpcodesCB.cpp
 )
 
 target_include_directories(SeaBoy PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
@@ -113,3 +131,63 @@ add_custom_command(TARGET SeaBoy POST_BUILD
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fonts/Roboto/Roboto-Regular.ttf
                ${CMAKE_CURRENT_BINARY_DIR}/fonts/Roboto/Roboto-Regular.ttf
                COPYONLY)
+
+# -----------------------------
+# sm83_runner – SingleStepTests/sm83 CPU test harness
+#
+# Clone the test data once:
+#   git clone --depth 1 https://github.com/SingleStepTests/sm83.git tests/sm83_data
+#
+# Then run:
+#   ./build/Release/sm83_runner.exe tests/sm83_data/v1
+# -----------------------------
+add_executable(sm83_runner
+  tests/sm83_runner.cpp
+  src/core/MMU.cpp
+  src/core/CPU.cpp
+  src/core/opcodes/Opcodes.cpp
+  src/core/opcodes/OpcodesCB.cpp
+)
+
+target_include_directories(sm83_runner PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(sm83_runner PRIVATE nlohmann_json::nlohmann_json)
+
+if(MSVC)
+  target_compile_options(sm83_runner PRIVATE /W4 /permissive- /Zc:preprocessor /utf-8)
+else()
+  target_compile_options(sm83_runner PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+set_target_properties(sm83_runner PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIG>"
+)
+
+# -----------------------------
+# blargg_runner – headless Blargg ROM test harness
+#
+# Download ROMs from: https://gbdev.gg/wiki/articles/Test_ROMs
+# Individual cpu_instrs sub-tests: 01-special.gb … 11-op a,(hl).gb
+# Combined test: cpu_instrs.gb
+#
+# Usage: ./build/Release/blargg_runner.exe roms/01-special.gb
+# -----------------------------
+add_executable(blargg_runner
+  tests/blargg_runner.cpp
+  src/core/MMU.cpp
+  src/core/CPU.cpp
+  src/core/GameBoy.cpp
+  src/core/opcodes/Opcodes.cpp
+  src/core/opcodes/OpcodesCB.cpp
+)
+
+target_include_directories(blargg_runner PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+if(MSVC)
+  target_compile_options(blargg_runner PRIVATE /W4 /permissive- /Zc:preprocessor /utf-8)
+else()
+  target_compile_options(blargg_runner PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+set_target_properties(blargg_runner PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIG>"
+)
