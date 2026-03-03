@@ -15,8 +15,9 @@
 //   1 = "Failed" found, or timeout, or file error
 //
 // How it works:
-//   The ROM runs headlessly. Output is captured via the serial port (SB/SC at
-//   0xFF01/02). LCD stub registers prevent the ROM from spinning on VBlank.
+//   The ROM runs headlessly through GameBoy::tick(), which drives CPU + Timer
+//   (and eventually PPU/APU).  Output is captured via the serial port (SB/SC at
+//   0xFF01/02).  LCD stub registers prevent the ROM from spinning on VBlank.
 //   The runner exits as soon as it sees "Passed" or "Failed" in the output.
 //
 // MBC support: MBC0 (no switching) and MBC1 (ROM bank switching).
@@ -29,30 +30,12 @@
 #include <string>
 #include <vector>
 
-#include "src/core/CPU.hpp"
-#include "src/core/MMU.hpp"
-
-// ---------------------------------------------------------------------------
-// File loading
-// ---------------------------------------------------------------------------
-
-static std::vector<uint8_t> loadFile(const char* path)
-{
-    std::ifstream f(path, std::ios::binary | std::ios::ate);
-    if (!f.is_open())
-        return {};
-    auto sz = f.tellg();
-    f.seekg(0);
-    std::vector<uint8_t> data(static_cast<size_t>(sz));
-    f.read(reinterpret_cast<char*>(data.data()), sz);
-    return data;
-}
+#include "src/core/GameBoy.hpp"
 
 // ---------------------------------------------------------------------------
 // Completion detection
 // ---------------------------------------------------------------------------
 // Blargg ROMs print either "Passed\n" or a failure message containing "Failed".
-// Also accept the lowercase variant found in some older ROMs.
 
 static bool checkPassed(const std::string& s) { return s.find("Passed") != std::string::npos; }
 static bool checkFailed(const std::string& s)
@@ -76,8 +59,8 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    const char* romPath    = argv[1];
-    uint64_t    maxCycles  = 500'000'000ULL; // ~120 s of Game Boy time
+    const char* romPath   = argv[1];
+    uint64_t    maxCycles = 500'000'000ULL; // ~120 s of Game Boy time
 
     for (int i = 2; i < argc; ++i)
     {
@@ -85,30 +68,28 @@ int main(int argc, char* argv[])
             maxCycles = std::stoull(argv[++i]);
     }
 
-    // ---- load ROM ----
-    auto romData = loadFile(romPath);
-    if (romData.empty())
+    // ---- set up emulator ----
+    SeaBoy::GameBoy gameBoy;
+    if (!gameBoy.loadROM(romPath))
     {
         std::fprintf(stderr, "Error: could not load '%s'\n", romPath);
         return 1;
     }
 
-    // ---- print cartridge info ----
-    const char* mbcNames[] = {
-        "ROM only", "MBC1", "MBC1+RAM", "MBC1+RAM+BATTERY",
-    };
-    uint8_t mbcType = romData.size() > 0x0147u ? romData[0x0147] : 0;
-    const char* mbcName = mbcType < 4 ? mbcNames[mbcType] : "unknown MBC";
+    // ---- print cartridge info (re-read header for display only) ----
+    {
+        std::ifstream f(romPath, std::ios::binary | std::ios::ate);
+        auto sz = static_cast<size_t>(f.tellg());
+        f.seekg(0);
+        std::vector<uint8_t> hdr(std::min(sz, size_t(0x150)));
+        f.read(reinterpret_cast<char*>(hdr.data()), static_cast<std::streamsize>(hdr.size()));
 
-    std::printf("ROM:  %s  (%zu KB, %s)\n", romPath, romData.size() / 1024, mbcName);
+        const char* mbcNames[] = {"ROM only", "MBC1", "MBC1+RAM", "MBC1+RAM+BATTERY"};
+        uint8_t mbcType = hdr.size() > 0x0147u ? hdr[0x0147] : 0;
+        const char* mbcName = mbcType < 4 ? mbcNames[mbcType] : "unknown MBC";
+        std::printf("ROM:  %s  (%zu KB, %s)\n", romPath, sz / 1024, mbcName);
+    }
     std::printf("Max:  %.0f M cycles\n\n", static_cast<double>(maxCycles) / 1'000'000.0);
-
-    // ---- set up emulator ----
-    SeaBoy::MMU mmu;
-    mmu.loadROM(romData.data(), romData.size());
-
-    SeaBoy::CPU cpu(mmu);
-    cpu.reset(); // post-boot DMG register values
 
     // ---- run loop ----
     uint64_t    totalCycles = 0;
@@ -119,18 +100,15 @@ int main(int argc, char* argv[])
 
     while (totalCycles < maxCycles)
     {
-        totalCycles += cpu.step();
+        totalCycles += gameBoy.tick();
 
-        const std::string& serial = mmu.serialOutput();
+        const std::string& serial = gameBoy.serialOutput();
 
         if (serial.size() != lastOutput.size())
         {
             // Stream new characters to stdout as they arrive
             for (size_t i = lastOutput.size(); i < serial.size(); ++i)
-            {
-                char c = serial[i];
-                std::putchar(c);
-            }
+                std::putchar(serial[i]);
             std::fflush(stdout);
             lastOutput = serial;
 
@@ -157,7 +135,7 @@ int main(int argc, char* argv[])
                 static_cast<unsigned long long>(totalCycles),
                 static_cast<double>(totalCycles) / 4'194'304.0);
 
-    const std::string& serial = mmu.serialOutput();
+    const std::string& serial = gameBoy.serialOutput();
     if (checkPassed(serial))
     {
         std::puts("Result: PASSED");

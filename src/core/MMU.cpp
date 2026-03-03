@@ -1,5 +1,8 @@
 #include "MMU.hpp"
 
+#include "../cartridge/Cartridge.hpp"
+#include "Timer.hpp"
+
 #include <algorithm>
 #include <cstring>
 
@@ -10,12 +13,12 @@ namespace SeaBoy
         reset();
     }
 
+    // Defined here so unique_ptr<Cartridge> is destructed where Cartridge is fully visible.
+    MMU::~MMU() = default;
+
     void MMU::reset()
     {
-        // ROM is not cleared here – it is replaced wholesale by loadROM().
-        m_mbcType    = 0;
-        m_romBankNum = 1;
-
+        // Cartridge is not reset here - it is replaced wholesale by loadROM().
         std::memset(m_wram, 0x00, sizeof(m_wram));
         std::memset(m_hram, 0x00, sizeof(m_hram));
         m_ifReg = 0xE1; // PanDocs Power Up Sequence
@@ -28,11 +31,8 @@ namespace SeaBoy
 
     void MMU::loadROM(const uint8_t* data, size_t size)
     {
-        m_rom.assign(data, data + size);
-
-        // Parse cartridge type from header - PanDocs.16
-        m_mbcType    = size > 0x0147u ? data[0x0147] : 0;
-        m_romBankNum = 1; // reset to bank 1
+        std::vector<uint8_t> romData(data, data + size);
+        m_cart = Cartridge::create(std::move(romData));
     }
 
     void MMU::enableTestMode()
@@ -48,44 +48,37 @@ namespace SeaBoy
         if (m_testRam)
             return m_testRam[addr];
 
-        // ROM bank 0 – always mapped, no MBC switching – PanDocs.17.2 MBC1
-        if (addr <= 0x3FFFu)
-        {
-            return addr < m_rom.size() ? m_rom[addr] : 0xFFu;
-        }
+        // ROM (bank 0 + switchable bank) and external RAM - delegated to Cartridge
+        if (addr <= ADDR_ROM_END)
+            return m_cart ? m_cart->read(addr) : 0xFFu;
 
-        // ROM bank N – fixed bank 1 for MBC0, switchable for MBC1 – PanDocs.17.2 MBC1
-        if (addr <= ADDR_ROM_END) // 0x7FFF
-        {
-            uint32_t offset = static_cast<uint32_t>(m_romBankNum) * 0x4000u
-                            + static_cast<uint32_t>(addr - 0x4000u);
-            return offset < m_rom.size() ? m_rom[offset] : 0xFFu;
-        }
+        // 0xA000–0xBFFF: external RAM (cartridge)
+        if (addr >= ADDR_ERAM_BASE && addr <= ADDR_ERAM_END)
+            return m_cart ? m_cart->read(addr) : 0xFFu;
 
         if (addr >= ADDR_WRAM_BASE && addr <= ADDR_WRAM_END)
-        {
             return m_wram[addr - ADDR_WRAM_BASE];
-        }
 
         // I/O registers (0xFF00–0xFF7F)
         if (addr == ADDR_IF)  return m_ifReg | 0xE0u; // upper 3 bits always 1
         if (addr == 0xFF01u)  return m_sb;
         if (addr == 0xFF02u)  return m_sc | 0x7Eu;    // unused bits read as 1
 
+        // Timer registers - PanDocs §Timer and Divider Registers
+        if (addr >= ADDR_DIV && addr <= ADDR_TAC)
+            return m_timer ? m_timer->read(addr) : 0xFFu;
+
         // Minimal LCD stubs so Blargg ROMs don't spin waiting for VBlank
         // PanDocs.4.4 LCDC, STAT, LY
         if (addr == 0xFF40u)  return 0x91u; // LCDC: LCD on, BG enabled
-        if (addr == 0xFF41u)  return 0x01u; // STAT: mode 1 (VBlank) — never blocks
+        if (addr == 0xFF41u)  return 0x01u; // STAT: mode 1 (VBlank) - never blocks
         if (addr == 0xFF44u)  return 0x90u; // LY = 144 (first VBlank line)
 
         if (addr >= ADDR_HRAM_BASE && addr <= ADDR_HRAM_END)
-        {
             return m_hram[addr - ADDR_HRAM_BASE];
-        }
+
         if (addr == ADDR_IE)
-        {
             return m_ie;
-        }
 
         // Open bus - unmapped regions return 0xFF
         return 0xFFu;
@@ -99,18 +92,17 @@ namespace SeaBoy
             return;
         }
 
-        // ROM area: MBC register writes – PanDocs.17.2 MBC1
-        if (addr <= ADDR_ROM_END) // 0x7FFF
+        // ROM area: MBC register writes (bank switching etc.) - delegated to Cartridge
+        if (addr <= ADDR_ROM_END)
         {
-            // MBC1: ROM bank number written to 0x2000–0x3FFF (lower 5 bits)
-            // MBC type 0x01/0x02/0x03 = MBC1 (no RAM / with RAM / with RAM+battery)
-            if (m_mbcType >= 0x01u && m_mbcType <= 0x03u &&
-                addr >= 0x2000u && addr <= 0x3FFFu)
-            {
-                m_romBankNum = val & 0x1Fu;
-                if (m_romBankNum == 0) m_romBankNum = 1; // 0x00 → bank 1 – PanDocs.17.2 MBC1
-            }
-            // 0x0000–0x1FFF (RAM enable) and 0x4000–0x7FFF (bank set hi / mode) ignored for now
+            if (m_cart) m_cart->write(addr, val);
+            return;
+        }
+
+        // 0xA000–0xBFFF: external RAM writes - delegated to Cartridge
+        if (addr >= ADDR_ERAM_BASE && addr <= ADDR_ERAM_END)
+        {
+            if (m_cart) m_cart->write(addr, val);
             return;
         }
 
@@ -123,6 +115,13 @@ namespace SeaBoy
         if (addr == ADDR_IF)
         {
             m_ifReg = val & 0x1Fu; // only lower 5 bits are writable
+            return;
+        }
+
+        // Timer registers - PanDocs.8 Timer and Divider Registers
+        if (addr >= ADDR_DIV && addr <= ADDR_TAC)
+        {
+            if (m_timer) m_timer->write(addr, val);
             return;
         }
 
@@ -164,7 +163,7 @@ namespace SeaBoy
     void MMU::write16(uint16_t addr, uint16_t val)
     {
         // Little-endian: low byte first
-        write8(addr,                          static_cast<uint8_t>(val & 0xFF));
+        write8(addr, static_cast<uint8_t>(val & 0xFF));
         write8(static_cast<uint16_t>(addr + 1), static_cast<uint8_t>(val >> 8));
     }
 

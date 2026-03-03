@@ -10,8 +10,13 @@ namespace SeaBoy
     GameBoy::GameBoy()
         : m_mmu()
         , m_cpu(m_mmu)      // CPU holds a reference to m_mmu - safe: both live in GameBoy
+        , m_timer(m_mmu)    // Timer holds a reference to m_mmu for interrupt flag writes
     {
+        // Wire Timer into MMU so 0xFF04–0xFF07 route through it.
+        m_mmu.setTimer(&m_timer);
+
         m_cpu.reset();
+        m_timer.reset();
         std::memset(m_frameBuffer, 0, sizeof(m_frameBuffer));
     }
 
@@ -37,6 +42,7 @@ namespace SeaBoy
         m_mmu.reset();
         m_mmu.loadROM(data.data(), data.size());
         m_cpu.reset();
+        m_timer.reset();
 
         return true;
     }
@@ -45,7 +51,7 @@ namespace SeaBoy
     {
         uint32_t cycles = m_cpu.step();
 
-        // TODO: timer.tick(cycles);
+        m_timer.tick(cycles);
         // TODO: ppu.tick(cycles);
         // TODO: apu.tick(cycles);
 
