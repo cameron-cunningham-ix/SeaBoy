@@ -113,8 +113,12 @@ namespace SeaBoy
         // Called at Mode 3 -> Mode 0 (HBlank) transition. - PanDocs §15.3
         void renderBGLine();
 
+        // Render the window layer for m_ly, overwriting covered BG pixels.
+        // Called between renderBGLine() and renderSpriteLine(). - PanDocs.4.8.1 Window
+        void renderWindowLine();
+
         // Render visible sprites for m_ly on top of the BG line.
-        // Called immediately after renderBGLine(). - PanDocs.4 OAM / Sprites
+        // Called immediately after renderWindowLine(). - PanDocs.4.3 OAM / Sprites
         void renderSpriteLine();
 
         MMU&     m_mmu;
@@ -146,6 +150,10 @@ namespace SeaBoy
         uint8_t m_dma  = 0xFF; // DMA register (source high byte)
         uint8_t m_wy   = 0x00; // window Y
         uint8_t m_wx   = 0x00; // window X
+
+        // Window state - PanDocs.4.8.1 Window
+        bool    m_windowTriggered   = false; // set when LY >= WY first time this frame
+        uint8_t m_windowLineCounter = 0;     // window-internal Y counter (≠ LY)
 
         // OAM DMA state - PanDocs.4.3.1 OAM DMA Transfer
         bool     m_dmaActive = false; // DMA in progress

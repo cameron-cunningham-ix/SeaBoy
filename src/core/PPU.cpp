@@ -48,7 +48,9 @@ namespace SeaBoy
         m_wy   = 0x00;
         m_wx   = 0x00;
 
-        m_statLine  = false;
+        m_statLine          = false;
+        m_windowTriggered   = false;
+        m_windowLineCounter = 0;
         m_dmaActive = false;
         m_dmaSource = 0;
         m_dmaByte   = 0;
@@ -66,9 +68,20 @@ namespace SeaBoy
         uint8_t spriteHeight = (m_lcdc & LCDC::OBJSize) ? 16 : 8;
         m_oamScan.scan(m_oam, m_ly, spriteHeight);
 
-        // Variable Mode 3 length: base 172 + SCX fine-scroll penalty + 6 per sprite
-        // PanDocs.4.8 Rendering - Mode 3 Timing
+        // Window trigger: armed once when LY >= WY while window is enabled
+        // PanDocs.4.6 Window - WY Condition
+        if (!m_windowTriggered &&
+            (m_lcdc & LCDC::WindowEnable) &&
+            m_ly >= m_wy)
+        {
+            m_windowTriggered = true;
+        }
+
+        // Variable Mode 3 length: base 172 + SCX fine-scroll + 6 per sprite
+        // +6 if window is active on this line - PanDocs.4.8 Mode 3 Timing
         m_mode3Length = DRAWING_DOTS_MIN + (m_scx & 7u) + m_oamScan.count() * 6u;
+        if ((m_lcdc & LCDC::WindowEnable) && m_windowTriggered && m_wx <= 166u)
+            m_mode3Length += 6u;
     }
 
     void PPU::tick(uint32_t tCycles)
@@ -109,6 +122,7 @@ namespace SeaBoy
                     // Mode 3 -> Mode 0 (HBlank)
                     m_mode = PPUMode::HBlank;
                     renderBGLine();
+                    renderWindowLine();
                     renderSpriteLine();
                     updateStatIRQ();
                 }
@@ -121,7 +135,12 @@ namespace SeaBoy
                 ++m_ly;
 
                 if (m_ly >= TOTAL_LINES)
+                {
                     m_ly = 0;
+                    // Reset window state for the new frame - PanDocs.4.8.1
+                    m_windowTriggered   = false;
+                    m_windowLineCounter = 0;
+                }
 
                 if (m_ly < VISIBLE_LINES)
                 {
@@ -203,6 +222,57 @@ namespace SeaBoy
         }
     }
 
+    void PPU::renderWindowLine()
+    {
+        // PanDocs.4.8.1 Window Rendering
+        // Window requires: LCDC.5=1, LY >= WY was seen this frame, WX <= 166
+        if (!(m_lcdc & LCDC::WindowEnable)) return;
+        if (!m_windowTriggered)             return;
+
+        // Effective screen X where window starts (WX=7 -> pixel 0, WX=166 -> pixel 159)
+        int winStartX = static_cast<int>(m_wx) - 7;
+        if (winStartX >= 160) return; // window entirely off right edge of screen
+
+        // Window tilemap - LCDC bit 6 selects 0x9800 or 0x9C00
+        uint16_t tileMapBase = (m_lcdc & LCDC::WindowTileMap) ? 0x1C00u : 0x1800u;
+
+        for (int x = (winStartX < 0 ? 0 : winStartX); x < 160; ++x)
+        {
+            // Window-local pixel X (0 = left edge of window)
+            int winPixelX = x - winStartX;
+
+            // Tile coords within the window's 32×32 tilemap
+            uint16_t tileCol = static_cast<uint16_t>(winPixelX >> 3);
+            uint16_t tileRow = static_cast<uint16_t>(m_windowLineCounter >> 3);
+
+            uint8_t tileIndex = m_vram[tileMapBase + tileRow * 32u + tileCol];
+
+            // Tile data addressing - same method as BG (LCDC bit 4)
+            uint16_t tileAddr;
+            if (m_lcdc & LCDC::BGWindowTiles)
+                tileAddr = static_cast<uint16_t>(tileIndex * 16u);
+            else
+                tileAddr = static_cast<uint16_t>(0x1000u + static_cast<int8_t>(tileIndex) * 16);
+
+            uint8_t  pixelRow = static_cast<uint8_t>(m_windowLineCounter & 7u);
+            uint16_t rowAddr  = static_cast<uint16_t>(tileAddr + pixelRow * 2u);
+
+            uint8_t lo = m_vram[rowAddr];
+            uint8_t hi = m_vram[rowAddr + 1u];
+
+            uint8_t bit     = 7u - static_cast<uint8_t>(winPixelX & 7u);
+            uint8_t colorID = static_cast<uint8_t>(
+                ((hi >> bit) & 1u) << 1u | ((lo >> bit) & 1u));
+
+            // Overwrite BG color ID and framebuffer for covered pixels
+            m_lineBGColorIDs[x]           = colorID;
+            m_frameBuffer[m_ly * 160 + x] = m_palettes.resolveBG(colorID);
+        }
+
+        // Advance the window's internal line counter
+        ++m_windowLineCounter;
+    }
+
     void PPU::renderSpriteLine()
     {
         // PanDocs.4 OAM / Sprites
@@ -217,7 +287,7 @@ namespace SeaBoy
         //   drawn first = lowest priority = highest X (rightmost);
         //   equal X -> highest OAM index.
         // This ensures the last-drawn sprite (lowest X / lowest OAM index) wins.
-        // PanDocs OAM - DMG sprite priority
+        // PanDocs.4.3 OAM - DMG sprite priority
         uint8_t order[10];
         for (uint8_t i = 0; i < count; ++i) order[i] = i;
 
