@@ -3,7 +3,7 @@
 //
 // Downloads:
 //   https://gbdev.gg/wiki/articles/Test_ROMs (Blargg section)
-//   Individual cpu_instrs sub-tests: 01-special.gb … 11-op a,(hl).gb
+//   Individual cpu_instrs sub-tests: 01-special.gb - 11-op a,(hl).gb
 //   Combined:                        cpu_instrs.gb
 //
 // Usage:
@@ -35,7 +35,12 @@
 // ---------------------------------------------------------------------------
 // Completion detection
 // ---------------------------------------------------------------------------
-// Blargg ROMs print either "Passed\n" or a failure message containing "Failed".
+// Blargg ROMs report results via two possible channels:
+//   1. Serial port (SB/SC at 0xFF01/02) - v1 test framework
+//   2. Memory-mapped output in external RAM - v2 test framework
+//      0xA001–0xA003: magic signature 0xDE, 0xB0, 0x61
+//      0xA000:        status (0x80 = running, else done)
+//      0xA004+:       null-terminated text output
 
 static bool checkPassed(const std::string& s) { return s.find("Passed") != std::string::npos; }
 static bool checkFailed(const std::string& s)
@@ -43,6 +48,31 @@ static bool checkFailed(const std::string& s)
     return s.find("Failed") != std::string::npos || s.find("failed") != std::string::npos;
 }
 static bool isDone(const std::string& s) { return checkPassed(s) || checkFailed(s); }
+
+// Check memory-mapped output for v2 test framework completion.
+// Returns the text output if valid signature found and status != 0x80, else empty.
+static std::string checkMemMappedOutput(const SeaBoy::MMU& mmu)
+{
+    // Check magic signature at 0xA001–0xA003
+    if (mmu.peek8(0xA001) != 0xDE ||
+        mmu.peek8(0xA002) != 0xB0 ||
+        mmu.peek8(0xA003) != 0x61)
+        return {};
+
+    // Status 0x80 = still running
+    if (mmu.peek8(0xA000) == 0x80)
+        return {};
+
+    // Read null-terminated text from 0xA004+
+    std::string text;
+    for (uint16_t addr = 0xA004; addr < 0xBFFF; ++addr)
+    {
+        uint8_t ch = mmu.peek8(addr);
+        if (ch == 0) break;
+        text += static_cast<char>(ch);
+    }
+    return text;
+}
 
 // ---------------------------------------------------------------------------
 // main
@@ -54,7 +84,7 @@ int main(int argc, char* argv[])
     {
         std::cerr << "Usage: blargg_runner <rom.gb> [--cycles <max>]\n\n"
                      "  Download ROMs from: https://gbdev.gg/wiki/articles/Test_ROMs\n"
-                     "  Individual tests:   01-special.gb … 11-op a,(hl).gb\n"
+                     "  Individual tests:   01-special.gb - 11-op a,(hl).gb\n"
                      "  Combined test:      cpu_instrs.gb\n";
         return 1;
     }
@@ -95,8 +125,8 @@ int main(int argc, char* argv[])
     uint64_t    totalCycles = 0;
     std::string lastOutput;
 
-    // Print progress dots every 10 M cycles while there is no serial output yet
-    uint64_t nextProgressAt = 10'000'000ULL;
+    // Check memory-mapped output every 100K cycles (v2 framework detection)
+    uint64_t nextMemCheck = 100'000ULL;
 
     while (totalCycles < maxCycles)
     {
@@ -114,15 +144,23 @@ int main(int argc, char* argv[])
 
             if (isDone(serial))
                 break;
-
-            // Reset progress counter once serial output begins
-            nextProgressAt = UINT64_MAX;
         }
-        else if (totalCycles >= nextProgressAt)
+
+        // Check memory-mapped output periodically (v2 test framework)
+        if (totalCycles >= nextMemCheck)
         {
-            std::putchar('.');
-            std::fflush(stdout);
-            nextProgressAt += 10'000'000ULL;
+            std::string memOut = checkMemMappedOutput(gameBoy.mmu());
+            if (!memOut.empty())
+            {
+                std::printf("%s", memOut.c_str());
+                if (!memOut.empty() && memOut.back() != '\n')
+                    std::putchar('\n');
+                std::fflush(stdout);
+                // Use memory-mapped output as the serial output for result checking
+                lastOutput = memOut;
+                break;
+            }
+            nextMemCheck += 100'000ULL;
         }
     }
 
@@ -135,13 +173,15 @@ int main(int argc, char* argv[])
                 static_cast<unsigned long long>(totalCycles),
                 static_cast<double>(totalCycles) / 4'194'304.0);
 
+    // Check serial output first, then memory-mapped output
     const std::string& serial = gameBoy.serialOutput();
-    if (checkPassed(serial))
+    std::string result = serial.empty() ? lastOutput : serial;
+    if (checkPassed(result))
     {
         std::puts("Result: PASSED");
         return 0;
     }
-    if (checkFailed(serial))
+    if (checkFailed(result))
     {
         std::puts("Result: FAILED");
         return 1;

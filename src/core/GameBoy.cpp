@@ -11,16 +11,18 @@ namespace SeaBoy
         : m_mmu()
         , m_cpu(m_mmu)      // CPU holds a reference to m_mmu - safe: both live in GameBoy
         , m_timer(m_mmu)    // Timer holds a reference to m_mmu for interrupt flag writes
+        , m_ppu(m_mmu)      // PPU holds a reference to m_mmu for interrupt flag writes
     {
-        // Wire Timer into MMU so 0xFF04–0xFF07 route through it.
+        // Wire Timer and PPU into MMU so I/O registers route through them.
         m_mmu.setTimer(&m_timer);
+        m_mmu.setPPU(&m_ppu);
 
         // M-cycle callback: tick subsystems after every bus access / internal cycle.
         m_mmu.setCycleCallback(&GameBoy::onBusCycle, this);
 
         m_cpu.reset();
         m_timer.reset();
-        std::memset(m_frameBuffer, 0, sizeof(m_frameBuffer));
+        m_ppu.reset();
     }
 
     bool GameBoy::loadROM(const std::string& path)
@@ -46,6 +48,7 @@ namespace SeaBoy
         m_mmu.loadROM(data.data(), data.size());
         m_cpu.reset();
         m_timer.reset();
+        m_ppu.reset();
 
         return true;
     }
@@ -61,8 +64,7 @@ namespace SeaBoy
     {
         auto* gb = static_cast<GameBoy*>(ctx);
         gb->m_timer.tick(tCycles);
-        gb->m_mmu.advanceScanline(tCycles); // stub LY counter (replaced by real PPU later)
-        // future: gb->m_ppu.tick(tCycles);
+        gb->m_ppu.tick(tCycles);
         // future: gb->m_apu.tick(tCycles);
     }
 

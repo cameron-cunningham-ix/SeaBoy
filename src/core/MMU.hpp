@@ -41,6 +41,7 @@ namespace SeaBoy
     // Forward declarations - full definitions included only in their respective .cpp files.
     class Cartridge; // src/cartridge/Cartridge.hpp
     class Timer;     // src/core/Timer.hpp
+    class PPU;       // src/core/PPU.hpp
 
     class MMU
     {
@@ -78,10 +79,9 @@ namespace SeaBoy
         // Tick subsystems without a bus access (for CPU internal M-cycles).
         void tickCycle() { if (m_cycleFn) m_cycleFn(m_cycleCtx, 4); }
 
-        // Advance stub scanline counter by tCycles T-cycles.
-        // PanDocs.4.5 - 456 T-cycles per scanline, 154 scanlines per frame.
-        // Replaced by real PPU later.
-        void advanceScanline(uint32_t tCycles);
+        // PPU link - set by GameBoy after constructing both MMU and PPU.
+        // MMU routes 0xFF40–0xFF4B to the PPU; null until wired.
+        void setPPU(PPU* p) { m_ppu = p; }
 
         // Serial port output (captured from writes to SB/SC, 0xFF01/02).
         // Blargg test ROMs write results here. Safe to call at any time.
@@ -109,10 +109,13 @@ namespace SeaBoy
         // Timer - null until setTimer() is called by GameBoy. Not owned.
         Timer* m_timer = nullptr;
 
+        // PPU - null until setPPU() is called by GameBoy. Not owned.
+        PPU* m_ppu = nullptr;
+
         uint8_t m_vram[0x2000]{};  // 8 KB VRAM (0x8000–0x9FFF) - stub until PPU
         uint8_t m_wram[0x2000]{};  // 8 KB WRAM
         uint8_t m_hram[0x7F]{};    // 127 bytes HRAM (0xFF80–0xFFFE)
-        uint8_t m_ifReg = 0xE1;    // IF - power-on value per PanDocs §Power_Up_Sequence
+        uint8_t m_ifReg = 0xE1;    // IF - power-on value per PanDocs.22 Power Up Sequence
         uint8_t m_ie    = 0x00;    // IE
 
         // Serial port – PanDocs.7 Serial Data Transfer
@@ -127,10 +130,6 @@ namespace SeaBoy
         CycleCallback m_cycleFn  = nullptr;
         void*         m_cycleCtx = nullptr;
 
-        // Stub scanline counter - cycles LY through 0–153 so ROMs don't spin
-        // on two-phase VBlank waits. Replaced by real PPU later.
-        uint32_t m_scanlineCycles = 0; // T-cycles within current scanline
-        uint8_t  m_ly            = 0;  // current scanline (0–153)
     };
 
 }

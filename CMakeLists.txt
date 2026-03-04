@@ -91,6 +91,8 @@ add_executable(SeaBoy
   src/core/CPU.cpp
   src/core/GameBoy.cpp
   src/core/Timer.cpp
+  src/core/PPU.cpp
+  src/core/Palettes.cpp
   src/core/opcodes/Opcodes.cpp
   src/core/opcodes/OpcodesCB.cpp
   src/cartridge/Cartridge.cpp
@@ -150,6 +152,8 @@ add_executable(sm83_runner
   src/core/MMU.cpp
   src/core/CPU.cpp
   src/core/Timer.cpp
+  src/core/PPU.cpp
+  src/core/Palettes.cpp
   src/core/opcodes/Opcodes.cpp
   src/core/opcodes/OpcodesCB.cpp
   src/cartridge/Cartridge.cpp
@@ -185,6 +189,8 @@ add_executable(blargg_runner
   src/core/CPU.cpp
   src/core/GameBoy.cpp
   src/core/Timer.cpp
+  src/core/PPU.cpp
+  src/core/Palettes.cpp
   src/core/opcodes/Opcodes.cpp
   src/core/opcodes/OpcodesCB.cpp
   src/cartridge/Cartridge.cpp

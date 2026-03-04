@@ -7,6 +7,7 @@
 
 #include "CPU.hpp"
 #include "MMU.hpp"
+#include "PPU.hpp"
 #include "Timer.hpp"
 
 // GameBoy - top-level orchestrator
@@ -34,8 +35,7 @@ namespace SeaBoy
 
         // Returns the 160×144 RGBA framebuffer produced by the PPU.
         // Pointer is valid for the lifetime of this GameBoy instance.
-        // Buffer contains zeros until PPU is implemented.
-        [[nodiscard]] const uint32_t* getFrameBuffer() const { return m_frameBuffer; }
+        [[nodiscard]] const uint32_t* getFrameBuffer() const { return m_ppu.frameBuffer(); }
 
         // Accumulated serial port output - used by blargg_runner to detect pass/fail.
         [[nodiscard]] const std::string& serialOutput() const { return m_mmu.serialOutput(); }
@@ -48,16 +48,14 @@ namespace SeaBoy
 
     private:
         // Member declaration order determines construction order.
-        // MMU must be constructed before CPU and Timer (both hold MMU&).
+        // MMU must be constructed before CPU, Timer, and PPU (all hold MMU&).
         MMU   m_mmu;
         CPU   m_cpu;
         Timer m_timer;
+        PPU   m_ppu;
 
-        // M-cycle callback - ticks timer (and future PPU/APU) during CPU execution.
+        // M-cycle callback - ticks timer and PPU during CPU execution.
         static void onBusCycle(void* ctx, uint32_t tCycles);
-
-        // Stub framebuffer - 160×144 RGBA pixels (replaced by PPU output later)
-        uint32_t m_frameBuffer[160 * 144]{};
     };
 
 }

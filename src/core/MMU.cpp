@@ -1,6 +1,7 @@
 #include "MMU.hpp"
 
 #include "../cartridge/Cartridge.hpp"
+#include "PPU.hpp"
 #include "Timer.hpp"
 
 #include <algorithm>
@@ -28,9 +29,6 @@ namespace SeaBoy
         m_sb = 0;
         m_sc = 0;
         m_serialOutput.clear();
-
-        m_scanlineCycles = 0;
-        m_ly = 0;
     }
 
     void MMU::loadROM(const uint8_t* data, size_t size)
@@ -72,17 +70,12 @@ namespace SeaBoy
             val = m_sb;
         else if (addr == 0xFF02u)
             val = m_sc | 0x7Eu;    // unused bits read as 1
-        // Timer registers - PanDocs §Timer and Divider Registers
+        // Timer registers - PanDocs.8 Timer and Divider Registers
         else if (addr >= ADDR_DIV && addr <= ADDR_TAC)
             val = m_timer ? m_timer->read(addr) : 0xFFu;
-        // Minimal LCD stubs - replaced by real PPU later
-        // PanDocs.4.4 LCDC, STAT, LY
-        else if (addr == 0xFF40u)
-            val = 0x91u; // LCDC: LCD on, BG enabled
-        else if (addr == 0xFF41u)
-            val = (m_ly >= 144) ? 0x01u : 0x00u; // mode 1 (VBlank) or mode 0 (HBlank)
-        else if (addr == 0xFF44u)
-            val = m_ly; // cycling scanline counter
+        // LCD registers — routed to PPU (PanDocs.4 LCD I/O Registers)
+        else if (addr >= 0xFF40u && addr <= 0xFF4Bu)
+            val = m_ppu ? m_ppu->read(addr) : 0xFFu;
         else if (addr >= ADDR_HRAM_BASE && addr <= ADDR_HRAM_END)
             val = m_hram[addr - ADDR_HRAM_BASE];
         else if (addr == ADDR_IE)
@@ -117,6 +110,9 @@ namespace SeaBoy
         // Timer registers - PanDocs.8 Timer and Divider Registers
         else if (addr >= ADDR_DIV && addr <= ADDR_TAC)
             { if (m_timer) m_timer->write(addr, val); }
+        // LCD registers — routed to PPU (PanDocs.4 LCD I/O Registers)
+        else if (addr >= 0xFF40u && addr <= 0xFF4Bu)
+            { if (m_ppu) m_ppu->write(addr, val); }
         // Serial port – PanDocs.7 Serial Data Transfer
         else if (addr == 0xFF01u)
             m_sb = val;
@@ -204,6 +200,8 @@ namespace SeaBoy
             return m_sb;
         if (addr == 0xFF02u)
             return m_sc | 0x7Eu;
+        if (addr >= 0xFF40u && addr <= 0xFF4Bu)
+            return m_ppu ? m_ppu->read(addr) : 0xFFu;
         if (addr >= ADDR_HRAM_BASE && addr <= ADDR_HRAM_END)
             return m_hram[addr - ADDR_HRAM_BASE];
         if (addr == ADDR_IE)
@@ -211,20 +209,5 @@ namespace SeaBoy
         return 0xFFu;
     }
 
-    void MMU::advanceScanline(uint32_t tCycles)
-    {
-        m_scanlineCycles += tCycles;
-        while (m_scanlineCycles >= 456)
-        {
-            m_scanlineCycles -= 456;
-            uint8_t prev = m_ly;
-            m_ly = (m_ly + 1) % 154;
-
-            // VBlank interrupt: set IF bit 0 when entering line 144
-            // PanDocs.9 INT $40 VBlank interrupt
-            if (prev == 143 && m_ly == 144)
-                m_ifReg |= 0x01u;
-        }
-    }
 
 }
