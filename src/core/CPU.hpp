@@ -52,6 +52,10 @@ namespace SeaBoy
         uint8_t  fetch8();
         uint16_t fetch16();
 
+        // Tick subsystems for an internal M-cycle (4 T-cycles, no bus access).
+        // Used by opcode handlers with internal cycles (INC rr, PUSH, JP, CALL, RET, etc.)
+        void internalCycle();
+
         // Dispatch a CB-prefix sub-opcode. Called by op_CB in Opcodes.cpp.
         uint32_t dispatchCB(uint8_t subOpcode) { return kCBOpcodes[subOpcode](*this); }
 

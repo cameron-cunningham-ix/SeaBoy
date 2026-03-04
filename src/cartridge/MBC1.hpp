@@ -21,6 +21,9 @@ namespace SeaBoy
         void    write(uint16_t addr, uint8_t val) override;
 
     private:
+        // PanDocs.17.2 - up to 4 banks × 8 KB = 32 KB external RAM
+        std::vector<uint8_t> m_ram;
+
         uint8_t m_romBank   = 1;     // Lower 5 bits of ROM bank; 0 remapped to 1
         uint8_t m_ramBank   = 0;     // 2-bit RAM bank / upper ROM bank selector
         bool    m_ramEnable = false; // Enabled when 0x0A written to 0x0000–0x1FFF

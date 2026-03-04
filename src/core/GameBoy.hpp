@@ -40,12 +40,21 @@ namespace SeaBoy
         // Accumulated serial port output - used by blargg_runner to detect pass/fail.
         [[nodiscard]] const std::string& serialOutput() const { return m_mmu.serialOutput(); }
 
+        // Debug access to CPU registers
+        [[nodiscard]] const CPU& cpu() const { return m_cpu; }
+
+        // Debug access to MMU (for peek8 etc.)
+        [[nodiscard]] const MMU& mmu() const { return m_mmu; }
+
     private:
         // Member declaration order determines construction order.
         // MMU must be constructed before CPU and Timer (both hold MMU&).
         MMU   m_mmu;
         CPU   m_cpu;
         Timer m_timer;
+
+        // M-cycle callback - ticks timer (and future PPU/APU) during CPU execution.
+        static void onBusCycle(void* ctx, uint32_t tCycles);
 
         // Stub framebuffer - 160×144 RGBA pixels (replaced by PPU output later)
         uint32_t m_frameBuffer[160 * 144]{};

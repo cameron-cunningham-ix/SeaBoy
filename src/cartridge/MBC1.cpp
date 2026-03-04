@@ -4,7 +4,14 @@ namespace SeaBoy
 {
     MBC1::MBC1(std::vector<uint8_t> rom)
         : Cartridge(std::move(rom))
-    {}
+    {
+        // PanDocs.17.2 - RAM size from header byte 0x0149:
+        //   0x00=0, 0x01=unused, 0x02=8KB, 0x03=32KB, 0x04=128KB, 0x05=64KB
+        static constexpr uint32_t kRamSizes[] = {0, 0, 0x2000, 0x8000, 0x20000, 0x10000};
+        uint8_t ramCode = m_rom.size() > 0x0149u ? m_rom[0x0149] : 0;
+        uint32_t ramSize = (ramCode < 6) ? kRamSizes[ramCode] : 0x2000u;
+        m_ram.resize(ramSize, 0x00);
+    }
 
     // PanDocs.17.2 MBC1 read routing
     uint8_t MBC1::read(uint16_t addr) const
@@ -27,7 +34,14 @@ namespace SeaBoy
             return offset < m_rom.size() ? m_rom[offset] : 0xFFu;
         }
 
-        // 0xA000–0xBFFF: external RAM - not implemented; return open-bus
+        // 0xA000–0xBFFF: external RAM
+        if (addr >= 0xA000u && addr <= 0xBFFFu && m_ramEnable && !m_ram.empty())
+        {
+            uint8_t  bank   = m_mode ? m_ramBank : 0;
+            uint32_t offset = static_cast<uint32_t>(bank) * 0x2000u
+                            + static_cast<uint32_t>(addr - 0xA000u);
+            return offset < m_ram.size() ? m_ram[offset] : 0xFFu;
+        }
         return 0xFFu;
     }
 
@@ -55,7 +69,15 @@ namespace SeaBoy
             // Banking mode select
             m_mode = (val & 0x01u) != 0u;
         }
-        // 0xA000–0xBFFF external RAM writes: not implemented
+        // 0xA000–0xBFFF: external RAM writes
+        if (addr >= 0xA000u && addr <= 0xBFFFu && m_ramEnable && !m_ram.empty())
+        {
+            uint8_t  bank   = m_mode ? m_ramBank : 0;
+            uint32_t offset = static_cast<uint32_t>(bank) * 0x2000u
+                            + static_cast<uint32_t>(addr - 0xA000u);
+            if (offset < m_ram.size())
+                m_ram[offset] = val;
+        }
     }
 
 }

@@ -315,6 +315,11 @@ namespace SeaBoy
         return v;
     }
 
+    void CPU::internalCycle()
+    {
+        m_mmu.tickCycle();
+    }
+
     uint32_t CPU::handleInterrupts()
     {
         // PanDocs.9 - Interrupt Service Routine
@@ -344,12 +349,17 @@ namespace SeaBoy
 
         m_mmu.writeIF(m_mmu.readIF() & ~bit);
 
-        // Push PC onto stack and jump to vector
+        // ISR dispatch = 5 M-cycles (20 T-cycles):
+        //   M1-M2: two internal wait cycles
+        //   M3-M4: push PC (high byte then low byte) via write8
+        //   M5: set PC to vector (internal)
+        m_mmu.tickCycle(); // M1: internal wait
+        m_mmu.tickCycle(); // M2: internal wait
         m_regs.SP -= 2;
-        m_mmu.write16(m_regs.SP, m_regs.PC);
+        m_mmu.write16(m_regs.SP, m_regs.PC); // M3-M4: push PC (2 bus writes, ticked via callback)
         m_regs.PC = vector;
+        m_mmu.tickCycle(); // M5: set PC to vector
 
-        // ISR dispatch takes 20 T-cycles (5 M-cycles)
         return 20;
     }
 
@@ -380,7 +390,10 @@ namespace SeaBoy
 
         // 3. HALT idle - if still halted, burn 4 T-cycles
         if (m_halted)
+        {
+            m_mmu.tickCycle(); // 4T idle cycle
             return 4;
+        }
 
         // 4. Fetch opcode
         //    HALT bug: PC not incremented on the bugged fetch - PanDocs.9.2

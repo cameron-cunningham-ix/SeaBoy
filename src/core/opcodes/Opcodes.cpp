@@ -151,6 +151,7 @@ uint32_t op_02(CPU& cpu) {
 // 0x03 INC BC - 8T
 uint32_t op_03(CPU& cpu) {
     cpu.regs().setBC(cpu.regs().getBC() + 1);
+    cpu.internalCycle(); // 1 internal M-cycle
     return 8;
 }
 
@@ -195,7 +196,8 @@ uint32_t op_08(CPU& cpu) {
 // 0x09 ADD HL,BC - 8T
 uint32_t op_09(CPU& cpu) {
     alu_add_hl(cpu, cpu.regs().getBC());
-    return 8; 
+    cpu.internalCycle();
+    return 8;
 }
 
 // 0x0A LD A,(BC) - 8T
@@ -205,9 +207,10 @@ uint32_t op_0A(CPU& cpu) {
 }
 
 // 0x0B DEC BC - 8T
-uint32_t op_0B(CPU& cpu) { 
-    cpu.regs().setBC(cpu.regs().getBC() - 1); 
-    return 8; 
+uint32_t op_0B(CPU& cpu) {
+    cpu.regs().setBC(cpu.regs().getBC() - 1);
+    cpu.internalCycle();
+    return 8;
 }
 
 // 0x0C INC C - 4T
@@ -261,9 +264,10 @@ uint32_t op_12(CPU& cpu) {
 }
 
 // 0x13 INC DE - 8T
-uint32_t op_13(CPU& cpu) { 
-    cpu.regs().setDE(cpu.regs().getDE() + 1); 
-    return 8; 
+uint32_t op_13(CPU& cpu) {
+    cpu.regs().setDE(cpu.regs().getDE() + 1);
+    cpu.internalCycle();
+    return 8;
 }
 
 // 0x14 INC D - 4T
@@ -301,13 +305,15 @@ uint32_t op_17(CPU& cpu) {
 uint32_t op_18(CPU& cpu) {
     int8_t offset = static_cast<int8_t>(cpu.fetch8());
     cpu.regs().PC = static_cast<uint16_t>(cpu.regs().PC + offset);
+    cpu.internalCycle(); // branch taken internal cycle
     return 12;
 }
 
 // 0x19 ADD HL,DE - 8T
-uint32_t op_19(CPU& cpu) { 
-    alu_add_hl(cpu, cpu.regs().getDE()); 
-    return 8; 
+uint32_t op_19(CPU& cpu) {
+    alu_add_hl(cpu, cpu.regs().getDE());
+    cpu.internalCycle();
+    return 8;
 }
 
 // 0x1A LD A,(DE) - 8T
@@ -317,8 +323,9 @@ uint32_t op_1A(CPU& cpu) {
 }
 
 // 0x1B DEC DE - 8T
-uint32_t op_1B(CPU& cpu) { 
-    cpu.regs().setDE(cpu.regs().getDE() - 1); 
+uint32_t op_1B(CPU& cpu) {
+    cpu.regs().setDE(cpu.regs().getDE() - 1);
+    cpu.internalCycle();
     return 8; 
 }
 
@@ -360,8 +367,9 @@ uint32_t op_1F(CPU& cpu) {
 // 0x20 JR NZ,e8 - 12T taken / 8T not taken
 uint32_t op_20(CPU& cpu) {
     int8_t offset = static_cast<int8_t>(cpu.fetch8());
-    if (!cpu.regs().flagZ()) { 
+    if (!cpu.regs().flagZ()) {
         cpu.regs().PC = static_cast<uint16_t>(cpu.regs().PC + offset);
+        cpu.internalCycle();
         return 12;
     }
     return 8;
@@ -381,9 +389,10 @@ uint32_t op_22(CPU& cpu) {
 }
 
 // 0x23 INC HL - 8T
-uint32_t op_23(CPU& cpu) { 
-    cpu.regs().setHL(cpu.regs().getHL() + 1); 
-    return 8; 
+uint32_t op_23(CPU& cpu) {
+    cpu.regs().setHL(cpu.regs().getHL() + 1);
+    cpu.internalCycle();
+    return 8;
 }
 
 // 0x24 INC H - 4T
@@ -440,15 +449,17 @@ uint32_t op_28(CPU& cpu) {
     int8_t offset = static_cast<int8_t>(cpu.fetch8());
     if (cpu.regs().flagZ()) {
         cpu.regs().PC = static_cast<uint16_t>(cpu.regs().PC + offset);
+        cpu.internalCycle();
         return 12;
     }
     return 8;
 }
 
 // 0x29 ADD HL,HL - 8T
-uint32_t op_29(CPU& cpu) { 
-    alu_add_hl(cpu, cpu.regs().getHL()); 
-    return 8; 
+uint32_t op_29(CPU& cpu) {
+    alu_add_hl(cpu, cpu.regs().getHL());
+    cpu.internalCycle();
+    return 8;
 }
 
 // 0x2A LD A,(HL+) - 8T
@@ -459,9 +470,10 @@ uint32_t op_2A(CPU& cpu) {
 }
 
 // 0x2B DEC HL - 8T
-uint32_t op_2B(CPU& cpu) { 
-    cpu.regs().setHL(cpu.regs().getHL() - 1); 
-    return 8; 
+uint32_t op_2B(CPU& cpu) {
+    cpu.regs().setHL(cpu.regs().getHL() - 1);
+    cpu.internalCycle();
+    return 8;
 }
 
 // 0x2C INC L - 4T
@@ -497,9 +509,10 @@ uint32_t op_2F(CPU& cpu) {
 // 0x30 JR NC,e8 - 12T taken / 8T not taken
 uint32_t op_30(CPU& cpu) {
     int8_t offset = static_cast<int8_t>(cpu.fetch8());
-    if (!cpu.regs().flagC()) { 
-        cpu.regs().PC = static_cast<uint16_t>(cpu.regs().PC + offset); 
-        return 12; 
+    if (!cpu.regs().flagC()) {
+        cpu.regs().PC = static_cast<uint16_t>(cpu.regs().PC + offset);
+        cpu.internalCycle();
+        return 12;
     }
     return 8;
 }
@@ -518,9 +531,10 @@ uint32_t op_32(CPU& cpu) {
 }
 
 // 0x33 INC SP - 8T
-uint32_t op_33(CPU& cpu) { 
+uint32_t op_33(CPU& cpu) {
     cpu.regs().SP++;
-    return 8; 
+    cpu.internalCycle();
+    return 8;
 }
 
 // 0x34 INC (HL) - 12T
@@ -558,15 +572,17 @@ uint32_t op_38(CPU& cpu) {
     int8_t offset = static_cast<int8_t>(cpu.fetch8());
     if (cpu.regs().flagC()) {
         cpu.regs().PC = static_cast<uint16_t>(cpu.regs().PC + offset);
+        cpu.internalCycle();
         return 12;
     }
     return 8;
 }
 
 // 0x39 ADD HL,SP - 8T
-uint32_t op_39(CPU& cpu) { 
-    alu_add_hl(cpu, cpu.regs().SP); 
-    return 8; 
+uint32_t op_39(CPU& cpu) {
+    alu_add_hl(cpu, cpu.regs().SP);
+    cpu.internalCycle();
+    return 8;
 }
 
 // 0x3A LD A,(HL-) - 8T
@@ -577,9 +593,10 @@ uint32_t op_3A(CPU& cpu) {
 }
 
 // 0x3B DEC SP - 8T
-uint32_t op_3B(CPU& cpu) { 
+uint32_t op_3B(CPU& cpu) {
     cpu.regs().SP--;
-    return 8; 
+    cpu.internalCycle();
+    return 8;
 }
 
 // 0x3C INC A - 4T
@@ -854,8 +871,10 @@ uint32_t op_BF(CPU& cpu) { return alu_r8(cpu, 7, 7); }
 
 // 0xC0 RET NZ - 20T taken / 8T not taken
 uint32_t op_C0(CPU& cpu) {
+    cpu.internalCycle(); // branch condition eval
     if (!cpu.regs().flagZ()) {
         cpu.regs().PC = stackPop(cpu);
+        cpu.internalCycle(); // set PC
         return 20;
     }
     return 8;
@@ -870,34 +889,38 @@ uint32_t op_C1(CPU& cpu) {
 // 0xC2 JP NZ,n16 - 16T taken / 12T not taken
 uint32_t op_C2(CPU& cpu) {
     uint16_t addr = cpu.fetch16();
-    if (!cpu.regs().flagZ()) { 
-        cpu.regs().PC = addr; 
-        return 16; 
+    if (!cpu.regs().flagZ()) {
+        cpu.regs().PC = addr;
+        cpu.internalCycle(); // set PC
+        return 16;
     }
     return 12;
 }
 
 // 0xC3 JP n16 - 16T
 uint32_t op_C3(CPU& cpu) {
-    cpu.regs().PC = cpu.fetch16(); 
-    return 16; 
+    cpu.regs().PC = cpu.fetch16();
+    cpu.internalCycle(); // set PC
+    return 16;
 }
 
 // 0xC4 CALL NZ,n16 - 24T taken / 12T not taken
 uint32_t op_C4(CPU& cpu) {
     uint16_t addr = cpu.fetch16();
-    if (!cpu.regs().flagZ()) { 
-        stackPush(cpu, cpu.regs().PC); 
-        cpu.regs().PC = addr; 
-        return 24; 
+    if (!cpu.regs().flagZ()) {
+        cpu.internalCycle(); // internal before push
+        stackPush(cpu, cpu.regs().PC);
+        cpu.regs().PC = addr;
+        return 24;
     }
     return 12;
 }
 
 // 0xC5 PUSH BC - 16T
-uint32_t op_C5(CPU& cpu) { 
-    stackPush(cpu, cpu.regs().getBC()); 
-    return 16; 
+uint32_t op_C5(CPU& cpu) {
+    cpu.internalCycle(); // internal before push
+    stackPush(cpu, cpu.regs().getBC());
+    return 16;
 }
 
 // 0xC6 ADD A,n8 - 8T
@@ -907,33 +930,38 @@ uint32_t op_C6(CPU& cpu) {
 }
 
 // 0xC7 RST $00 - 16T
-uint32_t op_C7(CPU& cpu) { 
-    stackPush(cpu, cpu.regs().PC); 
-    cpu.regs().PC = 0x0000; 
-    return 16; 
+uint32_t op_C7(CPU& cpu) {
+    cpu.internalCycle(); // internal before push
+    stackPush(cpu, cpu.regs().PC);
+    cpu.regs().PC = 0x0000;
+    return 16;
 }
 
 // 0xC8 RET Z - 20T taken / 8T not taken
 uint32_t op_C8(CPU& cpu) {
-    if (cpu.regs().flagZ()) { 
-        cpu.regs().PC = stackPop(cpu); 
-        return 20; 
+    cpu.internalCycle(); // branch condition eval
+    if (cpu.regs().flagZ()) {
+        cpu.regs().PC = stackPop(cpu);
+        cpu.internalCycle(); // set PC
+        return 20;
     }
     return 8;
 }
 
 // 0xC9 RET - 16T
-uint32_t op_C9(CPU& cpu) { 
-    cpu.regs().PC = stackPop(cpu); 
-    return 16; 
+uint32_t op_C9(CPU& cpu) {
+    cpu.regs().PC = stackPop(cpu);
+    cpu.internalCycle(); // set PC
+    return 16;
 }
 
 // 0xCA JP Z,n16 - 16T taken / 12T not taken
 uint32_t op_CA(CPU& cpu) {
     uint16_t addr = cpu.fetch16();
-    if (cpu.regs().flagZ()) { 
-        cpu.regs().PC = addr; 
-        return 16; 
+    if (cpu.regs().flagZ()) {
+        cpu.regs().PC = addr;
+        cpu.internalCycle(); // set PC
+        return 16;
     }
     return 12;
 }
@@ -949,10 +977,11 @@ uint32_t op_CB(CPU& cpu) {
 // 0xCC CALL Z,n16 - 24T taken / 12T not taken
 uint32_t op_CC(CPU& cpu) {
     uint16_t addr = cpu.fetch16();
-    if (cpu.regs().flagZ()) { 
-        stackPush(cpu, cpu.regs().PC); 
-        cpu.regs().PC = addr; 
-        return 24; 
+    if (cpu.regs().flagZ()) {
+        cpu.internalCycle(); // internal before push
+        stackPush(cpu, cpu.regs().PC);
+        cpu.regs().PC = addr;
+        return 24;
     }
     return 12;
 }
@@ -960,6 +989,7 @@ uint32_t op_CC(CPU& cpu) {
 // 0xCD CALL n16 - 24T
 uint32_t op_CD(CPU& cpu) {
     uint16_t addr = cpu.fetch16();
+    cpu.internalCycle(); // internal before push
     stackPush(cpu, cpu.regs().PC);
     cpu.regs().PC = addr;
     return 24;
@@ -972,17 +1002,20 @@ uint32_t op_CE(CPU& cpu) {
 }
 
 // 0xCF RST $08 - 16T
-uint32_t op_CF(CPU& cpu) { 
-    stackPush(cpu, cpu.regs().PC); 
-    cpu.regs().PC = 0x0008; 
-    return 16; 
+uint32_t op_CF(CPU& cpu) {
+    cpu.internalCycle();
+    stackPush(cpu, cpu.regs().PC);
+    cpu.regs().PC = 0x0008;
+    return 16;
 }
 
 // 0xD0 RET NC - 20T taken / 8T not taken
 uint32_t op_D0(CPU& cpu) {
-    if (!cpu.regs().flagC()) { 
-        cpu.regs().PC = stackPop(cpu); 
-        return 20; 
+    cpu.internalCycle(); // branch condition eval
+    if (!cpu.regs().flagC()) {
+        cpu.regs().PC = stackPop(cpu);
+        cpu.internalCycle(); // set PC
+        return 20;
     }
     return 8;
 }
@@ -996,9 +1029,10 @@ uint32_t op_D1(CPU& cpu) {
 // 0xD2 JP NC,n16 - 16T taken / 12T not taken
 uint32_t op_D2(CPU& cpu) {
     uint16_t addr = cpu.fetch16();
-    if (!cpu.regs().flagC()) { 
-        cpu.regs().PC = addr; 
-        return 16; 
+    if (!cpu.regs().flagC()) {
+        cpu.regs().PC = addr;
+        cpu.internalCycle();
+        return 16;
     }
     return 12;
 }
@@ -1009,18 +1043,20 @@ uint32_t op_D3(CPU&) { return 4; }
 // 0xD4 CALL NC,n16 - 24T taken / 12T not taken
 uint32_t op_D4(CPU& cpu) {
     uint16_t addr = cpu.fetch16();
-    if (!cpu.regs().flagC()) { 
-        stackPush(cpu, cpu.regs().PC); 
-        cpu.regs().PC = addr; 
-        return 24; 
+    if (!cpu.regs().flagC()) {
+        cpu.internalCycle();
+        stackPush(cpu, cpu.regs().PC);
+        cpu.regs().PC = addr;
+        return 24;
     }
     return 12;
 }
 
 // 0xD5 PUSH DE - 16T
-uint32_t op_D5(CPU& cpu) { 
-    stackPush(cpu, cpu.regs().getDE()); 
-    return 16; 
+uint32_t op_D5(CPU& cpu) {
+    cpu.internalCycle();
+    stackPush(cpu, cpu.regs().getDE());
+    return 16;
 }
 
 // 0xD6 SUB A,n8 - 8T
@@ -1030,17 +1066,20 @@ uint32_t op_D6(CPU& cpu) {
 }
 
 // 0xD7 RST $10 - 16T
-uint32_t op_D7(CPU& cpu) { 
-    stackPush(cpu, cpu.regs().PC); 
-    cpu.regs().PC = 0x0010; 
-    return 16; 
+uint32_t op_D7(CPU& cpu) {
+    cpu.internalCycle();
+    stackPush(cpu, cpu.regs().PC);
+    cpu.regs().PC = 0x0010;
+    return 16;
 }
 
 // 0xD8 RET C - 20T taken / 8T not taken
 uint32_t op_D8(CPU& cpu) {
-    if (cpu.regs().flagC()) { 
-        cpu.regs().PC = stackPop(cpu); 
-        return 20; 
+    cpu.internalCycle(); // branch condition eval
+    if (cpu.regs().flagC()) {
+        cpu.regs().PC = stackPop(cpu);
+        cpu.internalCycle(); // set PC
+        return 20;
     }
     return 8;
 }
@@ -1049,15 +1088,17 @@ uint32_t op_D8(CPU& cpu) {
 uint32_t op_D9(CPU& cpu) {
     cpu.regs().PC = stackPop(cpu);
     cpu.setIME(true);
+    cpu.internalCycle(); // set PC
     return 16;
 }
 
 // 0xDA JP C,n16 - 16T taken / 12T not taken
 uint32_t op_DA(CPU& cpu) {
     uint16_t addr = cpu.fetch16();
-    if (cpu.regs().flagC()) { 
-        cpu.regs().PC = addr; 
-        return 16; 
+    if (cpu.regs().flagC()) {
+        cpu.regs().PC = addr;
+        cpu.internalCycle();
+        return 16;
     }
     return 12;
 }
@@ -1068,10 +1109,11 @@ uint32_t op_DB(CPU&) { return 4; }
 // 0xDC CALL C,n16 - 24T taken / 12T not taken
 uint32_t op_DC(CPU& cpu) {
     uint16_t addr = cpu.fetch16();
-    if (cpu.regs().flagC()) { 
-        stackPush(cpu, cpu.regs().PC); 
-        cpu.regs().PC = addr; 
-        return 24; 
+    if (cpu.regs().flagC()) {
+        cpu.internalCycle();
+        stackPush(cpu, cpu.regs().PC);
+        cpu.regs().PC = addr;
+        return 24;
     }
     return 12;
 }
@@ -1086,10 +1128,11 @@ uint32_t op_DE(CPU& cpu) {
 }
 
 // 0xDF RST $18 - 16T
-uint32_t op_DF(CPU& cpu) { 
-    stackPush(cpu, cpu.regs().PC); 
-    cpu.regs().PC = 0x0018; 
-    return 16; 
+uint32_t op_DF(CPU& cpu) {
+    cpu.internalCycle();
+    stackPush(cpu, cpu.regs().PC);
+    cpu.regs().PC = 0x0018;
+    return 16;
 }
 
 // 0xE0 LDH (n8),A - 12T  (write A to 0xFF00+n8)
@@ -1118,9 +1161,10 @@ uint32_t op_E3(CPU&) { return 4; }
 uint32_t op_E4(CPU&) { return 4; }
 
 // 0xE5 PUSH HL - 16T
-uint32_t op_E5(CPU& cpu) { 
-    stackPush(cpu, cpu.regs().getHL()); 
-    return 16; 
+uint32_t op_E5(CPU& cpu) {
+    cpu.internalCycle();
+    stackPush(cpu, cpu.regs().getHL());
+    return 16;
 }
 
 // 0xE6 AND A,n8 - 8T
@@ -1130,10 +1174,11 @@ uint32_t op_E6(CPU& cpu) {
 }
 
 // 0xE7 RST $20 - 16T
-uint32_t op_E7(CPU& cpu) { 
-    stackPush(cpu, cpu.regs().PC); 
-    cpu.regs().PC = 0x0020; 
-    return 16; 
+uint32_t op_E7(CPU& cpu) {
+    cpu.internalCycle();
+    stackPush(cpu, cpu.regs().PC);
+    cpu.regs().PC = 0x0020;
+    return 16;
 }
 
 // 0xE8 ADD SP,e8 - 16T
@@ -1148,6 +1193,8 @@ uint32_t op_E8(CPU& cpu) {
     cpu.regs().setFlagH(((sp & 0x0F) + (ue & 0x0F)) > 0x0F);
     cpu.regs().setFlagC(((sp & 0xFF) + ue) > 0xFF);
     cpu.regs().SP = static_cast<uint16_t>(r);
+    cpu.internalCycle(); // 2 internal M-cycles
+    cpu.internalCycle();
     return 16;
 }
 
@@ -1179,10 +1226,11 @@ uint32_t op_EE(CPU& cpu) {
 }
 
 // 0xEF RST $28 - 16T
-uint32_t op_EF(CPU& cpu) { 
-    stackPush(cpu, cpu.regs().PC); 
-    cpu.regs().PC = 0x0028; 
-    return 16; 
+uint32_t op_EF(CPU& cpu) {
+    cpu.internalCycle();
+    stackPush(cpu, cpu.regs().PC);
+    cpu.regs().PC = 0x0028;
+    return 16;
 }
 
 // 0xF0 LDH A,(n8) - 12T  (read from 0xFF00+n8 into A)
@@ -1215,9 +1263,10 @@ uint32_t op_F3(CPU& cpu) {
 uint32_t op_F4(CPU&) { return 4; }
 
 // 0xF5 PUSH AF - 16T
-uint32_t op_F5(CPU& cpu) { 
-    stackPush(cpu, cpu.regs().getAF()); 
-    return 16; 
+uint32_t op_F5(CPU& cpu) {
+    cpu.internalCycle();
+    stackPush(cpu, cpu.regs().getAF());
+    return 16;
 }
 
 // 0xF6 OR A,n8 - 8T
@@ -1227,10 +1276,11 @@ uint32_t op_F6(CPU& cpu) {
 }
 
 // 0xF7 RST $30 - 16T
-uint32_t op_F7(CPU& cpu) { 
-    stackPush(cpu, cpu.regs().PC); 
-    cpu.regs().PC = 0x0030; 
-    return 16; 
+uint32_t op_F7(CPU& cpu) {
+    cpu.internalCycle();
+    stackPush(cpu, cpu.regs().PC);
+    cpu.regs().PC = 0x0030;
+    return 16;
 }
 
 // 0xF8 LD HL,SP+e8 - 12T
@@ -1245,13 +1295,15 @@ uint32_t op_F8(CPU& cpu) {
     cpu.regs().setFlagH(((sp & 0x0F) + (ue & 0x0F)) > 0x0F);
     cpu.regs().setFlagC(((sp & 0xFF) + ue) > 0xFF);
     cpu.regs().setHL(static_cast<uint16_t>(r));
+    cpu.internalCycle();
     return 12;
 }
 
 // 0xF9 LD SP,HL - 8T
-uint32_t op_F9(CPU& cpu) { 
-    cpu.regs().SP = cpu.regs().getHL(); 
-    return 8; 
+uint32_t op_F9(CPU& cpu) {
+    cpu.regs().SP = cpu.regs().getHL();
+    cpu.internalCycle();
+    return 8;
 }
 
 // 0xFA LD A,(n16) - 16T
@@ -1280,10 +1332,11 @@ uint32_t op_FE(CPU& cpu) {
 }
 
 // 0xFF RST $38 - 16T
-uint32_t op_FF(CPU& cpu) { 
-    stackPush(cpu, cpu.regs().PC); 
-    cpu.regs().PC = 0x0038; 
-    return 16; 
+uint32_t op_FF(CPU& cpu) {
+    cpu.internalCycle();
+    stackPush(cpu, cpu.regs().PC);
+    cpu.regs().PC = 0x0038;
+    return 16;
 }
 
 }

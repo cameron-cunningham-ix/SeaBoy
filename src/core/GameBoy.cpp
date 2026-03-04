@@ -15,6 +15,9 @@ namespace SeaBoy
         // Wire Timer into MMU so 0xFF04–0xFF07 route through it.
         m_mmu.setTimer(&m_timer);
 
+        // M-cycle callback: tick subsystems after every bus access / internal cycle.
+        m_mmu.setCycleCallback(&GameBoy::onBusCycle, this);
+
         m_cpu.reset();
         m_timer.reset();
         std::memset(m_frameBuffer, 0, sizeof(m_frameBuffer));
@@ -49,13 +52,18 @@ namespace SeaBoy
 
     uint32_t GameBoy::tick()
     {
-        uint32_t cycles = m_cpu.step();
-
-        m_timer.tick(cycles);
-        // TODO: ppu.tick(cycles);
-        // TODO: apu.tick(cycles);
-
-        return cycles;
+        // Subsystems (timer, future PPU/APU) are ticked at M-cycle granularity
+        // via the onBusCycle callback during cpu.step(), not after.
+        return m_cpu.step();
     }
 
-} // namespace SeaBoy
+    void GameBoy::onBusCycle(void* ctx, uint32_t tCycles)
+    {
+        auto* gb = static_cast<GameBoy*>(ctx);
+        gb->m_timer.tick(tCycles);
+        gb->m_mmu.advanceScanline(tCycles); // stub LY counter (replaced by real PPU later)
+        // future: gb->m_ppu.tick(tCycles);
+        // future: gb->m_apu.tick(tCycles);
+    }
+
+}

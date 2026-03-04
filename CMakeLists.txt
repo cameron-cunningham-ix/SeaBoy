@@ -90,8 +90,12 @@ add_executable(SeaBoy
   src/core/MMU.cpp
   src/core/CPU.cpp
   src/core/GameBoy.cpp
+  src/core/Timer.cpp
   src/core/opcodes/Opcodes.cpp
   src/core/opcodes/OpcodesCB.cpp
+  src/cartridge/Cartridge.cpp
+  src/cartridge/MBC0.cpp
+  src/cartridge/MBC1.cpp
 )
 
 target_include_directories(SeaBoy PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
@@ -145,8 +149,12 @@ add_executable(sm83_runner
   tests/sm83_runner.cpp
   src/core/MMU.cpp
   src/core/CPU.cpp
+  src/core/Timer.cpp
   src/core/opcodes/Opcodes.cpp
   src/core/opcodes/OpcodesCB.cpp
+  src/cartridge/Cartridge.cpp
+  src/cartridge/MBC0.cpp
+  src/cartridge/MBC1.cpp
 )
 
 target_include_directories(sm83_runner PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
@@ -176,8 +184,12 @@ add_executable(blargg_runner
   src/core/MMU.cpp
   src/core/CPU.cpp
   src/core/GameBoy.cpp
+  src/core/Timer.cpp
   src/core/opcodes/Opcodes.cpp
   src/core/opcodes/OpcodesCB.cpp
+  src/cartridge/Cartridge.cpp
+  src/cartridge/MBC0.cpp
+  src/cartridge/MBC1.cpp
 )
 
 target_include_directories(blargg_runner PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

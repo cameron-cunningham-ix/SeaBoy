@@ -19,6 +19,7 @@ namespace SeaBoy
     void MMU::reset()
     {
         // Cartridge is not reset here - it is replaced wholesale by loadROM().
+        std::memset(m_vram, 0x00, sizeof(m_vram));
         std::memset(m_wram, 0x00, sizeof(m_wram));
         std::memset(m_hram, 0x00, sizeof(m_hram));
         m_ifReg = 0xE1; // PanDocs Power Up Sequence
@@ -27,6 +28,9 @@ namespace SeaBoy
         m_sb = 0;
         m_sc = 0;
         m_serialOutput.clear();
+
+        m_scanlineCycles = 0;
+        m_ly = 0;
     }
 
     void MMU::loadROM(const uint8_t* data, size_t size)
@@ -43,45 +47,50 @@ namespace SeaBoy
     }
 
     // PanDocs.2 - Memory Map routing
-    uint8_t MMU::read8(uint16_t addr) const
+    // Each read8/write8 = 1 M-cycle = 4 T-cycles on the bus.
+    uint8_t MMU::read8(uint16_t addr)
     {
         if (m_testRam)
             return m_testRam[addr];
 
+        uint8_t val = 0xFFu; // Open bus default
+
         // ROM (bank 0 + switchable bank) and external RAM - delegated to Cartridge
         if (addr <= ADDR_ROM_END)
-            return m_cart ? m_cart->read(addr) : 0xFFu;
-
-        // 0xA000–0xBFFF: external RAM (cartridge)
-        if (addr >= ADDR_ERAM_BASE && addr <= ADDR_ERAM_END)
-            return m_cart ? m_cart->read(addr) : 0xFFu;
-
-        if (addr >= ADDR_WRAM_BASE && addr <= ADDR_WRAM_END)
-            return m_wram[addr - ADDR_WRAM_BASE];
-
+            val = m_cart ? m_cart->read(addr) : 0xFFu;
+        // 0x8000–0x9FFF: VRAM (stub until PPU)
+        else if (addr >= 0x8000u && addr <= 0x9FFFu)
+            val = m_vram[addr - 0x8000u];
+        else if (addr >= ADDR_ERAM_BASE && addr <= ADDR_ERAM_END)
+            val = m_cart ? m_cart->read(addr) : 0xFFu;
+        else if (addr >= ADDR_WRAM_BASE && addr <= ADDR_WRAM_END)
+            val = m_wram[addr - ADDR_WRAM_BASE];
         // I/O registers (0xFF00–0xFF7F)
-        if (addr == ADDR_IF)  return m_ifReg | 0xE0u; // upper 3 bits always 1
-        if (addr == 0xFF01u)  return m_sb;
-        if (addr == 0xFF02u)  return m_sc | 0x7Eu;    // unused bits read as 1
-
+        else if (addr == ADDR_IF)
+            val = m_ifReg | 0xE0u; // upper 3 bits always 1
+        else if (addr == 0xFF01u)
+            val = m_sb;
+        else if (addr == 0xFF02u)
+            val = m_sc | 0x7Eu;    // unused bits read as 1
         // Timer registers - PanDocs §Timer and Divider Registers
-        if (addr >= ADDR_DIV && addr <= ADDR_TAC)
-            return m_timer ? m_timer->read(addr) : 0xFFu;
-
-        // Minimal LCD stubs so Blargg ROMs don't spin waiting for VBlank
+        else if (addr >= ADDR_DIV && addr <= ADDR_TAC)
+            val = m_timer ? m_timer->read(addr) : 0xFFu;
+        // Minimal LCD stubs - replaced by real PPU later
         // PanDocs.4.4 LCDC, STAT, LY
-        if (addr == 0xFF40u)  return 0x91u; // LCDC: LCD on, BG enabled
-        if (addr == 0xFF41u)  return 0x01u; // STAT: mode 1 (VBlank) - never blocks
-        if (addr == 0xFF44u)  return 0x90u; // LY = 144 (first VBlank line)
+        else if (addr == 0xFF40u)
+            val = 0x91u; // LCDC: LCD on, BG enabled
+        else if (addr == 0xFF41u)
+            val = (m_ly >= 144) ? 0x01u : 0x00u; // mode 1 (VBlank) or mode 0 (HBlank)
+        else if (addr == 0xFF44u)
+            val = m_ly; // cycling scanline counter
+        else if (addr >= ADDR_HRAM_BASE && addr <= ADDR_HRAM_END)
+            val = m_hram[addr - ADDR_HRAM_BASE];
+        else if (addr == ADDR_IE)
+            val = m_ie;
 
-        if (addr >= ADDR_HRAM_BASE && addr <= ADDR_HRAM_END)
-            return m_hram[addr - ADDR_HRAM_BASE];
-
-        if (addr == ADDR_IE)
-            return m_ie;
-
-        // Open bus - unmapped regions return 0xFF
-        return 0xFFu;
+        // Tick subsystems after each bus access (4 T-cycles per M-cycle)
+        if (m_cycleFn) m_cycleFn(m_cycleCtx, 4);
+        return val;
     }
 
     void MMU::write8(uint16_t addr, uint8_t val)
@@ -94,65 +103,43 @@ namespace SeaBoy
 
         // ROM area: MBC register writes (bank switching etc.) - delegated to Cartridge
         if (addr <= ADDR_ROM_END)
-        {
-            if (m_cart) m_cart->write(addr, val);
-            return;
-        }
-
+            { if (m_cart) m_cart->write(addr, val); }
+        // 0x8000–0x9FFF: VRAM (stub until PPU)
+        else if (addr >= 0x8000u && addr <= 0x9FFFu)
+            m_vram[addr - 0x8000u] = val;
         // 0xA000–0xBFFF: external RAM writes - delegated to Cartridge
-        if (addr >= ADDR_ERAM_BASE && addr <= ADDR_ERAM_END)
-        {
-            if (m_cart) m_cart->write(addr, val);
-            return;
-        }
-
-        if (addr >= ADDR_WRAM_BASE && addr <= ADDR_WRAM_END)
-        {
+        else if (addr >= ADDR_ERAM_BASE && addr <= ADDR_ERAM_END)
+            { if (m_cart) m_cart->write(addr, val); }
+        else if (addr >= ADDR_WRAM_BASE && addr <= ADDR_WRAM_END)
             m_wram[addr - ADDR_WRAM_BASE] = val;
-            return;
-        }
-
-        if (addr == ADDR_IF)
-        {
+        else if (addr == ADDR_IF)
             m_ifReg = val & 0x1Fu; // only lower 5 bits are writable
-            return;
-        }
-
         // Timer registers - PanDocs.8 Timer and Divider Registers
-        if (addr >= ADDR_DIV && addr <= ADDR_TAC)
-        {
-            if (m_timer) m_timer->write(addr, val);
-            return;
-        }
-
+        else if (addr >= ADDR_DIV && addr <= ADDR_TAC)
+            { if (m_timer) m_timer->write(addr, val); }
         // Serial port – PanDocs.7 Serial Data Transfer
-        if (addr == 0xFF01u) { m_sb = val; return; }
-        if (addr == 0xFF02u)
+        else if (addr == 0xFF01u)
+            m_sb = val;
+        else if (addr == 0xFF02u)
         {
             m_sc = val;
             if (val & 0x80u) // Transfer start (internal clock)
             {
                 m_serialOutput += static_cast<char>(m_sb);
                 m_sc &= ~0x80u; // Clear start bit – transfer completes "instantly"
-                // TODO: set IF bit 3 (serial interrupt) if needed
             }
-            return;
         }
-
-        if (addr >= ADDR_HRAM_BASE && addr <= ADDR_HRAM_END)
-        {
+        else if (addr >= ADDR_HRAM_BASE && addr <= ADDR_HRAM_END)
             m_hram[addr - ADDR_HRAM_BASE] = val;
-            return;
-        }
-        if (addr == ADDR_IE)
-        {
+        else if (addr == ADDR_IE)
             m_ie = val;
-            return;
-        }
-        // Writes to unmapped regions are silently ignored
+        // else: writes to unmapped regions are silently ignored
+
+        // Tick subsystems after each bus access (4 T-cycles per M-cycle)
+        if (m_cycleFn) m_cycleFn(m_cycleCtx, 4);
     }
 
-    uint16_t MMU::read16(uint16_t addr) const
+    uint16_t MMU::read16(uint16_t addr)
     {
         // Little-endian: low byte at addr, high byte at addr+1
         uint8_t lo = read8(addr);
@@ -169,21 +156,15 @@ namespace SeaBoy
 
     uint8_t MMU::readIF() const
     {
-        // In test mode 0xFF0F is just program/data RAM; keep IF in m_ifReg so that
-        // instruction bytes placed there don't cause spurious interrupt dispatch.
-        if (m_testRam)
-            return m_ifReg | 0xE0u;
-        return read8(ADDR_IF);
+        // Direct register access - no bus cycle. Used by CPU interrupt logic
+        // and Timer interrupt posting, neither of which is a bus access.
+        return m_ifReg | 0xE0u;
     }
 
     void MMU::writeIF(uint8_t v)
     {
-        if (m_testRam)
-        {
-            m_ifReg = v & 0x1Fu;
-            return;
-        }
-        write8(ADDR_IF, v);
+        // Direct register access - no bus cycle.
+        m_ifReg = v & 0x1Fu;
     }
 
     uint8_t MMU::readIE() const
@@ -201,6 +182,49 @@ namespace SeaBoy
             return;
         }
         m_ie = v;
+    }
+
+    uint8_t MMU::peek8(uint16_t addr) const
+    {
+        // Same routing as read8 but no cycle callback and const-safe.
+        if (m_testRam)
+            return m_testRam[addr];
+
+        if (addr <= ADDR_ROM_END)
+            return m_cart ? m_cart->read(addr) : 0xFFu;
+        if (addr >= 0x8000u && addr <= 0x9FFFu)
+            return m_vram[addr - 0x8000u];
+        if (addr >= ADDR_ERAM_BASE && addr <= ADDR_ERAM_END)
+            return m_cart ? m_cart->read(addr) : 0xFFu;
+        if (addr >= ADDR_WRAM_BASE && addr <= ADDR_WRAM_END)
+            return m_wram[addr - ADDR_WRAM_BASE];
+        if (addr == ADDR_IF)
+            return m_ifReg | 0xE0u;
+        if (addr == 0xFF01u)
+            return m_sb;
+        if (addr == 0xFF02u)
+            return m_sc | 0x7Eu;
+        if (addr >= ADDR_HRAM_BASE && addr <= ADDR_HRAM_END)
+            return m_hram[addr - ADDR_HRAM_BASE];
+        if (addr == ADDR_IE)
+            return m_ie;
+        return 0xFFu;
+    }
+
+    void MMU::advanceScanline(uint32_t tCycles)
+    {
+        m_scanlineCycles += tCycles;
+        while (m_scanlineCycles >= 456)
+        {
+            m_scanlineCycles -= 456;
+            uint8_t prev = m_ly;
+            m_ly = (m_ly + 1) % 154;
+
+            // VBlank interrupt: set IF bit 0 when entering line 144
+            // PanDocs.9 INT $40 VBlank interrupt
+            if (prev == 143 && m_ly == 144)
+                m_ifReg |= 0x01u;
+        }
     }
 
 }

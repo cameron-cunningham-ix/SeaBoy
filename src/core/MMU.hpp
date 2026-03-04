@@ -53,15 +53,15 @@ namespace SeaBoy
         void loadROM(const uint8_t* data, size_t size);
 
         // Core bus interface
-        // Each call conceptually represents a 4 T-cycle bus access,
-        // cycle accounting is performed by the CPU, not here.
-        uint8_t read8(uint16_t addr) const;
+        // Each call represents a 4 T-cycle bus access.
+        // If a cycle callback is set, it fires after each access.
+        uint8_t read8(uint16_t addr);
         void write8(uint16_t addr, uint8_t val);
 
         // 16-bit helpers - always little-endian (low byte at addr, high at addr+1)
-        // Implemented via two read8/write8 calls so future access gating applies.
+        // Implemented via two read8/write8 calls; each triggers a cycle callback.
         // PanDocs - LD (nn),SP and PUSH/POP byte order
-        uint16_t read16(uint16_t addr) const;
+        uint16_t read16(uint16_t addr);
         void write16(uint16_t addr, uint16_t val);
 
         // Interrupt register helpers to avoid scattering 0xFF0F / 0xFFFF
@@ -70,6 +70,19 @@ namespace SeaBoy
         uint8_t readIE() const;
         void writeIE(uint8_t v);
 
+        // M-cycle callback - set by GameBoy to tick subsystems (timer, PPU, etc.)
+        // after every 4 T-cycle bus access or internal cycle.
+        using CycleCallback = void(*)(void* ctx, uint32_t tCycles);
+        void setCycleCallback(CycleCallback fn, void* ctx) { m_cycleFn = fn; m_cycleCtx = ctx; }
+
+        // Tick subsystems without a bus access (for CPU internal M-cycles).
+        void tickCycle() { if (m_cycleFn) m_cycleFn(m_cycleCtx, 4); }
+
+        // Advance stub scanline counter by tCycles T-cycles.
+        // PanDocs.4.5 - 456 T-cycles per scanline, 154 scanlines per frame.
+        // Replaced by real PPU later.
+        void advanceScanline(uint32_t tCycles);
+
         // Serial port output (captured from writes to SB/SC, 0xFF01/02).
         // Blargg test ROMs write results here. Safe to call at any time.
         const std::string& serialOutput() const { return m_serialOutput; }
@@ -77,6 +90,10 @@ namespace SeaBoy
         // Timer link - set by GameBoy after constructing both MMU and Timer.
         // MMU routes 0xFF04–0xFF07 to the Timer; null until wired.
         void setTimer(Timer* t) { m_timer = t; }
+
+        // Debug: read a byte without triggering the cycle callback.
+        // Used by blargg_runner to inspect memory without side effects.
+        uint8_t peek8(uint16_t addr) const;
 
         // Test mode: flat 64 KB overlay, bypasses all normal routing.
         // Used by sm83_runner for single-step CPU tests.
@@ -92,6 +109,7 @@ namespace SeaBoy
         // Timer - null until setTimer() is called by GameBoy. Not owned.
         Timer* m_timer = nullptr;
 
+        uint8_t m_vram[0x2000]{};  // 8 KB VRAM (0x8000–0x9FFF) - stub until PPU
         uint8_t m_wram[0x2000]{};  // 8 KB WRAM
         uint8_t m_hram[0x7F]{};    // 127 bytes HRAM (0xFF80–0xFFFE)
         uint8_t m_ifReg = 0xE1;    // IF - power-on value per PanDocs §Power_Up_Sequence
@@ -104,6 +122,15 @@ namespace SeaBoy
 
         // Non-null only when test mode is active (heap-allocated to avoid 64 KB stack cost)
         std::unique_ptr<uint8_t[]> m_testRam;
+
+        // M-cycle callback (null until setCycleCallback is called)
+        CycleCallback m_cycleFn  = nullptr;
+        void*         m_cycleCtx = nullptr;
+
+        // Stub scanline counter - cycles LY through 0–153 so ROMs don't spin
+        // on two-phase VBlank waits. Replaced by real PPU later.
+        uint32_t m_scanlineCycles = 0; // T-cycles within current scanline
+        uint8_t  m_ly            = 0;  // current scanline (0–153)
     };
 
 }
