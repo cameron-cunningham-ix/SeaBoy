@@ -56,14 +56,14 @@ namespace SeaBoy
         // ROM (bank 0 + switchable bank) and external RAM - delegated to Cartridge
         if (addr <= ADDR_ROM_END)
             val = m_cart ? m_cart->read(addr) : 0xFFu;
-        // 0x8000–0x9FFF: VRAM — routed to PPU
+        // 0x8000–0x9FFF: VRAM - routed to PPU
         else if (addr >= 0x8000u && addr <= 0x9FFFu)
             val = m_ppu ? m_ppu->readVRAM(addr) : 0xFFu;
         else if (addr >= ADDR_ERAM_BASE && addr <= ADDR_ERAM_END)
             val = m_cart ? m_cart->read(addr) : 0xFFu;
         else if (addr >= ADDR_WRAM_BASE && addr <= ADDR_WRAM_END)
             val = m_wram[addr - ADDR_WRAM_BASE];
-        // 0xFE00–0xFE9F: OAM — routed to PPU
+        // 0xFE00–0xFE9F: OAM - routed to PPU
         else if (addr >= 0xFE00u && addr <= 0xFE9Fu)
             val = m_ppu ? m_ppu->readOAM(addr) : 0xFFu;
         // I/O registers (0xFF00–0xFF7F)
@@ -76,7 +76,7 @@ namespace SeaBoy
         // Timer registers - PanDocs.8 Timer and Divider Registers
         else if (addr >= ADDR_DIV && addr <= ADDR_TAC)
             val = m_timer ? m_timer->read(addr) : 0xFFu;
-        // LCD registers — routed to PPU (PanDocs.4 LCD I/O Registers)
+        // LCD registers - routed to PPU (PanDocs.4 LCD I/O Registers)
         else if (addr >= 0xFF40u && addr <= 0xFF4Bu)
             val = m_ppu ? m_ppu->read(addr) : 0xFFu;
         else if (addr >= ADDR_HRAM_BASE && addr <= ADDR_HRAM_END)
@@ -100,7 +100,7 @@ namespace SeaBoy
         // ROM area: MBC register writes (bank switching etc.) - delegated to Cartridge
         if (addr <= ADDR_ROM_END)
             { if (m_cart) m_cart->write(addr, val); }
-        // 0x8000–0x9FFF: VRAM — routed to PPU
+        // 0x8000–0x9FFF: VRAM - routed to PPU
         else if (addr >= 0x8000u && addr <= 0x9FFFu)
             { if (m_ppu) m_ppu->writeVRAM(addr, val); }
         // 0xA000–0xBFFF: external RAM writes - delegated to Cartridge
@@ -108,7 +108,7 @@ namespace SeaBoy
             { if (m_cart) m_cart->write(addr, val); }
         else if (addr >= ADDR_WRAM_BASE && addr <= ADDR_WRAM_END)
             m_wram[addr - ADDR_WRAM_BASE] = val;
-        // 0xFE00–0xFE9F: OAM — routed to PPU
+        // 0xFE00–0xFE9F: OAM - routed to PPU
         else if (addr >= 0xFE00u && addr <= 0xFE9Fu)
             { if (m_ppu) m_ppu->writeOAM(addr, val); }
         else if (addr == ADDR_IF)
@@ -116,7 +116,7 @@ namespace SeaBoy
         // Timer registers - PanDocs.8 Timer and Divider Registers
         else if (addr >= ADDR_DIV && addr <= ADDR_TAC)
             { if (m_timer) m_timer->write(addr, val); }
-        // LCD registers — routed to PPU (PanDocs.4 LCD I/O Registers)
+        // LCD registers - routed to PPU (PanDocs.4 LCD I/O Registers)
         else if (addr >= 0xFF40u && addr <= 0xFF4Bu)
             { if (m_ppu) m_ppu->write(addr, val); }
         // Serial port – PanDocs.7 Serial Data Transfer

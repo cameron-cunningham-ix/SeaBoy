@@ -2,13 +2,13 @@
 
 #include <cstdint>
 
-// PanDocs.4.3 OAM Scan — Mode 2
+// PanDocs.4.3 OAM Scan - Mode 2
 // Scans the 40 OAM entries and collects up to 10 sprites visible on the
 // current scanline. Results are passed to the pixel renderer during Mode 3.
 //
 // OAM entry layout (4 bytes each, 40 entries at 0xFE00–0xFE9F):
-//   Byte 0: Y position — sprite top = Y - 16
-//   Byte 1: X position — sprite left = X - 8
+//   Byte 0: Y position - sprite top = Y - 16
+//   Byte 1: X position - sprite left = X - 8
 //   Byte 2: Tile index
 //   Byte 3: Attributes/flags
 

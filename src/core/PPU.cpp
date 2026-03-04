@@ -5,14 +5,14 @@
 
 namespace SeaBoy
 {
-    // Named constants for PPU timing — PanDocs.4.8 Rendering
+    // Named constants for PPU timing - PanDocs.4.8 Rendering
     constexpr uint32_t DOTS_PER_LINE    = 456;
     constexpr uint8_t  VISIBLE_LINES    = 144;
     constexpr uint8_t  TOTAL_LINES      = 154;
     constexpr uint32_t OAM_SCAN_DOTS    = 80;  // Mode 2 duration
     constexpr uint32_t DRAWING_DOTS_MIN = 172; // Mode 3 minimum duration
 
-    // LCD register addresses — PanDocs.4 LCD I/O Registers
+    // LCD register addresses - PanDocs.4 LCD I/O Registers
     constexpr uint16_t ADDR_LCDC = 0xFF40;
     constexpr uint16_t ADDR_STAT = 0xFF41;
     constexpr uint16_t ADDR_SCY  = 0xFF42;
@@ -48,7 +48,10 @@ namespace SeaBoy
         m_wy   = 0x00;
         m_wx   = 0x00;
 
-        m_statLine = false;
+        m_statLine  = false;
+        m_dmaActive = false;
+        m_dmaSource = 0;
+        m_dmaByte   = 0;
         m_palettes.reset();
 
         std::memset(m_vram,           0, sizeof(m_vram));
@@ -59,18 +62,33 @@ namespace SeaBoy
 
     void PPU::startOAMScan()
     {
-        // PanDocs.4.3 Mode 2 — scan OAM for up to 10 sprites on this line
+        // PanDocs.4.3 Mode 2 - scan OAM for up to 10 sprites on this line
         uint8_t spriteHeight = (m_lcdc & LCDC::OBJSize) ? 16 : 8;
         m_oamScan.scan(m_oam, m_ly, spriteHeight);
 
         // Variable Mode 3 length: base 172 + SCX fine-scroll penalty + 6 per sprite
-        // PanDocs.4.8 Rendering — Mode 3 Timing
+        // PanDocs.4.8 Rendering - Mode 3 Timing
         m_mode3Length = DRAWING_DOTS_MIN + (m_scx & 7u) + m_oamScan.count() * 6u;
     }
 
     void PPU::tick(uint32_t tCycles)
     {
-        // LCD disabled: stay in a blanked state — PanDocs.4.4 LCDC.7
+        // OAM DMA: 1 byte per M-cycle (4 T-cycles), 160 bytes total = 640 T-cycles
+        // DMA runs regardless of LCD state. - PanDocs.4.3.1 OAM DMA Transfer
+        if (m_dmaActive)
+        {
+            uint32_t steps = tCycles / 4;
+            while (steps-- > 0 && m_dmaByte < 160)
+            {
+                m_oam[m_dmaByte] = m_mmu.peek8(
+                    static_cast<uint16_t>(m_dmaSource + m_dmaByte));
+                ++m_dmaByte;
+            }
+            if (m_dmaByte >= 160)
+                m_dmaActive = false;
+        }
+
+        // LCD disabled: stay in a blanked state - PanDocs.4.4 LCDC.7
         if (!(m_lcdc & LCDC::LCDEnable))
             return;
 
@@ -83,14 +101,15 @@ namespace SeaBoy
             {
                 if (m_lineCycle == OAM_SCAN_DOTS)
                 {
-                    // Mode 2 → Mode 3 (Drawing)
+                    // Mode 2 -> Mode 3 (Drawing)
                     m_mode = PPUMode::Drawing;
                 }
                 else if (m_lineCycle == OAM_SCAN_DOTS + m_mode3Length)
                 {
-                    // Mode 3 → Mode 0 (HBlank)
+                    // Mode 3 -> Mode 0 (HBlank)
                     m_mode = PPUMode::HBlank;
                     renderBGLine();
+                    renderSpriteLine();
                     updateStatIRQ();
                 }
             }
@@ -112,11 +131,11 @@ namespace SeaBoy
                 }
                 else if (m_ly == VISIBLE_LINES)
                 {
-                    // Enter VBlank — PanDocs.9.1 INT $40 VBlank interrupt
+                    // Enter VBlank - PanDocs.9.1 INT $40 VBlank interrupt
                     m_mode = PPUMode::VBlank;
                     m_mmu.writeIF(m_mmu.readIF() | 0x01u); // set IF bit 0
                 }
-                // Lines 145–153 stay in VBlank mode (no transition needed)
+                // Lines 145-153 stay in VBlank mode (no transition needed)
 
                 updateStatIRQ();
             }
@@ -127,7 +146,7 @@ namespace SeaBoy
     {
         // PanDocs.4.3 BG/Window Rendering
 
-        // LCDC bit 0 = 0: BG disabled — fill line with color 0 (white on DMG)
+        // LCDC bit 0 = 0: BG disabled - fill line with color 0 (white on DMG)
         if (!(m_lcdc & LCDC::BGEnable))
         {
             uint32_t color0 = m_palettes.resolveBG(0);
@@ -139,7 +158,7 @@ namespace SeaBoy
             return;
         }
 
-        // BG tilemap base in VRAM — PanDocs.4.4 LCDC bit 3
+        // BG tilemap base in VRAM - PanDocs.4.4 LCDC bit 3
         // LCDC.3 = 0: 0x9800 (VRAM offset 0x1800)
         // LCDC.3 = 1: 0x9C00 (VRAM offset 0x1C00)
         uint16_t tileMapBase = (m_lcdc & LCDC::BGTileMap) ? 0x1C00u : 0x1800u;
@@ -157,16 +176,16 @@ namespace SeaBoy
             // Fetch tile index from tilemap
             uint8_t tileIndex = m_vram[tileMapBase + tileRow * 32u + tileCol];
 
-            // Tile data address in VRAM — PanDocs.4.4 LCDC bit 4
-            // LCDC.4 = 1: 0x8000 method — unsigned index 0–255, VRAM offset = index*16
-            // LCDC.4 = 0: 0x8800 method — signed index, base at VRAM 0x1000
+            // Tile data address in VRAM - PanDocs.4.4 LCDC bit 4
+            // LCDC.4 = 1: 0x8000 method - unsigned index 0-255, VRAM offset = index*16
+            // LCDC.4 = 0: 0x8800 method - signed index, base at VRAM 0x1000
             uint16_t tileAddr;
             if (m_lcdc & LCDC::BGWindowTiles)
                 tileAddr = static_cast<uint16_t>(tileIndex * 16u);
             else
                 tileAddr = static_cast<uint16_t>(0x1000u + static_cast<int8_t>(tileIndex) * 16);
 
-            // Row within the tile (0–7)
+            // Row within the tile (0-7)
             uint8_t  pixelRow = mapY & 7u;
             uint16_t rowAddr  = static_cast<uint16_t>(tileAddr + pixelRow * 2u);
 
@@ -181,6 +200,96 @@ namespace SeaBoy
 
             m_lineBGColorIDs[x]             = colorID;
             m_frameBuffer[m_ly * 160 + x]   = m_palettes.resolveBG(colorID);
+        }
+    }
+
+    void PPU::renderSpriteLine()
+    {
+        // PanDocs.4 OAM / Sprites
+        if (!(m_lcdc & LCDC::OBJEnable))
+            return;
+
+        uint8_t spriteHeight = (m_lcdc & LCDC::OBJSize) ? 16u : 8u;
+        const SpriteEntry* sprites = m_oamScan.sprites();
+        uint8_t count = m_oamScan.count();
+
+        // Sort sprite indices for back-to-front rendering:
+        //   drawn first = lowest priority = highest X (rightmost);
+        //   equal X -> highest OAM index.
+        // This ensures the last-drawn sprite (lowest X / lowest OAM index) wins.
+        // PanDocs OAM - DMG sprite priority
+        uint8_t order[10];
+        for (uint8_t i = 0; i < count; ++i) order[i] = i;
+
+        for (uint8_t i = 1; i < count; ++i)
+        {
+            uint8_t k = order[i];
+            int     j = static_cast<int>(i) - 1;
+            while (j >= 0)
+            {
+                const SpriteEntry& a = sprites[order[j]];
+                const SpriteEntry& b = sprites[k];
+                // b drawn before a if b has higher X, or equal X and higher OAM index
+                bool kBeforeJ = (b.x > a.x) ||
+                                (b.x == a.x && b.oamIndex > a.oamIndex);
+                if (!kBeforeJ) break;
+                order[j + 1] = order[j];
+                --j;
+            }
+            order[j + 1] = k;
+        }
+
+        for (uint8_t si = 0; si < count; ++si)
+        {
+            const SpriteEntry& sp = sprites[order[si]];
+
+            // X=0 or X>=168 means the sprite is fully off-screen horizontally
+            if (sp.x == 0 || sp.x >= 168u)
+                continue;
+
+            // Row within the sprite tile (Y flip handled below)
+            int     spriteTop = static_cast<int>(sp.y) - 16;
+            uint8_t spriteRow = static_cast<uint8_t>(static_cast<int>(m_ly) - spriteTop);
+
+            bool yFlip      = (sp.attr & 0x40u) != 0;
+            bool xFlip      = (sp.attr & 0x20u) != 0;
+            bool bgPriority = (sp.attr & 0x80u) != 0; // OBJ behind BG color 1-3
+            uint8_t palNum  = (sp.attr & 0x10u) ? 1u : 0u;
+
+            if (yFlip)
+                spriteRow = static_cast<uint8_t>(spriteHeight - 1u - spriteRow);
+
+            // 8×16 mode: tile & 0xFE = top half, tile | 0x01 = bottom half
+            uint8_t tileIndex = sp.tile;
+            if (spriteHeight == 16u)
+            {
+                tileIndex &= 0xFEu;
+                if (spriteRow >= 8u) { tileIndex |= 0x01u; spriteRow -= 8u; }
+            }
+
+            // Sprite tile data always uses 0x8000 base (unsigned index)
+            uint16_t rowAddr = static_cast<uint16_t>(tileIndex * 16u + spriteRow * 2u);
+            uint8_t  lo      = m_vram[rowAddr];
+            uint8_t  hi      = m_vram[rowAddr + 1u];
+
+            for (int px = 0; px < 8; ++px)
+            {
+                int screenX = static_cast<int>(sp.x) - 8 + px;
+                if (screenX < 0 || screenX >= 160) continue;
+
+                uint8_t bit     = xFlip ? static_cast<uint8_t>(px)
+                                        : static_cast<uint8_t>(7 - px);
+                uint8_t colorID = static_cast<uint8_t>(
+                    ((hi >> bit) & 1u) << 1u | ((lo >> bit) & 1u));
+
+                if (colorID == 0) continue; // transparent
+
+                // OBJ-behind-BG: attr.7=1 -> OBJ is behind BG color IDs 1-3
+                if (bgPriority && m_lineBGColorIDs[screenX] != 0) continue;
+
+                m_frameBuffer[m_ly * 160 + screenX] =
+                    m_palettes.resolveOBJ(colorID, palNum);
+            }
         }
     }
 
@@ -205,7 +314,7 @@ namespace SeaBoy
 
     uint8_t PPU::readVRAM(uint16_t addr) const
     {
-        // VRAM locked during Mode 3 (Drawing) — PanDocs.4.3 LCD Access Timing
+        // VRAM locked during Mode 3 (Drawing) - PanDocs.4.3 LCD Access Timing
         if ((m_lcdc & LCDC::LCDEnable) && m_mode == PPUMode::Drawing)
             return 0xFF;
         return m_vram[addr & 0x1FFFu];
@@ -292,7 +401,7 @@ namespace SeaBoy
             break;
         }
         case ADDR_STAT:
-            // Only bits 3–6 are writable; bits 0–2 and 7 are read-only
+            // Only bits 3-6 are writable; bits 0-2 and 7 are read-only
             m_stat = (m_stat & STAT::ModeBits) | (val & 0x78);
             updateStatIRQ(); // new interrupt enables may change the STAT line
             break;
@@ -304,8 +413,12 @@ namespace SeaBoy
             updateStatIRQ(); // LYC change may trigger/clear LYC match
             break;
         case ADDR_DMA:
-            m_dma = val;
-            // DMA transfer logic deferred to Phase 3
+            // PanDocs4.3.1 OAM DMA Transfer - initiates a 160-byte copy from
+            // (val << 8) into OAM, 1 byte per M-cycle (640 T-cycles total)
+            m_dma       = val;
+            m_dmaActive = true;
+            m_dmaSource = static_cast<uint16_t>(val << 8);
+            m_dmaByte   = 0;
             break;
         case ADDR_BGP:  m_palettes.writeBGP(val); break;
         case ADDR_OBP0: m_palettes.writeOBP0(val); break;
