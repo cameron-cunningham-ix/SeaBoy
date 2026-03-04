@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+#include "OAMScan.hpp"
 #include "Palettes.hpp"
 
 // PanDocs.4 LCD - Pixel Processing Unit
@@ -80,24 +81,57 @@ namespace SeaBoy
         uint8_t read(uint16_t addr) const;
         void    write(uint16_t addr, uint8_t val);
 
+        // VRAM I/O — called by MMU for 0x8000–0x9FFF
+        // Enforces Mode 3 access gating (returns 0xFF / ignores write during Drawing).
+        uint8_t readVRAM(uint16_t addr) const;
+        void    writeVRAM(uint16_t addr, uint8_t val);
+
+        // OAM I/O — called by MMU for 0xFE00–0xFE9F
+        // Enforces Mode 2/3 access gating (returns 0xFF / ignores write during OAMScan/Drawing).
+        uint8_t readOAM(uint16_t addr) const;
+        void    writeOAM(uint16_t addr, uint8_t val);
+
+        // Ungated reads — used by peek8 (debugger) and DMA.
+        uint8_t peekVRAM(uint16_t addr) const { return m_vram[addr & 0x1FFFu]; }
+        uint8_t peekOAM(uint16_t addr)  const { return m_oam[addr - 0xFE00u]; }
+
         // Framebuffer access — 160×144 RGBA8888 pixels
         const uint32_t* frameBuffer() const { return m_frameBuffer; }
 
-        // Palette access (for future)
+        // Palette access
         const Palettes& palettes() const { return m_palettes; }
 
     private:
         // STAT interrupt edge detection — PanDocs.9.1 INT 48 STAT interrupt
-        // The STAT interrupt fires on the rising edge of the combined STAT line.
         void updateStatIRQ();
 
-        MMU& m_mmu;
+        // Run OAMScan for the current line and compute variable Mode 3 length.
+        // Called whenever we enter Mode 2 (OAMScan).
+        void startOAMScan();
+
+        // Render BG tiles for m_ly into m_frameBuffer.
+        // Called at Mode 3 → Mode 0 (HBlank) transition. — PanDocs §15.3
+        void renderBGLine();
+
+        MMU&     m_mmu;
         Palettes m_palettes;
+        OAMScan  m_oamScan;
+
+        // VRAM (8 KB) and OAM (160 bytes) — owned by PPU — PanDocs.2 Memory Map
+        uint8_t m_vram[0x2000]{};
+        uint8_t m_oam[160]{};
 
         // Mode state machine
         PPUMode  m_mode      = PPUMode::OAMScan;
         uint32_t m_lineCycle = 0; // T-cycle within current scanline (0–455)
         uint8_t  m_ly        = 0; // current scanline (0–153)
+
+        // Variable Mode 3 length: 172 + SCX_fine_scroll + sprite_count*6
+        // PanDocs.4.8 Rendering — Mode 3 Timing
+        uint32_t m_mode3Length = 172;
+
+        // Per-line BG color IDs (0–3) for sprite-over-BG priority (Phase 3)
+        uint8_t m_lineBGColorIDs[160]{};
 
         // LCD registers
         uint8_t m_lcdc = 0x91; // PanDocs.22 Power Up Sequence: LCD on, BG enabled
@@ -112,7 +146,7 @@ namespace SeaBoy
         // STAT interrupt line — tracks previous combined state for edge detection
         bool m_statLine = false;
 
-        // Framebuffer — 160×144 RGBA8888 (blank until add rendering)
+        // Framebuffer — 160×144 RGBA8888
         uint32_t m_frameBuffer[160 * 144]{};
     };
 }

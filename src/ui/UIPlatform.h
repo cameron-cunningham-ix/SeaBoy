@@ -16,7 +16,7 @@ private:
     int windowWidth;
     int windowHeight;
     float mainScale;
-    float frameRate;
+    float frameRate = 59.7f; // GB native ~59.7 Hz
     int textureWidth;
     int textureHeight;
 
@@ -143,6 +143,7 @@ public:
        
 
         
+        SDL_UpdateTexture(texture, NULL, frameBuffer, textureWidth * sizeof(unsigned int));
         SDL_RenderTexture(renderer, texture, NULL, NULL);
        
 

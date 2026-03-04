@@ -12,9 +12,10 @@
 //
 // Address space:
 //   0x0000–0x7FFF  ROM (cartridge, bank-switched by MBC)
-//   0x8000–0x9FFF  VRAM (stub)
+//   0x8000–0x9FFF  VRAM (PPU-owned, routed to PPU::readVRAM/writeVRAM)
 //   0xA000–0xBFFF  External RAM (cartridge)
 //   0xC000–0xDFFF  WRAM (8 KB)
+//   0xFE00–0xFE9F  OAM (PPU-owned, routed to PPU::readOAM/writeOAM)
 //   0xFF0F         IF - Interrupt Flag
 //   0xFF80–0xFFFE  HRAM (127 bytes)
 //   0xFFFF         IE - Interrupt Enable
@@ -112,7 +113,6 @@ namespace SeaBoy
         // PPU - null until setPPU() is called by GameBoy. Not owned.
         PPU* m_ppu = nullptr;
 
-        uint8_t m_vram[0x2000]{};  // 8 KB VRAM (0x8000–0x9FFF) - stub until PPU
         uint8_t m_wram[0x2000]{};  // 8 KB WRAM
         uint8_t m_hram[0x7F]{};    // 127 bytes HRAM (0xFF80–0xFFFE)
         uint8_t m_ifReg = 0xE1;    // IF - power-on value per PanDocs.22 Power Up Sequence

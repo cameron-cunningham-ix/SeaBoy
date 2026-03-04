@@ -20,7 +20,7 @@ namespace SeaBoy
     void MMU::reset()
     {
         // Cartridge is not reset here - it is replaced wholesale by loadROM().
-        std::memset(m_vram, 0x00, sizeof(m_vram));
+        // VRAM and OAM are owned by PPU; cleared by PPU::reset().
         std::memset(m_wram, 0x00, sizeof(m_wram));
         std::memset(m_hram, 0x00, sizeof(m_hram));
         m_ifReg = 0xE1; // PanDocs Power Up Sequence
@@ -56,13 +56,16 @@ namespace SeaBoy
         // ROM (bank 0 + switchable bank) and external RAM - delegated to Cartridge
         if (addr <= ADDR_ROM_END)
             val = m_cart ? m_cart->read(addr) : 0xFFu;
-        // 0x8000–0x9FFF: VRAM (stub until PPU)
+        // 0x8000–0x9FFF: VRAM — routed to PPU
         else if (addr >= 0x8000u && addr <= 0x9FFFu)
-            val = m_vram[addr - 0x8000u];
+            val = m_ppu ? m_ppu->readVRAM(addr) : 0xFFu;
         else if (addr >= ADDR_ERAM_BASE && addr <= ADDR_ERAM_END)
             val = m_cart ? m_cart->read(addr) : 0xFFu;
         else if (addr >= ADDR_WRAM_BASE && addr <= ADDR_WRAM_END)
             val = m_wram[addr - ADDR_WRAM_BASE];
+        // 0xFE00–0xFE9F: OAM — routed to PPU
+        else if (addr >= 0xFE00u && addr <= 0xFE9Fu)
+            val = m_ppu ? m_ppu->readOAM(addr) : 0xFFu;
         // I/O registers (0xFF00–0xFF7F)
         else if (addr == ADDR_IF)
             val = m_ifReg | 0xE0u; // upper 3 bits always 1
@@ -97,14 +100,17 @@ namespace SeaBoy
         // ROM area: MBC register writes (bank switching etc.) - delegated to Cartridge
         if (addr <= ADDR_ROM_END)
             { if (m_cart) m_cart->write(addr, val); }
-        // 0x8000–0x9FFF: VRAM (stub until PPU)
+        // 0x8000–0x9FFF: VRAM — routed to PPU
         else if (addr >= 0x8000u && addr <= 0x9FFFu)
-            m_vram[addr - 0x8000u] = val;
+            { if (m_ppu) m_ppu->writeVRAM(addr, val); }
         // 0xA000–0xBFFF: external RAM writes - delegated to Cartridge
         else if (addr >= ADDR_ERAM_BASE && addr <= ADDR_ERAM_END)
             { if (m_cart) m_cart->write(addr, val); }
         else if (addr >= ADDR_WRAM_BASE && addr <= ADDR_WRAM_END)
             m_wram[addr - ADDR_WRAM_BASE] = val;
+        // 0xFE00–0xFE9F: OAM — routed to PPU
+        else if (addr >= 0xFE00u && addr <= 0xFE9Fu)
+            { if (m_ppu) m_ppu->writeOAM(addr, val); }
         else if (addr == ADDR_IF)
             m_ifReg = val & 0x1Fu; // only lower 5 bits are writable
         // Timer registers - PanDocs.8 Timer and Divider Registers
@@ -189,11 +195,13 @@ namespace SeaBoy
         if (addr <= ADDR_ROM_END)
             return m_cart ? m_cart->read(addr) : 0xFFu;
         if (addr >= 0x8000u && addr <= 0x9FFFu)
-            return m_vram[addr - 0x8000u];
+            return m_ppu ? m_ppu->peekVRAM(addr) : 0xFFu;
         if (addr >= ADDR_ERAM_BASE && addr <= ADDR_ERAM_END)
             return m_cart ? m_cart->read(addr) : 0xFFu;
         if (addr >= ADDR_WRAM_BASE && addr <= ADDR_WRAM_END)
             return m_wram[addr - ADDR_WRAM_BASE];
+        if (addr >= 0xFE00u && addr <= 0xFE9Fu)
+            return m_ppu ? m_ppu->peekOAM(addr) : 0xFFu;
         if (addr == ADDR_IF)
             return m_ifReg | 0xE0u;
         if (addr == 0xFF01u)
