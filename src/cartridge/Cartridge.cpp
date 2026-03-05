@@ -1,6 +1,7 @@
 #include "Cartridge.hpp"
 #include "MBC0.hpp"
 #include "MBC1.hpp"
+#include "MBC2.hpp"
 
 #include <cstdio>
 
@@ -27,6 +28,10 @@ namespace SeaBoy
             case 0x02:                          // MBC1+RAM
             case 0x03:                          // MBC1+RAM+BATTERY
                 return std::make_unique<MBC1>(std::move(rom));
+
+            case 0x05:                          // MBC2
+            case 0x06:                          // MBC2+BATTERY
+                return std::make_unique<MBC2>(std::move(rom));
 
             default:
                 std::fprintf(stderr,
