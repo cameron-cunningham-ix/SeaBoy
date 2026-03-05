@@ -86,9 +86,10 @@ namespace SeaBoy
         bool    m_spriteDone[10]{};       // which OAMScan sprites have been fetched
 
         // --- Pixel output ---
-        uint8_t m_pixelX     = 0;   // current output column (0-159)
-        uint8_t m_discard    = 0;   // pixels left to discard for SCX fine scroll
-        bool    m_drewWindow = false;
+        uint8_t m_pixelX       = 0;   // current output column (0-159)
+        uint8_t m_discard      = 0;   // pixels left to discard for SCX fine scroll
+        uint8_t m_initialDelay = 0;   // dots to suppress output at Mode 3 start - PanDocs.4.8 Rendering
+        bool    m_drewWindow   = false;
 
         // --- External references (set by init) ---
         const uint8_t*     m_vram        = nullptr;

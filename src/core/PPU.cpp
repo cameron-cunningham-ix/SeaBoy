@@ -111,7 +111,9 @@ namespace SeaBoy
             {
                 if (m_lineCycle == OAM_SCAN_DOTS)
                 {
-                    // Mode 2 -> Mode 3 (Drawing): initialize pixel fetcher
+                    // Mode 2 -> Mode 3 (Drawing): initialize pixel fetcher.
+                    // PanDocs.4.8 Rendering: fetcher takes its first step on the
+                    // same dot Mode 3 begins (dot 80), not dot 81.
                     m_mode = PPUMode::Drawing;
                     m_fetcher.init(m_vram,
                                   m_oamScan.sprites(), m_oamScan.count(),
@@ -119,6 +121,13 @@ namespace SeaBoy
                                   m_windowLineCounter, m_windowTriggered,
                                   m_palettes,
                                   &m_frameBuffer[m_ly * 160]);
+                    if (m_fetcher.step())
+                    {
+                        m_mode = PPUMode::HBlank;
+                        if (m_fetcher.drewWindow())
+                            ++m_windowLineCounter;
+                        updateStatIRQ();
+                    }
                 }
                 else if (m_mode == PPUMode::Drawing)
                 {

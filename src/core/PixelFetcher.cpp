@@ -37,12 +37,17 @@ namespace SeaBoy
         m_windowTriggered  = windowTriggered;
 
         // BG fetcher starts at the tile containing the leftmost visible pixel
-        m_bgStep   = 0;
-        m_bgTileX  = (scx >> 3) & 0x1Fu;
-        m_discard  = scx & 7u;
-        m_pixelX   = 0;
-        m_inWindow = false;
-        m_drewWindow = false;
+        m_bgStep       = 0;
+        m_bgTileX      = (scx >> 3) & 0x1Fu;
+        m_discard      = scx & 7u;
+        m_pixelX       = 0;
+        m_inWindow     = false;
+        m_drewWindow   = false;
+        // PanDocs §Rendering: Mode 3 minimum = 160 + 12 dots; the 12 dots
+        // are two initial tile fetches. After the Bug-A fix (step at dot 80),
+        // the first push arrives at ~dot 88, but hardware first pixel is at
+        // dot 92. Model the remaining 4-dot gap as an output hold-off.
+        m_initialDelay = 4;
 
         m_fetchedTileIndex = 0;
         m_fetchedLo = 0;
@@ -308,6 +313,15 @@ namespace SeaBoy
 
     bool PixelFetcher::outputTick()
     {
+        // Hold off pixel output for the first few dots of Mode 3.
+        // This models the 2-fetch warm-up overhead (PanDocs.4.8 Rendering: min
+        // Mode 3 = 160+12 dots). Value is calibrated against mealybug tests.
+        if (m_initialDelay > 0)
+        {
+            --m_initialDelay;
+            return false;
+        }
+
         if (m_bgFifoSize == 0) return false;
 
         // SCX fine scroll: discard first (SCX & 7) pixels from BG FIFO
