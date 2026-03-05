@@ -15,9 +15,11 @@
 //   1 = "Failed" found, or timeout, or file error
 //
 // How it works:
-//   The ROM runs headlessly through GameBoy::tick(), which drives CPU + Timer
-//   (and eventually PPU/APU).  Output is captured via the serial port (SB/SC at
-//   0xFF01/02).  LCD stub registers prevent the ROM from spinning on VBlank.
+//   The ROM runs headlessly through GameBoy::tick(), which drives CPU, Timer,
+//   and PPU (and eventually APU) at M-cycle granularity via the bus callback.
+//   Output is captured via the serial port (SB/SC at 0xFF01/02).
+//   The PPU generates real VBlank/STAT interrupts so ROMs that poll LCD status
+//   proceed normally without stubs.
 //   The runner exits as soon as it sees "Passed" or "Failed" in the output.
 //
 // MBC support: MBC0 (no switching) and MBC1 (ROM bank switching).
@@ -35,12 +37,14 @@
 // ---------------------------------------------------------------------------
 // Completion detection
 // ---------------------------------------------------------------------------
-// Blargg ROMs report results via two possible channels:
+// Blargg ROMs report results via three possible channels:
 //   1. Serial port (SB/SC at 0xFF01/02) - v1 test framework
 //   2. Memory-mapped output in external RAM - v2 test framework
 //      0xA001–0xA003: magic signature 0xDE, 0xB0, 0x61
 //      0xA000:        status (0x80 = running, else done)
 //      0xA004+:       null-terminated text output
+//   3. LCD tile map (VRAM 0x9800–0x9BFF) - LCD-only ROMs (e.g. halt_bug.gb)
+//      Tile indices correspond directly to ASCII values in Blargg's font.
 
 static bool checkPassed(const std::string& s) { return s.find("Passed") != std::string::npos; }
 static bool checkFailed(const std::string& s)
@@ -72,6 +76,58 @@ static std::string checkMemMappedOutput(const SeaBoy::MMU& mmu)
         text += static_cast<char>(ch);
     }
     return text;
+}
+
+// Check the BG/Window tile maps for Blargg LCD-text output.
+// Used for ROMs (e.g. halt_bug.gb) that display results on screen only and do
+// not output via the serial port or the v2 memory-mapped framework.
+// Blargg font: tile index == ASCII value for printable characters (0x20–0x7E).
+// mmu.peek8() routes to PPU::peekVRAM() which bypasses Mode-3 locking.
+static std::string checkTileMapOutput(const SeaBoy::MMU& mmu)
+{
+    static constexpr uint16_t MAPS[2]  = { 0x9800, 0x9C00 };
+    static constexpr int      COLS     = 32;
+    static constexpr int      VIS_COLS = 20;
+    static constexpr int      VIS_ROWS = 18;
+
+    for (uint16_t base : MAPS)
+    {
+        for (int row = 0; row < VIS_ROWS; ++row)
+        {
+            std::string line;
+            for (int col = 0; col < VIS_COLS; ++col)
+            {
+                uint8_t tile = mmu.peek8(
+                    static_cast<uint16_t>(base + row * COLS + col));
+                line += (tile >= 0x20 && tile <= 0x7E)
+                            ? static_cast<char>(tile)
+                            : ' ';
+            }
+            if (line.find("Passed") != std::string::npos ||
+                line.find("Failed") != std::string::npos)
+            {
+                // Collect all visible non-empty rows for display
+                std::string full;
+                for (int r = 0; r < VIS_ROWS; ++r)
+                {
+                    std::string rline;
+                    for (int c = 0; c < VIS_COLS; ++c)
+                    {
+                        uint8_t t = mmu.peek8(
+                            static_cast<uint16_t>(base + r * COLS + c));
+                        rline += (t >= 0x20 && t <= 0x7E)
+                                     ? static_cast<char>(t)
+                                     : ' ';
+                    }
+                    auto end = rline.find_last_not_of(' ');
+                    if (end != std::string::npos)
+                        full += rline.substr(0, end + 1) + '\n';
+                }
+                return full.empty() ? line : full;
+            }
+        }
+    }
+    return {};
 }
 
 // ---------------------------------------------------------------------------
@@ -125,7 +181,7 @@ int main(int argc, char* argv[])
     uint64_t    totalCycles = 0;
     std::string lastOutput;
 
-    // Check memory-mapped output every 100K cycles (v2 framework detection)
+    // Periodic threshold for alternative output channel checks (every 100 K cycles)
     uint64_t nextMemCheck = 100'000ULL;
 
     while (totalCycles < maxCycles)
@@ -146,20 +202,33 @@ int main(int argc, char* argv[])
                 break;
         }
 
-        // Check memory-mapped output periodically (v2 test framework)
+        // Periodically check alternative output channels (every 100 K cycles)
         if (totalCycles >= nextMemCheck)
         {
+            // v2 test framework: memory-mapped output at 0xA000+
             std::string memOut = checkMemMappedOutput(gameBoy.mmu());
             if (!memOut.empty())
             {
                 std::printf("%s", memOut.c_str());
-                if (!memOut.empty() && memOut.back() != '\n')
+                if (memOut.back() != '\n')
                     std::putchar('\n');
                 std::fflush(stdout);
-                // Use memory-mapped output as the serial output for result checking
                 lastOutput = memOut;
                 break;
             }
+
+            // LCD-only ROMs (e.g. halt_bug.gb): result written to VRAM tile map
+            std::string tileOut = checkTileMapOutput(gameBoy.mmu());
+            if (!tileOut.empty())
+            {
+                std::printf("%s", tileOut.c_str());
+                if (tileOut.back() != '\n')
+                    std::putchar('\n');
+                std::fflush(stdout);
+                lastOutput = tileOut;
+                break;
+            }
+
             nextMemCheck += 100'000ULL;
         }
     }

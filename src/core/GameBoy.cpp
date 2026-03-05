@@ -55,7 +55,7 @@ namespace SeaBoy
 
     uint32_t GameBoy::tick()
     {
-        // Subsystems (timer, future PPU/APU) are ticked at M-cycle granularity
+        // Subsystems (timer, PPU, and future APU) are ticked at M-cycle granularity
         // via the onBusCycle callback during cpu.step(), not after.
         return m_cpu.step();
     }

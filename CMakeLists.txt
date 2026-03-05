@@ -83,6 +83,21 @@ set(JSON_Install    OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(nlohmann_json)
 
 # -----------------------------
+# stb (header-only) – used by mealybug_runner for PNG writing
+# stb has no CMakeLists.txt so we use FetchContent_Populate directly.
+# -----------------------------
+FetchContent_Declare(
+  stb
+  GIT_REPOSITORY https://github.com/nothings/stb.git
+  GIT_TAG master
+  GIT_SHALLOW TRUE
+)
+FetchContent_GetProperties(stb)
+if(NOT stb_POPULATED)
+  FetchContent_Populate(stb)
+endif()
+
+# -----------------------------
 # Executable
 # -----------------------------
 add_executable(SeaBoy
@@ -213,5 +228,93 @@ else()
 endif()
 
 set_target_properties(blargg_runner PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIG>"
+)
+
+# -----------------------------
+# mealybug_runner – PPU visual regression test harness
+#
+# ROMs + expected PNGs from:
+#   https://github.com/mattcurrie/mealybug-tearoom-tests
+# Clone into roms/mealybug-tearoom-tests/
+#
+# Usage (single test):
+#   ./build/Release/mealybug_runner.exe roms/mealybug-tearoom-tests/ppu/m3_bgp_change.gb \
+#       roms/mealybug-tearoom-tests/ppu/m3_bgp_change.dmg.png
+#
+# Batch (all DMG tests):
+#   bash tests/run_mealybug.sh
+#
+# Requires ImageMagick (magick) on PATH for pixel comparison.
+# -----------------------------
+add_executable(mealybug_runner
+  tests/mealybug_runner.cpp
+  src/core/MMU.cpp
+  src/core/CPU.cpp
+  src/core/GameBoy.cpp
+  src/core/Timer.cpp
+  src/core/PPU.cpp
+  src/core/OAMScan.cpp
+  src/core/PixelFetcher.cpp
+  src/core/Palettes.cpp
+  src/core/opcodes/Opcodes.cpp
+  src/core/opcodes/OpcodesCB.cpp
+  src/cartridge/Cartridge.cpp
+  src/cartridge/MBC0.cpp
+  src/cartridge/MBC1.cpp
+)
+
+target_include_directories(mealybug_runner PRIVATE  ${CMAKE_CURRENT_SOURCE_DIR})
+# SYSTEM suppresses third-party warnings from stb headers
+target_include_directories(mealybug_runner SYSTEM PRIVATE ${stb_SOURCE_DIR})
+
+if(MSVC)
+  target_compile_options(mealybug_runner PRIVATE /W4 /permissive- /Zc:preprocessor /utf-8)
+else()
+  target_compile_options(mealybug_runner PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+set_target_properties(mealybug_runner PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIG>"
+)
+
+# -----------------------------
+# mooneye_runner – mooneye-test-suite register-based pass/fail harness
+#
+# Clone ROMs:
+#   git clone https://github.com/Gekkio/mooneye-test-suite roms/mooneye-test-suite
+#
+# Usage (single test):
+#   ./build/Release/mooneye_runner.exe roms/mooneye-test-suite/acceptance/add_sp_e_timing.gb
+#
+# Batch (all DMG-compatible tests):
+#   bash tests/run_mooneye.sh
+# -----------------------------
+add_executable(mooneye_runner
+  tests/mooneye_runner.cpp
+  src/core/MMU.cpp
+  src/core/CPU.cpp
+  src/core/GameBoy.cpp
+  src/core/Timer.cpp
+  src/core/PPU.cpp
+  src/core/OAMScan.cpp
+  src/core/PixelFetcher.cpp
+  src/core/Palettes.cpp
+  src/core/opcodes/Opcodes.cpp
+  src/core/opcodes/OpcodesCB.cpp
+  src/cartridge/Cartridge.cpp
+  src/cartridge/MBC0.cpp
+  src/cartridge/MBC1.cpp
+)
+
+target_include_directories(mooneye_runner PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+if(MSVC)
+  target_compile_options(mooneye_runner PRIVATE /W4 /permissive- /Zc:preprocessor /utf-8)
+else()
+  target_compile_options(mooneye_runner PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+set_target_properties(mooneye_runner PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIG>"
 )
