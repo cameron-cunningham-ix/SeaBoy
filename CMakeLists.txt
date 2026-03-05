@@ -93,6 +93,7 @@ add_executable(SeaBoy
   src/core/Timer.cpp
   src/core/PPU.cpp
   src/core/OAMScan.cpp
+  src/core/PixelFetcher.cpp
   src/core/Palettes.cpp
   src/core/opcodes/Opcodes.cpp
   src/core/opcodes/OpcodesCB.cpp
@@ -155,6 +156,7 @@ add_executable(sm83_runner
   src/core/Timer.cpp
   src/core/PPU.cpp
   src/core/OAMScan.cpp
+  src/core/PixelFetcher.cpp
   src/core/Palettes.cpp
   src/core/opcodes/Opcodes.cpp
   src/core/opcodes/OpcodesCB.cpp
@@ -193,6 +195,7 @@ add_executable(blargg_runner
   src/core/Timer.cpp
   src/core/PPU.cpp
   src/core/OAMScan.cpp
+  src/core/PixelFetcher.cpp
   src/core/Palettes.cpp
   src/core/opcodes/Opcodes.cpp
   src/core/opcodes/OpcodesCB.cpp

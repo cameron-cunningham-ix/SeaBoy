@@ -60,9 +60,9 @@ struct State
     uint16_t pc = 0, sp = 0;
     uint8_t  a = 0, b = 0, c = 0, d = 0, e = 0, f = 0, h = 0, l = 0;
     bool     ime     = false;
-    bool     ei      = false; // IME-scheduled (EI delay) — optional field
+    bool     ei      = false; // IME-scheduled (EI delay) - optional field
     bool     has_ei  = false;
-    uint8_t  ie      = 0;    // IE register value — initial state only
+    uint8_t  ie      = 0;    // IE register value - initial state only
     bool     has_ie  = false;
     std::vector<std::pair<uint16_t, uint8_t>> ram;
 };
@@ -135,7 +135,7 @@ static TestResult runTest(const json& tc)
 
     // ---- CPU ----
     SeaBoy::CPU cpu(mmu);
-    // Set state directly — do NOT call reset()
+    // Set state directly - do NOT call reset()
     SeaBoy::Registers& r = cpu.regs();
     r.A  = initial.a;
     r.B  = initial.b;
@@ -293,7 +293,7 @@ int main(int argc, char* argv[])
         {
             std::cout << "FAIL  " << filePath.filename().string()
                       << "  [" << filePass << "/" << total << "]"
-                      << "  first: \"" << firstFailName << "\" — " << firstFailReason << "\n";
+                      << "  first: \"" << firstFailName << "\" - " << firstFailReason << "\n";
         }
     }
 

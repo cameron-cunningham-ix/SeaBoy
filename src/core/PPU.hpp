@@ -4,6 +4,7 @@
 
 #include "OAMScan.hpp"
 #include "Palettes.hpp"
+#include "PixelFetcher.hpp"
 
 // PanDocs.4 LCD - Pixel Processing Unit
 //
@@ -105,25 +106,14 @@ namespace SeaBoy
         // STAT interrupt edge detection - PanDocs.9.1 INT 48 STAT interrupt
         void updateStatIRQ();
 
-        // Run OAMScan for the current line and compute variable Mode 3 length.
+        // Run OAMScan for the current line.
         // Called whenever we enter Mode 2 (OAMScan).
         void startOAMScan();
 
-        // Render BG tiles for m_ly into m_frameBuffer.
-        // Called at Mode 3 -> Mode 0 (HBlank) transition. - PanDocs §15.3
-        void renderBGLine();
-
-        // Render the window layer for m_ly, overwriting covered BG pixels.
-        // Called between renderBGLine() and renderSpriteLine(). - PanDocs.4.8.1 Window
-        void renderWindowLine();
-
-        // Render visible sprites for m_ly on top of the BG line.
-        // Called immediately after renderWindowLine(). - PanDocs.4.3 OAM / Sprites
-        void renderSpriteLine();
-
-        MMU&     m_mmu;
-        Palettes m_palettes;
-        OAMScan  m_oamScan;
+        MMU&         m_mmu;
+        Palettes     m_palettes;
+        OAMScan      m_oamScan;
+        PixelFetcher m_fetcher;
 
         // VRAM (8 KB) and OAM (160 bytes) - owned by PPU - PanDocs.2 Memory Map
         uint8_t m_vram[0x2000]{};
@@ -134,12 +124,6 @@ namespace SeaBoy
         uint32_t m_lineCycle = 0; // T-cycle within current scanline (0–455)
         uint8_t  m_ly        = 0; // current scanline (0–153)
 
-        // Variable Mode 3 length: 172 + SCX_fine_scroll + sprite_count*6
-        // PanDocs.4.8 Rendering - Mode 3 Timing
-        uint32_t m_mode3Length = 172;
-
-        // Per-line BG color IDs (0–3) for sprite-over-BG priority (Phase 3)
-        uint8_t m_lineBGColorIDs[160]{};
 
         // LCD registers
         uint8_t m_lcdc = 0x91; // PanDocs.22 Power Up Sequence: LCD on, BG enabled

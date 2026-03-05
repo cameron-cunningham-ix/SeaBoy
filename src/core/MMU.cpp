@@ -79,6 +79,9 @@ namespace SeaBoy
         // LCD registers - routed to PPU (PanDocs.4 LCD I/O Registers)
         else if (addr >= 0xFF40u && addr <= 0xFF4Bu)
             val = m_ppu ? m_ppu->read(addr) : 0xFFu;
+        // CGB palette registers - routed to PPU (PanDocs.4.7)
+        else if (addr >= 0xFF68u && addr <= 0xFF6Bu)
+            val = m_ppu ? m_ppu->read(addr) : 0xFFu;
         else if (addr >= ADDR_HRAM_BASE && addr <= ADDR_HRAM_END)
             val = m_hram[addr - ADDR_HRAM_BASE];
         else if (addr == ADDR_IE)
@@ -118,6 +121,9 @@ namespace SeaBoy
             { if (m_timer) m_timer->write(addr, val); }
         // LCD registers - routed to PPU (PanDocs.4 LCD I/O Registers)
         else if (addr >= 0xFF40u && addr <= 0xFF4Bu)
+            { if (m_ppu) m_ppu->write(addr, val); }
+        // CGB palette registers - routed to PPU (PanDocs §4.7)
+        else if (addr >= 0xFF68u && addr <= 0xFF6Bu)
             { if (m_ppu) m_ppu->write(addr, val); }
         // Serial port – PanDocs.7 Serial Data Transfer
         else if (addr == 0xFF01u)
@@ -209,6 +215,8 @@ namespace SeaBoy
         if (addr == 0xFF02u)
             return m_sc | 0x7Eu;
         if (addr >= 0xFF40u && addr <= 0xFF4Bu)
+            return m_ppu ? m_ppu->read(addr) : 0xFFu;
+        if (addr >= 0xFF68u && addr <= 0xFF6Bu)
             return m_ppu ? m_ppu->read(addr) : 0xFFu;
         if (addr >= ADDR_HRAM_BASE && addr <= ADDR_HRAM_END)
             return m_hram[addr - ADDR_HRAM_BASE];
