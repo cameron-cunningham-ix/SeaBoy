@@ -86,6 +86,10 @@ namespace SeaBoy
         // MMU routes 0xFF40–0xFF4B to the PPU; null until wired.
         void setPPU(PPU* p) { m_ppu = p; }
 
+        // Returns true while an OAM DMA transfer is in progress (including startup delay).
+        // Used to enforce bus conflict: CPU may only access HRAM during DMA
+        bool isDMAActive() const;
+
         // Serial port output (captured from writes to SB/SC, 0xFF01/02).
         // Blargg test ROMs write results here. Safe to call at any time.
         const std::string& serialOutput() const { return m_serialOutput; }

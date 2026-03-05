@@ -43,7 +43,7 @@ namespace SeaBoy
         m_pixelX       = 0;
         m_inWindow     = false;
         m_drewWindow   = false;
-        // PanDocs §Rendering: Mode 3 minimum = 160 + 12 dots; the 12 dots
+        // PanDocs.4.8 Rendering: Mode 3 minimum = 160 + 12 dots; the 12 dots
         // are two initial tile fetches. After the Bug-A fix (step at dot 80),
         // the first push arrives at ~dot 88, but hardware first pixel is at
         // dot 92. Model the remaining 4-dot gap as an output hold-off.
@@ -80,7 +80,7 @@ namespace SeaBoy
     }
 
     // -----------------------------------------------------------------------
-    // BG fetcher state machine - PanDocs §15 Pixel FIFO
+    // BG fetcher state machine - PanDocs Pixel FIFO
     // -----------------------------------------------------------------------
 
     void PixelFetcher::bgFetcherTick()

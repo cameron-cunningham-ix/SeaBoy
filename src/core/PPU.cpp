@@ -56,9 +56,10 @@ namespace SeaBoy
         m_lycDelay          = -1;
         m_windowTriggered   = false;
         m_windowLineCounter = 0;
-        m_dmaActive = false;
-        m_dmaSource = 0;
-        m_dmaByte   = 0;
+        m_dmaActive     = false;
+        m_dmaStartDelay = 0;
+        m_dmaSource     = 0;
+        m_dmaByte       = 0;
         m_palettes.reset();
 
         std::memset(m_vram,        0, sizeof(m_vram));
@@ -84,18 +85,25 @@ namespace SeaBoy
 
     void PPU::tick(uint32_t tCycles)
     {
-        // OAM DMA: 1 byte per M-cycle (4 T-cycles), 160 bytes total = 640 T-cycles
+        // OAM DMA: 1 byte per M-cycle (4 T-cycles), 160 bytes total = 640 T-cycles.
         // DMA runs regardless of LCD state. - PanDocs.4.3.1 OAM DMA Transfer
         if (m_dmaActive)
         {
             uint32_t steps = tCycles / 4;
-            while (steps-- > 0 && m_dmaByte < 160)
+            while (steps-- > 0)
             {
+                // PanDocs OAM DMA: 1 M-cycle startup delay before copy begins
+                if (m_dmaStartDelay > 0)
+                {
+                    m_dmaStartDelay -= 4; // consume 1 M-cycle of delay
+                    continue;
+                }
+                if (m_dmaByte >= 160) break;
                 m_oam[m_dmaByte] = m_mmu.peek8(
                     static_cast<uint16_t>(m_dmaSource + m_dmaByte));
                 ++m_dmaByte;
             }
-            if (m_dmaByte >= 160)
+            if (m_dmaStartDelay == 0 && m_dmaByte >= 160)
                 m_dmaActive = false;
         }
 
@@ -322,12 +330,14 @@ namespace SeaBoy
             updateStatIRQ(); // LYC change may trigger/clear LYC match
             break;
         case ADDR_DMA:
-            // PanDocs4.3.1 OAM DMA Transfer - initiates a 160-byte copy from
-            // (val << 8) into OAM, 1 byte per M-cycle (640 T-cycles total)
-            m_dma       = val;
-            m_dmaActive = true;
-            m_dmaSource = static_cast<uint16_t>(val << 8);
-            m_dmaByte   = 0;
+            // PanDocs.4.3.1 OAM DMA Transfer - initiates a 160-byte copy from
+            // (val << 8) into OAM, 1 byte per M-cycle (640 T-cycles total).
+            // Transfer starts after a 1 M-cycle (4 T-cycle) startup delay
+            m_dma           = val;
+            m_dmaActive     = true;
+            m_dmaStartDelay = 4;
+            m_dmaSource     = static_cast<uint16_t>(val << 8);
+            m_dmaByte       = 0;
             break;
         case ADDR_BGP:  m_palettes.writeBGP(val); break;
         case ADDR_OBP0: m_palettes.writeOBP0(val); break;

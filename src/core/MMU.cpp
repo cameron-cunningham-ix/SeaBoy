@@ -44,12 +44,27 @@ namespace SeaBoy
         m_ifReg = 0; // no pending interrupts; IF must not alias test RAM at 0xFF0F
     }
 
+    bool MMU::isDMAActive() const
+    {
+        return m_ppu && m_ppu->isDMAActive();
+    }
+
     // PanDocs.2 - Memory Map routing
     // Each read8/write8 = 1 M-cycle = 4 T-cycles on the bus.
     uint8_t MMU::read8(uint16_t addr)
     {
         if (m_testRam)
             return m_testRam[addr];
+
+        // PanDocs OAM DMA: during an active DMA transfer the CPU loses access
+        // to ROM/WRAM/ERAM/VRAM (the bus the DMA controller is using).
+        // I/O registers (0xFF00–0xFF7F) and OAM/prohibited (0xFE00–0xFEFF)
+        // are on separate buses and remain accessible.
+        if (isDMAActive() && addr < 0xFE00u)
+        {
+            if (m_cycleFn) m_cycleFn(m_cycleCtx, 4);
+            return 0xFFu;
+        }
 
         uint8_t val = 0xFFu; // Open bus default
 

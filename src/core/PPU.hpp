@@ -99,6 +99,9 @@ namespace SeaBoy
         // Framebuffer access - 160×144 RGBA8888 pixels
         const uint32_t* frameBuffer() const { return m_frameBuffer; }
 
+        // DMA state query - used by MMU to enforce bus conflict - PanDocs OAM DMA
+        bool isDMAActive() const { return m_dmaActive; }
+
         // Palette access
         const Palettes& palettes() const { return m_palettes; }
 
@@ -140,9 +143,10 @@ namespace SeaBoy
         uint8_t m_windowLineCounter = 0;     // window-internal Y counter (≠ LY)
 
         // OAM DMA state - PanDocs.4.3.1 OAM DMA Transfer
-        bool     m_dmaActive = false; // DMA in progress
-        uint16_t m_dmaSource = 0;     // source base address (DMA register << 8)
-        uint8_t  m_dmaByte   = 0;     // next byte index to copy (0–159)
+        bool     m_dmaActive     = false; // DMA in progress
+        uint8_t  m_dmaStartDelay = 0;     // T-cycles of startup delay before copy begins
+        uint16_t m_dmaSource     = 0;     // source base address (DMA register << 8)
+        uint8_t  m_dmaByte       = 0;     // next byte index to copy (0–159)
 
         // STAT interrupt line - tracks previous combined state for edge detection
         bool    m_statLine  = false;
