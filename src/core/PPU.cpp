@@ -53,6 +53,7 @@ namespace SeaBoy
         m_wx   = 0x00;
 
         m_statLine          = false;
+        m_lycDelay          = -1;
         m_windowTriggered   = false;
         m_windowLineCounter = 0;
         m_dmaActive = false;
@@ -104,6 +105,17 @@ namespace SeaBoy
 
         for (uint32_t i = 0; i < tCycles; ++i)
         {
+            // LYC coincidence interrupt fires 4 T-cycles after LY updates.
+            // Count down each dot; fire when it reaches 0. - PanDocs LYC, Phase 2B
+            if (m_lycDelay > 0)
+            {
+                if (--m_lycDelay == 0)
+                {
+                    m_lycDelay = -1;
+                    updateStatIRQ();
+                }
+            }
+
             ++m_lineCycle;
 
             // Mode transitions within a visible scanline
@@ -115,6 +127,9 @@ namespace SeaBoy
                     // PanDocs.4.8 Rendering: fetcher takes its first step on the
                     // same dot Mode 3 begins (dot 80), not dot 81.
                     m_mode = PPUMode::Drawing;
+                    // PanDocs.9.1 STAT: notify edge-detector so the OAMScan
+                    // interrupt source clears before Mode 3 begins. - Phase 2A
+                    updateStatIRQ();
                     m_fetcher.init(m_vram,
                                   m_oamScan.sprites(), m_oamScan.count(),
                                   m_lcdc, m_scx, m_scy, m_ly, m_wx,
@@ -171,7 +186,11 @@ namespace SeaBoy
                 }
                 // Lines 145-153 stay in VBlank mode (no transition needed)
 
-                updateStatIRQ();
+                // PanDocs LYC: arm 4-dot delay for LYC==LY interrupt - Phase 2B
+                if (m_lyc == m_ly)
+                    m_lycDelay = 4;
+
+                updateStatIRQ(); // mode changes fire immediately; LYC is suppressed
             }
         }
     }
@@ -187,7 +206,8 @@ namespace SeaBoy
         if ((m_stat & STAT::HBlankIRQ)  && m_mode == PPUMode::HBlank)  line = true;
         if ((m_stat & STAT::VBlankIRQ)  && m_mode == PPUMode::VBlank)  line = true;
         if ((m_stat & STAT::OAMScanIRQ) && m_mode == PPUMode::OAMScan) line = true;
-        if ((m_stat & STAT::LYCIRQ)     && m_ly == m_lyc)              line = true;
+        // LYC fires only when no delay is pending (m_lycDelay == -1) - Phase 2B
+        if (m_lycDelay < 0 && (m_stat & STAT::LYCIRQ) && m_ly == m_lyc) line = true;
 
         // Rising edge -> set IF bit 1
         if (line && !m_statLine)

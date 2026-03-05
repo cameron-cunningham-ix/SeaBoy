@@ -145,7 +145,10 @@ namespace SeaBoy
         uint8_t  m_dmaByte   = 0;     // next byte index to copy (0–159)
 
         // STAT interrupt line - tracks previous combined state for edge detection
-        bool m_statLine = false;
+        bool    m_statLine  = false;
+        // PanDocs LYC: on DMG, the LYC==LY interrupt fires 4 T-cycles after
+        // LY updates. -1 = idle; 0-4 = countdown in progress. - Phase 2B
+        int8_t  m_lycDelay  = -1;
 
         // Framebuffer - 160×144 RGBA8888
         uint32_t m_frameBuffer[160 * 144]{};
