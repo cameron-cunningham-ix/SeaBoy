@@ -63,9 +63,15 @@ namespace SeaBoy
             val = m_cart ? m_cart->read(addr) : 0xFFu;
         else if (addr >= ADDR_WRAM_BASE && addr <= ADDR_WRAM_END)
             val = m_wram[addr - ADDR_WRAM_BASE];
+        // Echo RAM: 0xE000–0xFDFF mirrors WRAM - PanDocs.2
+        else if (addr >= 0xE000u && addr <= 0xFDFFu)
+            val = m_wram[addr - 0xE000u];
         // 0xFE00–0xFE9F: OAM - routed to PPU
         else if (addr >= 0xFE00u && addr <= 0xFE9Fu)
             val = m_ppu ? m_ppu->readOAM(addr) : 0xFFu;
+        // Prohibited area: 0xFEA0–0xFEFF returns 0x00 on DMG - PanDocs.2
+        else if (addr >= 0xFEA0u && addr <= 0xFEFFu)
+            val = 0x00u;
         // I/O registers (0xFF00–0xFF7F)
         else if (addr == ADDR_IF)
             val = m_ifReg | 0xE0u; // upper 3 bits always 1
@@ -111,9 +117,15 @@ namespace SeaBoy
             { if (m_cart) m_cart->write(addr, val); }
         else if (addr >= ADDR_WRAM_BASE && addr <= ADDR_WRAM_END)
             m_wram[addr - ADDR_WRAM_BASE] = val;
+        // Echo RAM: 0xE000–0xFDFF mirrors WRAM - PanDocs.2
+        else if (addr >= 0xE000u && addr <= 0xFDFFu)
+            m_wram[addr - 0xE000u] = val;
         // 0xFE00–0xFE9F: OAM - routed to PPU
         else if (addr >= 0xFE00u && addr <= 0xFE9Fu)
             { if (m_ppu) m_ppu->writeOAM(addr, val); }
+        // Prohibited area: 0xFEA0–0xFEFF - writes ignored on DMG - PanDocs.2
+        else if (addr >= 0xFEA0u && addr <= 0xFEFFu)
+            { /* ignored */ }
         else if (addr == ADDR_IF)
             m_ifReg = val & 0x1Fu; // only lower 5 bits are writable
         // Timer registers - PanDocs.8 Timer and Divider Registers
@@ -122,7 +134,7 @@ namespace SeaBoy
         // LCD registers - routed to PPU (PanDocs.4 LCD I/O Registers)
         else if (addr >= 0xFF40u && addr <= 0xFF4Bu)
             { if (m_ppu) m_ppu->write(addr, val); }
-        // CGB palette registers - routed to PPU (PanDocs §4.7)
+        // CGB palette registers - routed to PPU (PanDocs.4.7)
         else if (addr >= 0xFF68u && addr <= 0xFF6Bu)
             { if (m_ppu) m_ppu->write(addr, val); }
         // Serial port – PanDocs.7 Serial Data Transfer
@@ -206,8 +218,14 @@ namespace SeaBoy
             return m_cart ? m_cart->read(addr) : 0xFFu;
         if (addr >= ADDR_WRAM_BASE && addr <= ADDR_WRAM_END)
             return m_wram[addr - ADDR_WRAM_BASE];
+        // Echo RAM: 0xE000–0xFDFF mirrors WRAM - PanDocs.2
+        if (addr >= 0xE000u && addr <= 0xFDFFu)
+            return m_wram[addr - 0xE000u];
         if (addr >= 0xFE00u && addr <= 0xFE9Fu)
             return m_ppu ? m_ppu->peekOAM(addr) : 0xFFu;
+        // Prohibited area: 0xFEA0–0xFEFF returns 0x00 on DMG - PanDocs.2
+        if (addr >= 0xFEA0u && addr <= 0xFEFFu)
+            return 0x00u;
         if (addr == ADDR_IF)
             return m_ifReg | 0xE0u;
         if (addr == 0xFF01u)

@@ -15,7 +15,9 @@
 //   0x8000–0x9FFF  VRAM (PPU-owned, routed to PPU::readVRAM/writeVRAM)
 //   0xA000–0xBFFF  External RAM (cartridge)
 //   0xC000–0xDFFF  WRAM (8 KB)
+//   0xE000–0xFDFF  Echo RAM (mirrors WRAM 0xC000–0xDFFF)
 //   0xFE00–0xFE9F  OAM (PPU-owned, routed to PPU::readOAM/writeOAM)
+//   0xFEA0–0xFEFF  Prohibited (reads 0x00, writes ignored on DMG)
 //   0xFF0F         IF - Interrupt Flag
 //   0xFF80–0xFFFE  HRAM (127 bytes)
 //   0xFFFF         IE - Interrupt Enable
