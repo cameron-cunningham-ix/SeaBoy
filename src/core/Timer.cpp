@@ -11,7 +11,7 @@ namespace SeaBoy
 
     void Timer::reset()
     {
-        m_counter       = 0;
+        m_counter       = 0xABCC; // Post-DMG-boot-ROM state (PanDocs Power_Up_Sequence)
         m_tima          = 0;
         m_tma           = 0;
         m_tac           = 0;
