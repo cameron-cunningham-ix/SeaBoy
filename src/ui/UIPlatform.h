@@ -7,6 +7,22 @@
 #include "SDL3/SDL.h"
 #include "SDL3/SDL_main.h"
 #include "nfd.h"
+#include "src/core/GameBoy.hpp"
+
+// Key bindings for the 8 GameBoy buttons.
+// Stored as a plain struct so SettingsUI can read/write individual fields.
+// Default mapping: Z=A, X=B, Return=Start, RShift=Select, arrow keys=D-pad.
+struct JoypadBindings
+{
+    SDL_Scancode a      = SDL_SCANCODE_Z;
+    SDL_Scancode b      = SDL_SCANCODE_X;
+    SDL_Scancode start  = SDL_SCANCODE_RETURN;
+    SDL_Scancode select = SDL_SCANCODE_RSHIFT;
+    SDL_Scancode up     = SDL_SCANCODE_UP;
+    SDL_Scancode down   = SDL_SCANCODE_DOWN;
+    SDL_Scancode left   = SDL_SCANCODE_LEFT;
+    SDL_Scancode right  = SDL_SCANCODE_RIGHT;
+};
 
 /// @brief SDL + ImGui platform for rendering and input
 class UIPlatform
@@ -25,8 +41,10 @@ private:
     SDL_Texture* texture = nullptr;
     
 public:
-    
-    /// @brief 
+    // Key bindings - public so SettingsUI can read and modify them at runtime.
+    JoypadBindings m_bindings;
+
+    /// @brief
     /// @param title Title of SDL window created, appears at top
     /// @param windowWidth SDL window width including UI
     /// @param windowHeight SDL window height including UI
@@ -180,8 +198,9 @@ public:
     }
 
     /// @brief Process input events
-    /// @return True when running 
-    bool processInput()
+    /// @param gb Optional GameBoy instance to forward button presses to. May be nullptr.
+    /// @return True when running
+    bool processInput(SeaBoy::GameBoy* gb = nullptr)
     {
         bool running = true;
         SDL_Event e;
@@ -196,6 +215,8 @@ public:
                     break;
                 case SDL_EVENT_KEY_DOWN:
                 {
+                    if (!e.key.repeat && gb)
+                        forwardKey(e.key.scancode, true, gb);
                     switch (e.key.scancode)
                     {
                         case SDL_SCANCODE_ESCAPE:
@@ -207,15 +228,13 @@ public:
 
                 case SDL_EVENT_KEY_UP:
                 {
-                    switch (e.key.scancode)
-                    {
-                        // TODO
-                    }
+                    if (!e.key.repeat && gb)
+                        forwardKey(e.key.scancode, false, gb);
                 }
                 break;
             }
         }
-        
+
         return running;
     }
 
@@ -227,5 +246,30 @@ public:
         unsigned int a = vec4.w * 255;
         unsigned int val = (r << 24) | g << 16 | b << 8 | a;
         return val;
+    }
+
+private:
+    // Maps a SDL scancode to a GameBoy button via m_bindings and forwards the event.
+    void forwardKey(SDL_Scancode sc, bool pressed, SeaBoy::GameBoy* gb)
+    {
+        struct Entry { SDL_Scancode sc; SeaBoy::Button btn; };
+        const Entry map[] = {
+            { m_bindings.a,      SeaBoy::Button::A      },
+            { m_bindings.b,      SeaBoy::Button::B      },
+            { m_bindings.start,  SeaBoy::Button::Start  },
+            { m_bindings.select, SeaBoy::Button::Select },
+            { m_bindings.up,     SeaBoy::Button::Up     },
+            { m_bindings.down,   SeaBoy::Button::Down   },
+            { m_bindings.left,   SeaBoy::Button::Left   },
+            { m_bindings.right,  SeaBoy::Button::Right  },
+        };
+        for (const auto& entry : map)
+        {
+            if (entry.sc == sc)
+            {
+                gb->setButton(entry.btn, pressed);
+                break;
+            }
+        }
     }
 };

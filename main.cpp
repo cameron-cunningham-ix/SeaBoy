@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
     char displayTitle[128]   = "SeaBoy!";
 
     // Create emulation / debug window
-    UIPlatform platform(displayTitle, 1280, 720, DISPLAY_WIDTH, DISPLAY_HEIGHT);
+    UIPlatform platform(displayTitle, DISPLAY_WIDTH*4, DISPLAY_HEIGHT*4, DISPLAY_WIDTH, DISPLAY_HEIGHT);
 
     SeaBoy::GameBoy gameBoy;
 
@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     bool running = true;
     while (running)
     {
-        if (!platform.processInput())
+        if (!platform.processInput(&gameBoy))
         {
             running = false;
             break;

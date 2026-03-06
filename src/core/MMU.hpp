@@ -30,6 +30,7 @@
 namespace SeaBoy
 {
     // Named address constants
+    constexpr uint16_t ADDR_P1        = 0xFF00; // Joypad / P1 register
     constexpr uint16_t ADDR_ROM_BANK  = 0x3FFF;
     constexpr uint16_t ADDR_ROM_END   = 0x7FFF;
     constexpr uint16_t ADDR_ERAM_BASE = 0xA000;
@@ -48,6 +49,7 @@ namespace SeaBoy
     // Forward declarations - full definitions included only in their respective .cpp files.
     class Cartridge; // src/cartridge/Cartridge.hpp
     class Timer;     // src/core/Timer.hpp
+    class Joypad;    // src/core/Joypad.hpp
     // PPU is fully included above via PPU.hpp
 
     class MMU
@@ -106,6 +108,10 @@ namespace SeaBoy
         // MMU routes 0xFF04–0xFF07 to the Timer; null until wired.
         void setTimer(Timer* t) { m_timer = t; }
 
+        // Joypad link - set by GameBoy after constructing both MMU and Joypad.
+        // MMU routes 0xFF00 to the Joypad; null until wired.
+        void setJoypad(Joypad* j) { m_joypad = j; }
+
         // Debug: read a byte without triggering the cycle callback.
         // Used by blargg_runner to inspect memory without side effects.
         uint8_t peek8(uint16_t addr) const;
@@ -126,6 +132,9 @@ namespace SeaBoy
 
         // PPU - null until setPPU() is called by GameBoy. Not owned.
         PPU* m_ppu = nullptr;
+
+        // Joypad - null until setJoypad() is called by GameBoy. Not owned.
+        Joypad* m_joypad = nullptr;
 
         uint8_t m_wram[0x2000]{};  // 8 KB WRAM
         uint8_t m_hram[0x7F]{};    // 127 bytes HRAM (0xFF80–0xFFFE)

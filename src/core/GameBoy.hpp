@@ -6,6 +6,7 @@
 #include <string>
 
 #include "CPU.hpp"
+#include "Joypad.hpp"
 #include "MMU.hpp"
 #include "PPU.hpp"
 #include "Timer.hpp"
@@ -40,6 +41,9 @@ namespace SeaBoy
         // Accumulated serial port output - used by blargg_runner to detect pass/fail.
         [[nodiscard]] const std::string& serialOutput() const { return m_mmu.serialOutput(); }
 
+        // Joypad input - called by UIPlatform on each SDL key event.
+        void setButton(Button btn, bool pressed) { m_joypad.setButton(btn, pressed); }
+
         // Debug access to CPU registers
         [[nodiscard]] const CPU& cpu() const { return m_cpu; }
 
@@ -49,13 +53,17 @@ namespace SeaBoy
     private:
         // Member declaration order determines construction order.
         // MMU must be constructed before CPU, Timer, and PPU (all hold MMU&).
-        MMU   m_mmu;
-        CPU   m_cpu;
-        Timer m_timer;
-        PPU   m_ppu;
+        MMU    m_mmu;
+        CPU    m_cpu;
+        Timer  m_timer;
+        PPU    m_ppu;
+        Joypad m_joypad;
 
         // M-cycle callback - ticks timer and PPU during CPU execution.
         static void onBusCycle(void* ctx, uint32_t tCycles);
+
+        // Joypad interrupt callback - sets IF bit 4 on button press.
+        static void onJoypadIRQ(void* ctx);
     };
 
 }

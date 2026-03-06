@@ -1,6 +1,7 @@
 #include "MMU.hpp"
 
 #include "../cartridge/Cartridge.hpp"
+#include "Joypad.hpp"
 #include "PPU.hpp"
 #include "Timer.hpp"
 
@@ -88,6 +89,9 @@ namespace SeaBoy
         else if (addr >= 0xFEA0u && addr <= 0xFEFFu)
             val = 0x00u;
         // I/O registers (0xFF00–0xFF7F)
+        // Joypad P1 register - PanDocs.6 Joypad Input
+        else if (addr == ADDR_P1)
+            val = m_joypad ? m_joypad->read() : 0xFFu;
         else if (addr == ADDR_IF)
             val = m_ifReg | 0xE0u; // upper 3 bits always 1
         else if (addr == 0xFF01u)
@@ -141,6 +145,9 @@ namespace SeaBoy
         // Prohibited area: 0xFEA0–0xFEFF - writes ignored on DMG - PanDocs.2
         else if (addr >= 0xFEA0u && addr <= 0xFEFFu)
             { /* ignored */ }
+        // Joypad P1 register - PanDocs.6 Joypad Input
+        else if (addr == ADDR_P1)
+            { if (m_joypad) m_joypad->write(val); }
         else if (addr == ADDR_IF)
             m_ifReg = val & 0x1Fu; // only lower 5 bits are writable
         // Timer registers - PanDocs.8 Timer and Divider Registers

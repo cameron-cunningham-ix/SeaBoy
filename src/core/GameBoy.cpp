@@ -13,9 +13,13 @@ namespace SeaBoy
         , m_timer(m_mmu)    // Timer holds a reference to m_mmu for interrupt flag writes
         , m_ppu(m_mmu)      // PPU holds a reference to m_mmu for interrupt flag writes
     {
-        // Wire Timer and PPU into MMU so I/O registers route through them.
+        // Wire Timer, PPU, and Joypad into MMU so I/O registers route through them.
         m_mmu.setTimer(&m_timer);
         m_mmu.setPPU(&m_ppu);
+        m_mmu.setJoypad(&m_joypad);
+
+        // Joypad interrupt: set IF bit 4 (INT_JOYPAD) on any button press.
+        m_joypad.setIFCallback(&GameBoy::onJoypadIRQ, this);
 
         // M-cycle callback: tick subsystems after every bus access / internal cycle.
         m_mmu.setCycleCallback(&GameBoy::onBusCycle, this);
@@ -66,6 +70,13 @@ namespace SeaBoy
         gb->m_timer.tick(tCycles);
         gb->m_ppu.tick(tCycles);
         // future: gb->m_apu.tick(tCycles);
+    }
+
+    void GameBoy::onJoypadIRQ(void* ctx)
+    {
+        // PanDocs.6 Joypad Input - request joypad interrupt (IF bit 4)
+        auto* gb = static_cast<GameBoy*>(ctx);
+        gb->m_mmu.writeIF(gb->m_mmu.readIF() | 0x10u);
     }
 
 }

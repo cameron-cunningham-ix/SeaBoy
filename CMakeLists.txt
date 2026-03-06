@@ -105,6 +105,7 @@ add_executable(SeaBoy
   src/core/MMU.cpp
   src/core/CPU.cpp
   src/core/GameBoy.cpp
+  src/core/Joypad.cpp
   src/core/Timer.cpp
   src/core/PPU.cpp
   src/core/OAMScan.cpp
@@ -169,6 +170,7 @@ add_executable(sm83_runner
   tests/sm83_runner.cpp
   src/core/MMU.cpp
   src/core/CPU.cpp
+  src/core/Joypad.cpp
   src/core/Timer.cpp
   src/core/PPU.cpp
   src/core/OAMScan.cpp
@@ -209,6 +211,7 @@ add_executable(blargg_runner
   src/core/MMU.cpp
   src/core/CPU.cpp
   src/core/GameBoy.cpp
+  src/core/Joypad.cpp
   src/core/Timer.cpp
   src/core/PPU.cpp
   src/core/OAMScan.cpp
@@ -255,6 +258,7 @@ add_executable(mealybug_runner
   src/core/MMU.cpp
   src/core/CPU.cpp
   src/core/GameBoy.cpp
+  src/core/Joypad.cpp
   src/core/Timer.cpp
   src/core/PPU.cpp
   src/core/OAMScan.cpp
@@ -299,6 +303,7 @@ add_executable(mooneye_runner
   src/core/MMU.cpp
   src/core/CPU.cpp
   src/core/GameBoy.cpp
+  src/core/Joypad.cpp
   src/core/Timer.cpp
   src/core/PPU.cpp
   src/core/OAMScan.cpp
@@ -341,6 +346,7 @@ add_executable(microtest_runner
   src/core/MMU.cpp
   src/core/CPU.cpp
   src/core/GameBoy.cpp
+  src/core/Joypad.cpp
   src/core/Timer.cpp
   src/core/PPU.cpp
   src/core/OAMScan.cpp
