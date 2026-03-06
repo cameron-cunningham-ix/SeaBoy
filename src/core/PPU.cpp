@@ -352,4 +352,61 @@ namespace SeaBoy
         default: break;
         }
     }
+
+    void PPU::triggerOAMCorrupt(OAMCorruptType type)
+    {
+        // Gate: LCD on, visible line, PPU in Mode 2 - PanDocs.25 OAM Corruption Bug
+        if (!(m_lcdc & LCDC::LCDEnable)) return;
+        if (m_ly >= VISIBLE_LINES)       return;
+        if (m_mode != PPUMode::OAMScan)  return;
+
+        // One OAM row (8 bytes = 4 × 16-bit words) is read per M-cycle during Mode 2.
+        // row 0 (objects 0-1) is protected from corruption.
+        uint8_t row = static_cast<uint8_t>(m_lineCycle / 4);
+        if (row == 0) return;
+
+        uint8_t* cur  = m_oam + row * 8;
+        uint8_t* prev = m_oam + (row - 1) * 8;
+
+        // 16-bit word helpers (little-endian)
+        auto rw = [](const uint8_t* p, int w) -> uint16_t
+            { return static_cast<uint16_t>(p[w * 2] | (p[w * 2 + 1] << 8)); };
+        auto ww = [](uint8_t* p, int w, uint16_t v)
+            { p[w * 2] = static_cast<uint8_t>(v); p[w * 2 + 1] = static_cast<uint8_t>(v >> 8); };
+
+        if (type == OAMCorruptType::Write)
+        {
+            // PanDocs.25 OAM Corruption Bug - Write Corruption
+            uint16_t a = rw(cur, 0), b = rw(prev, 0), c = rw(prev, 2);
+            ww(cur, 0, static_cast<uint16_t>(((a ^ c) & (b ^ c)) ^ c));
+            for (int i = 1; i < 4; ++i) ww(cur, i, rw(prev, i));
+        }
+        else if (type == OAMCorruptType::Read)
+        {
+            // PanDocs.25 OAM Corruption Bug - Read Corruption
+            uint16_t a = rw(cur, 0), b = rw(prev, 0), c = rw(prev, 2);
+            ww(cur, 0, static_cast<uint16_t>(b | (a & c)));
+            for (int i = 1; i < 4; ++i) ww(cur, i, rw(prev, i));
+        }
+        else // ReadWrite
+        {
+            // PanDocs.25 OAM Corruption Bug - Read During Increase/Decrease
+            // Multi-row step only applies when not in the first four or last row.
+            if (row >= 4 && row < 19)
+            {
+                uint8_t* prev2 = m_oam + (row - 2) * 8;
+                uint16_t a = rw(prev2, 0), b = rw(prev, 0), c = rw(cur, 0), d = rw(prev, 2);
+                ww(prev, 0, static_cast<uint16_t>((b & (a | c | d)) | (a & c & d)));
+                for (int i = 0; i < 4; ++i)
+                {
+                    ww(cur,   i, rw(prev, i));
+                    ww(prev2, i, rw(prev, i));
+                }
+            }
+            // Follow with Read corruption applied to (updated) cur
+            uint16_t a = rw(cur, 0), b = rw(prev, 0), c = rw(prev, 2);
+            ww(cur, 0, static_cast<uint16_t>(b | (a & c)));
+            for (int i = 1; i < 4; ++i) ww(cur, i, rw(prev, i));
+        }
+    }
 }

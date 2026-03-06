@@ -68,6 +68,9 @@ namespace SeaBoy
         constexpr uint8_t LYCIRQ      = 0x40; // bit 6: LYC == LY interrupt enable
     }
 
+    // OAM corruption trigger type - PanDocs.25 OAM Corruption Bug
+    enum class OAMCorruptType { Write, Read, ReadWrite };
+
     class PPU
     {
     public:
@@ -91,6 +94,11 @@ namespace SeaBoy
         // Enforces Mode 2/3 access gating (returns 0xFF / ignores write during OAMScan/Drawing).
         uint8_t readOAM(uint16_t addr) const;
         void    writeOAM(uint16_t addr, uint8_t val);
+
+        // OAM corruption bug - PanDocs.25 OAM Corruption Bug
+        // Called by MMU when a corruption-triggering instruction accesses 0xFE00–0xFEFF
+        // while the PPU is in Mode 2 on a visible scanline.
+        void triggerOAMCorrupt(OAMCorruptType type);
 
         // Ungated reads - used by peek8 (debugger) and DMA.
         uint8_t peekVRAM(uint16_t addr) const { return m_vram[addr & 0x1FFFu]; }
