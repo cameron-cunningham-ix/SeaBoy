@@ -258,5 +258,11 @@ namespace SeaBoy
         return 0xFFu;
     }
 
+    void MMU::triggerOAMCorrupt(uint16_t addr, OAMCorruptType type)
+    {
+        // PanDocs.25 OAM Corruption Bug - only fires when addr is in the OAM region
+        if (m_ppu && addr >= 0xFE00u && addr <= 0xFEFFu)
+            m_ppu->triggerOAMCorrupt(type);
+    }
 
 }

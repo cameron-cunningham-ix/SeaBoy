@@ -8,6 +8,10 @@
 #include <string>
 #include <vector>
 
+// PPU.hpp included for OAMCorruptType used in triggerOAMCorrupt().
+// PPU.hpp only forward-declares MMU, so there is no circular dependency
+#include "PPU.hpp"
+
 // PanDocs.2 - Memory Map
 //
 // Address space:
@@ -44,7 +48,7 @@ namespace SeaBoy
     // Forward declarations - full definitions included only in their respective .cpp files.
     class Cartridge; // src/cartridge/Cartridge.hpp
     class Timer;     // src/core/Timer.hpp
-    class PPU;       // src/core/PPU.hpp
+    // PPU is fully included above via PPU.hpp
 
     class MMU
     {
@@ -89,6 +93,10 @@ namespace SeaBoy
         // Returns true while an OAM DMA transfer is in progress (including startup delay).
         // Used to enforce bus conflict: CPU may only access HRAM during DMA
         bool isDMAActive() const;
+
+        // OAM corruption bug - PanDocs.25 OAM Corruption Bug
+        // Delegates to PPU::triggerOAMCorrupt() when addr is in 0xFE00–0xFEFF.
+        void triggerOAMCorrupt(uint16_t addr, OAMCorruptType type);
 
         // Serial port output (captured from writes to SB/SC, 0xFF01/02).
         // Blargg test ROMs write results here. Safe to call at any time.
