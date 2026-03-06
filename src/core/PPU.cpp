@@ -241,6 +241,16 @@ namespace SeaBoy
 
     uint8_t PPU::readOAM(uint16_t addr) const
     {
+        // PanDocs.4.3.1 OAM DMA Transfer — when DMA is active, the DMA controller
+        // owns the OAM bus, overriding normal PPU mode-based locking.
+        if (m_dmaActive)
+        {
+            // During startup delay: DMA hasn't started writing yet, OAM readable
+            if (m_dmaStartDelay > 0)
+                return m_oam[addr - 0xFE00u];
+            // During active transfer: DMA writing to OAM, CPU reads return 0xFF
+            return 0xFF;
+        }
         // OAM locked during Mode 2 (OAMScan) and Mode 3 (Drawing)
         if ((m_lcdc & LCDC::LCDEnable) &&
             (m_mode == PPUMode::OAMScan || m_mode == PPUMode::Drawing))
@@ -250,6 +260,13 @@ namespace SeaBoy
 
     void PPU::writeOAM(uint16_t addr, uint8_t val)
     {
+        // PanDocs.4.3.1 OAM DMA Transfer — DMA owns the OAM bus
+        if (m_dmaActive)
+        {
+            if (m_dmaStartDelay > 0)
+                m_oam[addr - 0xFE00u] = val; // startup delay: OAM still writable
+            return; // during transfer: writes ignored
+        }
         if ((m_lcdc & LCDC::LCDEnable) &&
             (m_mode == PPUMode::OAMScan || m_mode == PPUMode::Drawing))
             return;
@@ -332,10 +349,12 @@ namespace SeaBoy
         case ADDR_DMA:
             // PanDocs.4.3.1 OAM DMA Transfer - initiates a 160-byte copy from
             // (val << 8) into OAM, 1 byte per M-cycle (640 T-cycles total).
-            // Transfer starts after a 1 M-cycle (4 T-cycle) startup delay
+            // Transfer starts after a startup delay. Set to 8 T-cycles (2 ticks)
+            // because the first tick is consumed in the same bus callback as the
+            // triggering write; the CPU needs OAM access for 1 more M-cycle.
             m_dma           = val;
             m_dmaActive     = true;
-            m_dmaStartDelay = 4;
+            m_dmaStartDelay = 8;
             m_dmaSource     = static_cast<uint16_t>(val << 8);
             m_dmaByte       = 0;
             break;

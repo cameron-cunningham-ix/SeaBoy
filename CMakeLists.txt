@@ -323,3 +323,45 @@ endif()
 set_target_properties(mooneye_runner PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIG>"
 )
+
+# -----------------------------
+# microtest_runner – gbmicrotest cycle-accurate micro-test harness
+#
+# ROMs from: https://github.com/aappleby/gbmicrotest
+# Pre-built binaries in roms/gbmicrotest-main/bin/
+#
+# Usage (single test):
+#   ./build/Release/microtest_runner.exe roms/gbmicrotest-main/bin/minimal.gb
+#
+# Batch (all tests):
+#   bash tests/run_microtest.sh
+# -----------------------------
+add_executable(microtest_runner
+  tests/microtest_runner.cpp
+  src/core/MMU.cpp
+  src/core/CPU.cpp
+  src/core/GameBoy.cpp
+  src/core/Timer.cpp
+  src/core/PPU.cpp
+  src/core/OAMScan.cpp
+  src/core/PixelFetcher.cpp
+  src/core/Palettes.cpp
+  src/core/opcodes/Opcodes.cpp
+  src/core/opcodes/OpcodesCB.cpp
+  src/cartridge/Cartridge.cpp
+  src/cartridge/MBC0.cpp
+  src/cartridge/MBC1.cpp
+  src/cartridge/MBC2.cpp
+)
+
+target_include_directories(microtest_runner PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+if(MSVC)
+  target_compile_options(microtest_runner PRIVATE /W4 /permissive- /Zc:preprocessor /utf-8)
+else()
+  target_compile_options(microtest_runner PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+set_target_properties(microtest_runner PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIG>"
+)

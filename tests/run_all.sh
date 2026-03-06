@@ -11,6 +11,7 @@
 #   --no-blargg          Skip Blargg ROM tests
 #   --no-mealybug        Skip Mealybug PPU visual tests
 #   --no-mooneye         Skip Mooneye hardware tests
+#   --no-microtest       Skip gbmicrotest cycle-accurate tests
 #
 # Exit code: 0 if all enabled suites pass, 1 if any fail.
 
@@ -54,6 +55,7 @@ RUN_SM83=0
 RUN_BLARGG=1
 RUN_MEALYBUG=1
 RUN_MOONEYE=1
+RUN_MICROTEST=1
 
 # ---------------------------------------------------------------------------
 # Argument parsing
@@ -66,7 +68,8 @@ while [[ $# -gt 0 ]]; do
         --no-blargg)  RUN_BLARGG=0;   shift   ;;
         --no-mealybug) RUN_MEALYBUG=0; shift  ;;
         --no-mooneye) RUN_MOONEYE=0;  shift   ;;
-        -h|--help)    sed -n '2,15p' "$0"; exit 0 ;;
+        --no-microtest) RUN_MICROTEST=0; shift ;;
+        -h|--help)    sed -n '2,16p' "$0"; exit 0 ;;
         *) echo "Unknown option: $1" >&2; exit 1 ;;
     esac
 done
@@ -86,12 +89,12 @@ fi
 # ---------------------------------------------------------------------------
 # Summary state
 # ---------------------------------------------------------------------------
-# Indices: 0=Build 1=Blargg 2=SM83 3=Mealybug 4=Mooneye
-SUITE_NAMES=("Build" "Blargg" "SM83" "Mealybug" "Mooneye")
-SUITE_STATUS=("SKIP" "SKIP" "SKIP" "SKIP" "SKIP")
-SUITE_PASS=(0 0 0 0 0)
-SUITE_FAIL=(0 0 0 0 0)
-SUITE_NOTES=("" "" "use --sm83 to enable" "" "")
+# Indices: 0=Build 1=Blargg 2=SM83 3=Mealybug 4=Mooneye 5=Microtest
+SUITE_NAMES=("Build" "Blargg" "SM83" "Mealybug" "Mooneye" "Microtest")
+SUITE_STATUS=("SKIP" "SKIP" "SKIP" "SKIP" "SKIP" "SKIP")
+SUITE_PASS=(0 0 0 0 0 0)
+SUITE_FAIL=(0 0 0 0 0 0)
+SUITE_NOTES=("" "" "use --sm83 to enable" "" "" "")
 
 BLARGG_ROM_LABELS=()
 BLARGG_ROM_STATUS=()
@@ -350,6 +353,43 @@ if [[ $RUN_MOONEYE -eq 1 ]]; then
 fi
 
 # ===========================================================================
+# STEP 5: MICROTEST
+# ===========================================================================
+if [[ $RUN_MICROTEST -eq 1 ]]; then
+    echo -e "${C_BOLD}--- gbmicrotest Cycle-Accurate Tests ---${C_RESET}"
+    MICROTEST_SCRIPT="$SCRIPT_DIR/run_microtest.sh"
+
+    if [[ ! -f "$MICROTEST_SCRIPT" ]]; then
+        echo "ERROR: run_microtest.sh not found"
+        SUITE_STATUS[5]="FAIL"
+        OVERALL_FAIL=1
+    else
+        set +e
+        mt_output=$(bash "$MICROTEST_SCRIPT" "$BUILD_DIR" 2>&1)
+        mt_exit=$?
+        set -e
+
+        printf '%s\n' "$mt_output" | sed 's/^/  /'
+        echo ""
+
+        if parse_results "$mt_output"; then
+            SUITE_PASS[5]=$PARSED_PASS
+            SUITE_FAIL[5]=$PARSED_FAIL
+        else
+            SUITE_NOTES[5]="no results line"
+        fi
+
+        if [[ $mt_exit -eq 0 ]]; then
+            SUITE_STATUS[5]="PASS"
+        else
+            SUITE_STATUS[5]="FAIL"
+            OVERALL_FAIL=1
+        fi
+    fi
+    echo ""
+fi
+
+# ===========================================================================
 # SUMMARY TABLE
 # ===========================================================================
 echo -e "${C_BOLD}$SEP${C_RESET}"
@@ -387,8 +427,8 @@ else
         "SM83" "$(color_status "${SUITE_STATUS[2]}")" "-" "-" "${SUITE_NOTES[2]}"
 fi
 
-# Mealybug + Mooneye
-for idx in 3 4; do
+# Mealybug + Mooneye + Microtest
+for idx in 3 4 5; do
     st="${SUITE_STATUS[$idx]}"
     if [[ "$st" == "SKIP" ]]; then
         printf "%-16s  %b  %-9s  %-9s  %s\n" \
@@ -404,8 +444,8 @@ done
 
 echo "$DASH"
 
-total_pass=$(( SUITE_PASS[1] + SUITE_PASS[2] + SUITE_PASS[3] + SUITE_PASS[4] ))
-total_fail=$(( SUITE_FAIL[1] + SUITE_FAIL[2] + SUITE_FAIL[3] + SUITE_FAIL[4] ))
+total_pass=$(( SUITE_PASS[1] + SUITE_PASS[2] + SUITE_PASS[3] + SUITE_PASS[4] + SUITE_PASS[5] ))
+total_fail=$(( SUITE_FAIL[1] + SUITE_FAIL[2] + SUITE_FAIL[3] + SUITE_FAIL[4] + SUITE_FAIL[5] ))
 overall_label="PASS"; [[ $OVERALL_FAIL -ne 0 ]] && overall_label="FAIL"
 
 printf "${C_BOLD}%-16s  %b  %-9s  %-9s${C_RESET}\n" \
