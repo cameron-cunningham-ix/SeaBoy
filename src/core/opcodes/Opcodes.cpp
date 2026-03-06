@@ -16,17 +16,29 @@ namespace SeaBoy::Opcodes
 
 // ---------------------------------------------------------------------------
 // Helper: push a 16-bit value onto the stack
+// PanDocs.25 OAM Corruption Bug: PUSH triggers Write corruption for each SP--
+// IDU when SP is in 0xFE00–0xFEFF. Trigger fires with the pre-decrement value.
 // ---------------------------------------------------------------------------
 static void stackPush(CPU& cpu, uint16_t val) {
-    cpu.regs().SP -= 2;
-    cpu.mmu().write16(cpu.regs().SP, val);
+    cpu.mmu().triggerOAMCorrupt(cpu.regs().SP, OAMCorruptType::Write); // SP-- IDU (high byte)
+    cpu.mmu().write8(--cpu.regs().SP, static_cast<uint8_t>(val >> 8));
+    cpu.mmu().triggerOAMCorrupt(cpu.regs().SP, OAMCorruptType::Write); // SP-- IDU (low byte)
+    cpu.mmu().write8(--cpu.regs().SP, static_cast<uint8_t>(val));
 }
 
 // Helper: pop a 16-bit value from the stack
+// PanDocs.25 OAM Corruption Bug: POP triggers 3 corruption events when SP is in
+// 0xFE00–0xFEFF — one read, one glitched write from the SP++ IDU, and a second
+// read without a second glitched write.
 static uint16_t stackPop(CPU& cpu) {
-    uint16_t val = cpu.mmu().read16(cpu.regs().SP);
-    cpu.regs().SP += 2;
-    return val;
+    uint16_t sp0 = cpu.regs().SP;
+    cpu.mmu().triggerOAMCorrupt(sp0, OAMCorruptType::Read);    // M2 start: bus read
+    uint8_t lo = cpu.mmu().read8(sp0);                          // M2 callback: PPU +4T
+    cpu.mmu().triggerOAMCorrupt(sp0, OAMCorruptType::Write);   // M2 end: SP++ IDU
+    cpu.regs().SP = static_cast<uint16_t>(sp0 + 1);
+    cpu.mmu().triggerOAMCorrupt(cpu.regs().SP, OAMCorruptType::Read);  // M3 start: bus read
+    uint8_t hi = cpu.mmu().read8(cpu.regs().SP++);              // M3 callback: PPU +4T
+    return static_cast<uint16_t>(lo | (hi << 8));
 }
 
 // ---------------------------------------------------------------------------
@@ -150,8 +162,10 @@ uint32_t op_02(CPU& cpu) {
 
 // 0x03 INC BC - 8T
 uint32_t op_03(CPU& cpu) {
-    cpu.regs().setBC(cpu.regs().getBC() + 1);
-    cpu.internalCycle(); // 1 internal M-cycle
+    uint16_t pre = cpu.regs().getBC();
+    cpu.regs().setBC(static_cast<uint16_t>(pre + 1));
+    cpu.internalCycle(); // IDU fires during this M-cycle; PPU advances 4T
+    cpu.mmu().triggerOAMCorrupt(pre, OAMCorruptType::Write); // trigger after IDU M-cycle
     return 8;
 }
 
@@ -208,8 +222,10 @@ uint32_t op_0A(CPU& cpu) {
 
 // 0x0B DEC BC - 8T
 uint32_t op_0B(CPU& cpu) {
-    cpu.regs().setBC(cpu.regs().getBC() - 1);
+    uint16_t pre = cpu.regs().getBC();
+    cpu.regs().setBC(static_cast<uint16_t>(pre - 1));
     cpu.internalCycle();
+    cpu.mmu().triggerOAMCorrupt(pre, OAMCorruptType::Write);
     return 8;
 }
 
@@ -265,8 +281,10 @@ uint32_t op_12(CPU& cpu) {
 
 // 0x13 INC DE - 8T
 uint32_t op_13(CPU& cpu) {
-    cpu.regs().setDE(cpu.regs().getDE() + 1);
+    uint16_t pre = cpu.regs().getDE();
+    cpu.regs().setDE(static_cast<uint16_t>(pre + 1));
     cpu.internalCycle();
+    cpu.mmu().triggerOAMCorrupt(pre, OAMCorruptType::Write);
     return 8;
 }
 
@@ -324,9 +342,11 @@ uint32_t op_1A(CPU& cpu) {
 
 // 0x1B DEC DE - 8T
 uint32_t op_1B(CPU& cpu) {
-    cpu.regs().setDE(cpu.regs().getDE() - 1);
+    uint16_t pre = cpu.regs().getDE();
+    cpu.regs().setDE(static_cast<uint16_t>(pre - 1));
     cpu.internalCycle();
-    return 8; 
+    cpu.mmu().triggerOAMCorrupt(pre, OAMCorruptType::Write);
+    return 8;
 }
 
 // 0x1C INC E - 4T
@@ -390,8 +410,10 @@ uint32_t op_22(CPU& cpu) {
 
 // 0x23 INC HL - 8T
 uint32_t op_23(CPU& cpu) {
-    cpu.regs().setHL(cpu.regs().getHL() + 1);
+    uint16_t pre = cpu.regs().getHL();
+    cpu.regs().setHL(static_cast<uint16_t>(pre + 1));
     cpu.internalCycle();
+    cpu.mmu().triggerOAMCorrupt(pre, OAMCorruptType::Write);
     return 8;
 }
 
@@ -464,15 +486,19 @@ uint32_t op_29(CPU& cpu) {
 
 // 0x2A LD A,(HL+) - 8T
 uint32_t op_2A(CPU& cpu) {
-    cpu.regs().A = cpu.mmu().read8(cpu.regs().getHL());
-    cpu.regs().setHL(cpu.regs().getHL() + 1);
+    uint16_t hl = cpu.regs().getHL();
+    cpu.mmu().triggerOAMCorrupt(hl, OAMCorruptType::ReadWrite); // read + IDU same M-cycle
+    cpu.regs().A = cpu.mmu().read8(hl);
+    cpu.regs().setHL(static_cast<uint16_t>(hl + 1));
     return 8;
 }
 
 // 0x2B DEC HL - 8T
 uint32_t op_2B(CPU& cpu) {
-    cpu.regs().setHL(cpu.regs().getHL() - 1);
+    uint16_t pre = cpu.regs().getHL();
+    cpu.regs().setHL(static_cast<uint16_t>(pre - 1));
     cpu.internalCycle();
+    cpu.mmu().triggerOAMCorrupt(pre, OAMCorruptType::Write);
     return 8;
 }
 
@@ -532,8 +558,9 @@ uint32_t op_32(CPU& cpu) {
 
 // 0x33 INC SP - 8T
 uint32_t op_33(CPU& cpu) {
-    cpu.regs().SP++;
+    uint16_t pre = cpu.regs().SP++;
     cpu.internalCycle();
+    cpu.mmu().triggerOAMCorrupt(pre, OAMCorruptType::Write);
     return 8;
 }
 
@@ -587,15 +614,18 @@ uint32_t op_39(CPU& cpu) {
 
 // 0x3A LD A,(HL-) - 8T
 uint32_t op_3A(CPU& cpu) {
-    cpu.regs().A = cpu.mmu().read8(cpu.regs().getHL());
-    cpu.regs().setHL(cpu.regs().getHL() - 1);
+    uint16_t hl = cpu.regs().getHL();
+    cpu.mmu().triggerOAMCorrupt(hl, OAMCorruptType::ReadWrite); // read + IDU same M-cycle
+    cpu.regs().A = cpu.mmu().read8(hl);
+    cpu.regs().setHL(static_cast<uint16_t>(hl - 1));
     return 8;
 }
 
 // 0x3B DEC SP - 8T
 uint32_t op_3B(CPU& cpu) {
-    cpu.regs().SP--;
+    uint16_t pre = cpu.regs().SP--;
     cpu.internalCycle();
+    cpu.mmu().triggerOAMCorrupt(pre, OAMCorruptType::Write);
     return 8;
 }
 
