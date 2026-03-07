@@ -108,6 +108,7 @@ add_executable(SeaBoy
   src/core/Joypad.cpp
   src/core/Timer.cpp
   src/core/PPU.cpp
+  src/core/APU.cpp
   src/core/OAMScan.cpp
   src/core/PixelFetcher.cpp
   src/core/Palettes.cpp
@@ -173,6 +174,7 @@ add_executable(sm83_runner
   src/core/Joypad.cpp
   src/core/Timer.cpp
   src/core/PPU.cpp
+  src/core/APU.cpp
   src/core/OAMScan.cpp
   src/core/PixelFetcher.cpp
   src/core/Palettes.cpp
@@ -214,6 +216,7 @@ add_executable(blargg_runner
   src/core/Joypad.cpp
   src/core/Timer.cpp
   src/core/PPU.cpp
+  src/core/APU.cpp
   src/core/OAMScan.cpp
   src/core/PixelFetcher.cpp
   src/core/Palettes.cpp
@@ -261,6 +264,7 @@ add_executable(mealybug_runner
   src/core/Joypad.cpp
   src/core/Timer.cpp
   src/core/PPU.cpp
+  src/core/APU.cpp
   src/core/OAMScan.cpp
   src/core/PixelFetcher.cpp
   src/core/Palettes.cpp
@@ -306,6 +310,7 @@ add_executable(mooneye_runner
   src/core/Joypad.cpp
   src/core/Timer.cpp
   src/core/PPU.cpp
+  src/core/APU.cpp
   src/core/OAMScan.cpp
   src/core/PixelFetcher.cpp
   src/core/Palettes.cpp
@@ -349,6 +354,7 @@ add_executable(microtest_runner
   src/core/Joypad.cpp
   src/core/Timer.cpp
   src/core/PPU.cpp
+  src/core/APU.cpp
   src/core/OAMScan.cpp
   src/core/PixelFetcher.cpp
   src/core/Palettes.cpp

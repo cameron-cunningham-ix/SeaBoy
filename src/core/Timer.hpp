@@ -43,6 +43,10 @@ namespace SeaBoy
         uint8_t read(uint16_t addr) const;
         void    write(uint16_t addr, uint8_t val);
 
+        // Expose the 16-bit internal counter for DIV-APU (APU frame sequencer).
+        // The APU detects falling edges on bit 12 of this counter.
+        uint16_t sysCounter() const { return m_counter; }
+
     private:
         // Returns the internal counter bit index selected by TAC[1:0]
         // PanDocs.8 Timer and Divider Registers (clock select table)

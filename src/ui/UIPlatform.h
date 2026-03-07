@@ -53,7 +53,7 @@ public:
     UIPlatform(char* title, int windowWidth, int windowHeight, int textureWidth, int textureHeight)
     {
         // SDL Initializations
-        if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
+        if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_AUDIO))
         {
             SDL_GetError();
             std::cerr << "SDL failed to initialize\n";

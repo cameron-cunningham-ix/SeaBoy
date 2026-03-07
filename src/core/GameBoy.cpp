@@ -12,10 +12,12 @@ namespace SeaBoy
         , m_cpu(m_mmu)      // CPU holds a reference to m_mmu - safe: both live in GameBoy
         , m_timer(m_mmu)    // Timer holds a reference to m_mmu for interrupt flag writes
         , m_ppu(m_mmu)      // PPU holds a reference to m_mmu for interrupt flag writes
+        , m_apu(m_mmu)      // APU holds a reference to m_mmu (for future interrupt use)
     {
-        // Wire Timer, PPU, and Joypad into MMU so I/O registers route through them.
+        // Wire Timer, PPU, APU, and Joypad into MMU so I/O registers route through them.
         m_mmu.setTimer(&m_timer);
         m_mmu.setPPU(&m_ppu);
+        m_mmu.setAPU(&m_apu);
         m_mmu.setJoypad(&m_joypad);
 
         // Joypad interrupt: set IF bit 4 (INT_JOYPAD) on any button press.
@@ -27,6 +29,7 @@ namespace SeaBoy
         m_cpu.reset();
         m_timer.reset();
         m_ppu.reset();
+        m_apu.reset();
     }
 
     bool GameBoy::loadROM(const std::string& path)
@@ -53,13 +56,14 @@ namespace SeaBoy
         m_cpu.reset();
         m_timer.reset();
         m_ppu.reset();
+        m_apu.reset();
 
         return true;
     }
 
     uint32_t GameBoy::tick()
     {
-        // Subsystems (timer, PPU, and future APU) are ticked at M-cycle granularity
+        // Subsystems (timer, PPU, APU) are ticked at M-cycle granularity
         // via the onBusCycle callback during cpu.step(), not after.
         return m_cpu.step();
     }
@@ -69,7 +73,7 @@ namespace SeaBoy
         auto* gb = static_cast<GameBoy*>(ctx);
         gb->m_timer.tick(tCycles);
         gb->m_ppu.tick(tCycles);
-        // future: gb->m_apu.tick(tCycles);
+        gb->m_apu.tick(tCycles, gb->m_timer.sysCounter());
     }
 
     void GameBoy::onJoypadIRQ(void* ctx)

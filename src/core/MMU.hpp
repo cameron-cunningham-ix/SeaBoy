@@ -50,6 +50,7 @@ namespace SeaBoy
     class Cartridge; // src/cartridge/Cartridge.hpp
     class Timer;     // src/core/Timer.hpp
     class Joypad;    // src/core/Joypad.hpp
+    class APU;       // src/core/APU.hpp
     // PPU is fully included above via PPU.hpp
 
     class MMU
@@ -112,6 +113,10 @@ namespace SeaBoy
         // MMU routes 0xFF00 to the Joypad; null until wired.
         void setJoypad(Joypad* j) { m_joypad = j; }
 
+        // APU link - set by GameBoy after constructing both MMU and APU.
+        // MMU routes 0xFF10–0xFF26 and 0xFF30–0xFF3F to the APU; null until wired.
+        void setAPU(APU* a) { m_apu = a; }
+
         // Debug: read a byte without triggering the cycle callback.
         // Used by blargg_runner to inspect memory without side effects.
         uint8_t peek8(uint16_t addr) const;
@@ -135,6 +140,9 @@ namespace SeaBoy
 
         // Joypad - null until setJoypad() is called by GameBoy. Not owned.
         Joypad* m_joypad = nullptr;
+
+        // APU - null until setAPU() is called by GameBoy. Not owned.
+        APU* m_apu = nullptr;
 
         uint8_t m_wram[0x2000]{};  // 8 KB WRAM
         uint8_t m_hram[0x7F]{};    // 127 bytes HRAM (0xFF80–0xFFFE)

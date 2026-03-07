@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <string>
 
+#include "APU.hpp"
 #include "CPU.hpp"
 #include "Joypad.hpp"
 #include "MMU.hpp"
@@ -50,13 +51,17 @@ namespace SeaBoy
         // Debug access to MMU (for peek8 etc.)
         [[nodiscard]] const MMU& mmu() const { return m_mmu; }
 
+        // Audio access - used by main.cpp to drain samples for SDL audio.
+        [[nodiscard]] APU& apu() { return m_apu; }
+
     private:
         // Member declaration order determines construction order.
-        // MMU must be constructed before CPU, Timer, and PPU (all hold MMU&).
+        // MMU must be constructed before CPU, Timer, PPU, and APU (all hold MMU&).
         MMU    m_mmu;
         CPU    m_cpu;
         Timer  m_timer;
         PPU    m_ppu;
+        APU    m_apu;
         Joypad m_joypad;
 
         // M-cycle callback - ticks timer and PPU during CPU execution.

@@ -25,6 +25,18 @@ int main(int argc, char *argv[])
             fprintf(stderr, "Warning: could not load ROM '%s'\n", argv[1]);
     }
 
+    // SDL3 audio stream for APU output — PanDocs Audio
+    SDL_AudioSpec audioSpec{};
+    audioSpec.freq     = 48000;
+    audioSpec.format   = SDL_AUDIO_F32;
+    audioSpec.channels = 2;
+    SDL_AudioStream* audioStream = SDL_OpenAudioDeviceStream(
+        SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &audioSpec, nullptr, nullptr);
+    if (audioStream)
+        SDL_ResumeAudioStreamDevice(audioStream);
+    else
+        fprintf(stderr, "Warning: SDL audio failed to initialize: %s\n", SDL_GetError());
+
     bool running = true;
     while (running)
     {
@@ -40,6 +52,16 @@ int main(int argc, char *argv[])
         while (frameCycles < SeaBoy::TCYCLES_PER_FRAME)
         {
             frameCycles += gameBoy.tick();
+        }
+
+        // Drain APU samples into SDL audio stream
+        if (audioStream)
+        {
+            float samples[2048]; // up to 1024 stereo pairs
+            uint32_t count = gameBoy.apu().drainSamples(samples, 1024);
+            if (count > 0)
+                SDL_PutAudioStreamData(audioStream, samples,
+                    static_cast<int>(count * 2 * sizeof(float)));
         }
 
         // Push the PPU framebuffer to the display texture

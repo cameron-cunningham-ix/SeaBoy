@@ -1,6 +1,7 @@
 #include "MMU.hpp"
 
 #include "../cartridge/Cartridge.hpp"
+#include "APU.hpp"
 #include "Joypad.hpp"
 #include "PPU.hpp"
 #include "Timer.hpp"
@@ -101,6 +102,9 @@ namespace SeaBoy
         // Timer registers - PanDocs.8 Timer and Divider Registers
         else if (addr >= ADDR_DIV && addr <= ADDR_TAC)
             val = m_timer ? m_timer->read(addr) : 0xFFu;
+        // APU registers - PanDocs Audio Registers
+        else if ((addr >= 0xFF10u && addr <= 0xFF26u) || (addr >= 0xFF30u && addr <= 0xFF3Fu))
+            val = m_apu ? m_apu->read(addr) : 0xFFu;
         // LCD registers - routed to PPU (PanDocs.4 LCD I/O Registers)
         else if (addr >= 0xFF40u && addr <= 0xFF4Bu)
             val = m_ppu ? m_ppu->read(addr) : 0xFFu;
@@ -153,6 +157,9 @@ namespace SeaBoy
         // Timer registers - PanDocs.8 Timer and Divider Registers
         else if (addr >= ADDR_DIV && addr <= ADDR_TAC)
             { if (m_timer) m_timer->write(addr, val); }
+        // APU registers - PanDocs Audio Registers
+        else if ((addr >= 0xFF10u && addr <= 0xFF26u) || (addr >= 0xFF30u && addr <= 0xFF3Fu))
+            { if (m_apu) m_apu->write(addr, val); }
         // LCD registers - routed to PPU (PanDocs.4 LCD I/O Registers)
         else if (addr >= 0xFF40u && addr <= 0xFF4Bu)
             { if (m_ppu) m_ppu->write(addr, val); }
@@ -254,6 +261,9 @@ namespace SeaBoy
             return m_sb;
         if (addr == 0xFF02u)
             return m_sc | 0x7Eu;
+        // APU registers - PanDocs Audio Registers
+        if ((addr >= 0xFF10u && addr <= 0xFF26u) || (addr >= 0xFF30u && addr <= 0xFF3Fu))
+            return m_apu ? m_apu->read(addr) : 0xFFu;
         if (addr >= 0xFF40u && addr <= 0xFF4Bu)
             return m_ppu ? m_ppu->read(addr) : 0xFFu;
         if (addr >= 0xFF68u && addr <= 0xFF6Bu)
