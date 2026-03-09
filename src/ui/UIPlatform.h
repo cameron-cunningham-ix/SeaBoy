@@ -165,17 +165,6 @@ public:
         SDL_RenderTexture(renderer, texture, NULL, NULL);
        
 
-        // Try to render UI at target frame rate
-        static Uint64 lastFrameTime = SDL_GetTicks();
-        Uint64 frameStartTime = SDL_GetTicks();
-        Uint64 frameDuration = frameStartTime - lastFrameTime;
-        Uint64 targetFrameDuration = static_cast<Uint64>(1000.0f / frameRate);
-        if (frameDuration < targetFrameDuration)
-        {
-            SDL_Delay(static_cast<Uint32>(targetFrameDuration - frameDuration));
-        }
-        lastFrameTime = SDL_GetTicks();
-
         ImGui::Render();
         ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
         SDL_RenderPresent(renderer);

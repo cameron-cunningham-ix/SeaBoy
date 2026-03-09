@@ -46,6 +46,19 @@ int main(int argc, char *argv[])
             break;
         }
 
+        // Audio-driven sync: wait if SDL has too much buffered audio.
+        // This replaces SDL_Delay-based frame limiting — the audio hardware clock
+        // drives emulation speed, preventing sample accumulation and gradual delay.
+        if (audioStream)
+        {
+            // ~2 frames of audio (~1608 stereo pairs = ~33ms at 48 kHz)
+            constexpr int MAX_QUEUED_BYTES = 1608 * 2 * sizeof(float);
+            while (SDL_GetAudioStreamQueued(audioStream) > MAX_QUEUED_BYTES)
+            {
+                SDL_Delay(1);
+            }
+        }
+
         // Run one full frame worth of T-cycles
         // PanDocs.4.8 — 154 lines × 456 T-cycles = 70 224 T-cycles per frame
         uint32_t frameCycles = 0;

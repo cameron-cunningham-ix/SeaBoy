@@ -2,6 +2,7 @@
 #include "MBC0.hpp"
 #include "MBC1.hpp"
 #include "MBC2.hpp"
+#include "MBC3.hpp"
 
 #include <cstdio>
 
@@ -32,6 +33,13 @@ namespace SeaBoy
             case 0x05:                          // MBC2
             case 0x06:                          // MBC2+BATTERY
                 return std::make_unique<MBC2>(std::move(rom));
+
+            case 0x0F:                          // MBC3+TIMER+BATTERY
+            case 0x10:                          // MBC3+TIMER+RAM+BATTERY
+            case 0x11:                          // MBC3
+            case 0x12:                          // MBC3+RAM
+            case 0x13:                          // MBC3+RAM+BATTERY
+                return std::make_unique<MBC3>(std::move(rom));
 
             default:
                 std::fprintf(stderr,
