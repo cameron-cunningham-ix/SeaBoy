@@ -13,8 +13,8 @@ int main(int argc, char *argv[])
     const int DISPLAY_HEIGHT = 144;
     char displayTitle[128]   = "SeaBoy!";
 
-    // Create emulation / debug window
-    UIPlatform platform(displayTitle, DISPLAY_WIDTH*4, DISPLAY_HEIGHT*4, DISPLAY_WIDTH, DISPLAY_HEIGHT);
+    // Create emulation / debug window (wider to accommodate debugger panels)
+    UIPlatform platform(displayTitle, 1280, 720, DISPLAY_WIDTH, DISPLAY_HEIGHT);
 
     SeaBoy::GameBoy gameBoy;
 
@@ -44,6 +44,14 @@ int main(int argc, char *argv[])
         {
             running = false;
             break;
+        }
+
+        // Handle ROM open from File menu
+        if (!platform.m_pendingROMPath.empty())
+        {
+            if (!gameBoy.loadROM(platform.m_pendingROMPath))
+                fprintf(stderr, "Warning: could not load ROM '%s'\n", platform.m_pendingROMPath.c_str());
+            platform.m_pendingROMPath.clear();
         }
 
         // Audio-driven sync: wait if SDL has too much buffered audio.

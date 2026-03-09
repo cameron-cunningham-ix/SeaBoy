@@ -1,6 +1,8 @@
 #include <iostream>
 #include <cstring>
 #include <cmath>
+#include <string>
+#include <algorithm>
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlrenderer3.h"
@@ -43,6 +45,9 @@ private:
 public:
     // Key bindings - public so SettingsUI can read and modify them at runtime.
     JoypadBindings m_bindings;
+
+    // ROM path requested via File > Open ROM. Consumed by main loop.
+    std::string m_pendingROMPath;
 
     /// @brief
     /// @param title Title of SDL window created, appears at top
@@ -145,32 +150,92 @@ public:
         SDL_Quit();
     }
 
+    /// @brief Returns the SDL renderer (needed by DebuggerUI for texture creation)
+    SDL_Renderer* getRenderer() const { return renderer; }
+
+    /// @brief Returns the game display texture (needed by DebuggerUI for ImGui::Image)
+    SDL_Texture* getGameTexture() const { return texture; }
+
     /// @brief Render the UI and emulation display
-    void renderUI()
+    /// @param renderExtraUI Optional callback to render additional ImGui panels (e.g. DebuggerUI)
+    template<typename F = void(*)()>
+    void renderUI(F renderExtraUI = [](){})
     {
+        // Upload framebuffer to texture before starting ImGui frame
+        SDL_UpdateTexture(texture, NULL, frameBuffer, textureWidth * sizeof(unsigned int));
+
+        // Clear renderer
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderClear(renderer);
+
         // Start ImGui frame
         ImGui_ImplSDLRenderer3_NewFrame();
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
-        ImGuiWindowFlags flags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse;
-        // Set ImGui window to match viewport (SDL window)
-        int currWindowWidth, currWindowHeight;
-        SDL_GetWindowSizeInPixels(window, &windowWidth, &windowHeight);
-        // ImGui::SetNextWindowSize(ImVec2(currWindowWidth, currWindowHeight));
-        // ImVec2 availSize = ImVec2((float)currWindowWidth, (float)currWindowHeight);
-       
 
-        
-        SDL_UpdateTexture(texture, NULL, frameBuffer, textureWidth * sizeof(unsigned int));
-        SDL_RenderTexture(renderer, texture, NULL, NULL);
-       
+        // Fullscreen dockspace host window
+        const ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImGui::SetNextWindowPos(viewport->WorkPos);
+        ImGui::SetNextWindowSize(viewport->WorkSize);
+        ImGuiWindowFlags hostFlags =
+            ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar |
+            ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
+            ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
+            ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_MenuBar |
+            ImGuiWindowFlags_NoBackground;
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+        ImGui::Begin("##DockHost", nullptr, hostFlags);
+        ImGui::PopStyleVar(3);
 
+        // Dockspace
+        ImGuiID dockspaceId = ImGui::GetID("MainDockspace");
+        ImGui::DockSpace(dockspaceId, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_PassthruCentralNode);
+
+        // Menu bar
+        if (ImGui::BeginMenuBar())
+        {
+            if (ImGui::BeginMenu("File"))
+            {
+                if (ImGui::MenuItem("Open ROM..."))
+                {
+                    nfdchar_t* path = nullptr;
+                    nfdfilteritem_t filters[1] = { { "GameBoy ROM", "gb,gbc" } };
+                    if (NFD_OpenDialog(&path, filters, 1, nullptr) == NFD_OKAY)
+                    {
+                        m_pendingROMPath = path;
+                        NFD_FreePath(path);
+                    }
+                }
+                ImGui::EndMenu();
+            }
+            ImGui::EndMenuBar();
+        }
+        ImGui::End(); // ##DockHost
+
+        // Game display window - dockable
+        ImGui::Begin("Game", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+        ImVec2 avail = ImGui::GetContentRegionAvail();
+        // Maintain aspect ratio (160:144)
+        float scale = (std::min)(avail.x / static_cast<float>(textureWidth),
+                                 avail.y / static_cast<float>(textureHeight));
+        ImVec2 imageSize(static_cast<float>(textureWidth) * scale,
+                         static_cast<float>(textureHeight) * scale);
+        // Center the image
+        ImVec2 cursor = ImGui::GetCursorPos();
+        ImGui::SetCursorPos(ImVec2(cursor.x + (avail.x - imageSize.x) * 0.5f,
+                                   cursor.y + (avail.y - imageSize.y) * 0.5f));
+        ImGui::Image(reinterpret_cast<ImTextureID>(texture), imageSize);
+        ImGui::End(); // Game
+
+        // Render additional UI (e.g. debugger panels)
+        renderExtraUI();
+
+        // Finalize
         ImGui::Render();
         ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
         SDL_RenderPresent(renderer);
-        // Clear renderer for next frame
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
-        SDL_RenderClear(renderer);
     }
 
     /// @brief Write data to frameBuffer

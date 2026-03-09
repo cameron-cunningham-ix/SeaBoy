@@ -51,6 +51,12 @@ namespace SeaBoy
         // Debug access to MMU (for peek8 etc.)
         [[nodiscard]] const MMU& mmu() const { return m_mmu; }
 
+        // Debug access to PPU state (registers, VRAM, OAM)
+        [[nodiscard]] const PPU& ppu() const { return m_ppu; }
+
+        // Debug access to Timer state (DIV, TIMA, TMA, TAC)
+        [[nodiscard]] const Timer& timer() const { return m_timer; }
+
         // Audio access - used by main.cpp to drain samples for SDL audio.
         [[nodiscard]] APU& apu() { return m_apu; }
 

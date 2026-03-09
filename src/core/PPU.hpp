@@ -113,6 +113,20 @@ namespace SeaBoy
         // Palette access
         const Palettes& palettes() const { return m_palettes; }
 
+        // Debug-only accessors - read-only snapshots of internal state
+        PPUMode  mode()      const { return m_mode; }
+        uint8_t  ly()        const { return m_ly; }
+        uint32_t lineCycle() const { return m_lineCycle; }
+        uint8_t  lcdc()      const { return m_lcdc; }
+        uint8_t  stat()      const { return m_stat; }
+        uint8_t  scy()       const { return m_scy; }
+        uint8_t  scx()       const { return m_scx; }
+        uint8_t  lyc()       const { return m_lyc; }
+        uint8_t  wy()        const { return m_wy; }
+        uint8_t  wx()        const { return m_wx; }
+        const uint8_t* rawOAM()  const { return m_oam; }
+        const uint8_t* rawVRAM() const { return m_vram; }
+
     private:
         // STAT interrupt edge detection - PanDocs.9.1 INT 48 STAT interrupt
         void updateStatIRQ();
