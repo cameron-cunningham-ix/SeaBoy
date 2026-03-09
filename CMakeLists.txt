@@ -119,6 +119,7 @@ add_executable(SeaBoy
   src/cartridge/MBC1.cpp
   src/cartridge/MBC2.cpp
   src/cartridge/MBC3.cpp
+  src/ui/DebuggerUI.cpp
 )
 
 target_include_directories(SeaBoy PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

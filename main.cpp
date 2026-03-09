@@ -5,6 +5,7 @@
 #include "SDL3/SDL.h"
 #include "SDL3/SDL_main.h"
 #include "src/ui/UIPlatform.h"
+#include "src/ui/DebuggerUI.h"
 #include "src/core/GameBoy.hpp"
 
 int main(int argc, char *argv[])
@@ -37,6 +38,8 @@ int main(int argc, char *argv[])
     else
         fprintf(stderr, "Warning: SDL audio failed to initialize: %s\n", SDL_GetError());
 
+    DebuggerUI debugger(gameBoy, platform.getRenderer());
+
     bool running = true;
     while (running)
     {
@@ -54,12 +57,9 @@ int main(int argc, char *argv[])
             platform.m_pendingROMPath.clear();
         }
 
-        // Audio-driven sync: wait if SDL has too much buffered audio.
-        // This replaces SDL_Delay-based frame limiting — the audio hardware clock
-        // drives emulation speed, preventing sample accumulation and gradual delay.
-        if (audioStream)
+        // Audio-driven sync — skip when paused to avoid blocking the UI
+        if (audioStream && !debugger.isPaused())
         {
-            // ~2 frames of audio (~1608 stereo pairs = ~33ms at 48 kHz)
             constexpr int MAX_QUEUED_BYTES = 1608 * 2 * sizeof(float);
             while (SDL_GetAudioStreamQueued(audioStream) > MAX_QUEUED_BYTES)
             {
@@ -67,12 +67,32 @@ int main(int argc, char *argv[])
             }
         }
 
-        // Run one full frame worth of T-cycles
-        // PanDocs.4.8 — 154 lines × 456 T-cycles = 70 224 T-cycles per frame
-        uint32_t frameCycles = 0;
-        while (frameCycles < SeaBoy::TCYCLES_PER_FRAME)
+        // Emulation tick — respects pause / step / breakpoints
+        if (!debugger.isPaused())
         {
-            frameCycles += gameBoy.tick();
+            // Run one full frame worth of T-cycles
+            // PanDocs.4.8 — 154 lines × 456 T-cycles = 70 224 T-cycles per frame
+            uint32_t frameCycles = 0;
+            while (frameCycles < SeaBoy::TCYCLES_PER_FRAME)
+            {
+                frameCycles += gameBoy.tick();
+                if (!debugger.breakpointsEmpty() &&
+                    debugger.checkBreakpoints(gameBoy.cpu().registers().PC))
+                {
+                    debugger.pause();
+                    break;
+                }
+            }
+        }
+        else if (debugger.consumeStep())
+        {
+            gameBoy.tick();
+        }
+        else if (debugger.consumeStepFrame())
+        {
+            uint32_t frameCycles = 0;
+            while (frameCycles < SeaBoy::TCYCLES_PER_FRAME)
+                frameCycles += gameBoy.tick();
         }
 
         // Drain APU samples into SDL audio stream
@@ -87,7 +107,7 @@ int main(int argc, char *argv[])
 
         // Push the PPU framebuffer to the display texture
         platform.writeToBuffer(gameBoy.getFrameBuffer());
-        platform.renderUI();
+        platform.renderUI([&]() { debugger.render(); });
     }
 
     return 0;
