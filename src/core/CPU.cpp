@@ -278,20 +278,33 @@ namespace SeaBoy
 
     void CPU::reset(bool cgb, uint8_t headerChecksum)
     {
-        // PanDocs Power_Up_Sequence - post-boot register values (DMG)
-        // headerChecksum != 0 affects initial F value on real hardware.
-        // Using common DMG post-boot values here.
-        (void)cgb;            // CGB register set differences handled later
-        (void)headerChecksum; // Affects F initial value; simplified for now
-
-        m_regs.A  = 0x01;
-        m_regs.setF(0xB0);    // Z=1 N=0 H=1 C=1 on DMG
-        m_regs.B  = 0x00;
-        m_regs.C  = 0x13;
-        m_regs.D  = 0x00;
-        m_regs.E  = 0xD8;
-        m_regs.H  = 0x01;
-        m_regs.L  = 0x4D;
+        // PanDocs Power_Up_Sequence - post-boot register values
+        if (cgb)
+        {
+            // CGB post-boot register values
+            // A=0x11 is critical — games check this to detect CGB hardware
+            m_regs.A  = 0x11;
+            m_regs.setF(0x80);    // Z=1 N=0 H=0 C=0 on CGB
+            m_regs.B  = 0x00;
+            m_regs.C  = 0x00;
+            m_regs.D  = 0xFF;
+            m_regs.E  = 0x56;
+            m_regs.H  = 0x00;
+            m_regs.L  = 0x0D;
+        }
+        else
+        {
+            // DMG post-boot register values
+            (void)headerChecksum; // Affects F initial value; simplified for now
+            m_regs.A  = 0x01;
+            m_regs.setF(0xB0);    // Z=1 N=0 H=1 C=1 on DMG
+            m_regs.B  = 0x00;
+            m_regs.C  = 0x13;
+            m_regs.D  = 0x00;
+            m_regs.E  = 0xD8;
+            m_regs.H  = 0x01;
+            m_regs.L  = 0x4D;
+        }
         m_regs.SP = 0xFFFE;
         m_regs.PC = 0x0100;   // Skip boot ROM; start at cartridge entry point
 

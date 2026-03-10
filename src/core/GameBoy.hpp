@@ -61,6 +61,9 @@ namespace SeaBoy
         // Audio access - used by main.cpp to drain samples for SDL audio.
         [[nodiscard]] APU& apu() { return m_apu; }
 
+        // CGB mode flag - true if the loaded ROM has CGB flag 0x80 or 0xC0.
+        [[nodiscard]] bool isCGB() const { return m_cgbMode; }
+
     private:
         // Member declaration order determines construction order.
         // MMU must be constructed before CPU, Timer, PPU, and APU (all hold MMU&).
@@ -70,6 +73,7 @@ namespace SeaBoy
         PPU    m_ppu;
         APU    m_apu;
         Joypad m_joypad;
+        bool   m_cgbMode = false;
 
         // M-cycle callback - ticks timer and PPU during CPU execution.
         static void onBusCycle(void* ctx, uint32_t tCycles);

@@ -53,7 +53,14 @@ namespace SeaBoy
 
         m_mmu.reset();
         m_mmu.loadROM(data.data(), data.size());
-        m_cpu.reset();
+
+        // PanDocs.10 - CGB flag at header byte 0x0143
+        // 0x80 = CGB+DMG compatible, 0xC0 = CGB only
+        uint8_t cgbFlag = (data.size() > 0x0143u) ? data[0x0143] : 0x00;
+        m_cgbMode = (cgbFlag == 0x80 || cgbFlag == 0xC0);
+
+        uint8_t headerChecksum = (data.size() > 0x014Du) ? data[0x014D] : 0x00;
+        m_cpu.reset(m_cgbMode, headerChecksum);
         m_timer.reset();
         m_ppu.reset();
         m_apu.reset();
