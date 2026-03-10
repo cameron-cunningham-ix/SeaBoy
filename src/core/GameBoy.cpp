@@ -59,6 +59,8 @@ namespace SeaBoy
         uint8_t cgbFlag = (data.size() > 0x0143u) ? data[0x0143] : 0x00;
         m_cgbMode = (cgbFlag == 0x80 || cgbFlag == 0xC0);
 
+        m_mmu.setCGBMode(m_cgbMode);
+
         uint8_t headerChecksum = (data.size() > 0x014Du) ? data[0x014D] : 0x00;
         m_cpu.reset(m_cgbMode, headerChecksum);
         m_timer.reset();

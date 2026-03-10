@@ -27,6 +27,8 @@ namespace SeaBoy
         std::memset(m_hram, 0x00, sizeof(m_hram));
         m_ifReg = 0xE1; // PanDocs Power Up Sequence
         m_ie    = 0x00;
+        m_svbk    = 0;
+        m_cgbMode = false;
 
         m_sb = 0;
         m_sc = 0;
@@ -49,6 +51,15 @@ namespace SeaBoy
     bool MMU::isDMAActive() const
     {
         return m_ppu && m_ppu->isDMAActive();
+    }
+
+    // PanDocs.2 SVBK — CGB WRAM bank offset for 0xD000–0xDFFF region.
+    // Bank 0 maps to 1. Returns byte offset into m_wram[].
+    static inline uint32_t wramBankOffset(uint8_t svbk)
+    {
+        uint8_t bank = svbk & 0x07u;
+        if (bank == 0) bank = 1;
+        return static_cast<uint32_t>(bank) * 0x1000u;
     }
 
     // PanDocs.2 - Memory Map routing
@@ -78,11 +89,16 @@ namespace SeaBoy
             val = m_ppu ? m_ppu->readVRAM(addr) : 0xFFu;
         else if (addr >= ADDR_ERAM_BASE && addr <= ADDR_ERAM_END)
             val = m_cart ? m_cart->read(addr) : 0xFFu;
-        else if (addr >= ADDR_WRAM_BASE && addr <= ADDR_WRAM_END)
-            val = m_wram[addr - ADDR_WRAM_BASE];
-        // Echo RAM: 0xE000–0xFDFF mirrors WRAM - PanDocs.2
-        else if (addr >= 0xE000u && addr <= 0xFDFFu)
+        // WRAM: 0xC000–0xCFFF = bank 0, 0xD000–0xDFFF = switchable (SVBK) - PanDocs.2
+        else if (addr >= 0xC000u && addr <= 0xCFFFu)
+            val = m_wram[addr - 0xC000u];
+        else if (addr >= 0xD000u && addr <= 0xDFFFu)
+            val = m_wram[wramBankOffset(m_svbk) + (addr - 0xD000u)];
+        // Echo RAM: 0xE000–0xEFFF mirrors bank 0, 0xF000–0xFDFF mirrors switchable - PanDocs.2
+        else if (addr >= 0xE000u && addr <= 0xEFFFu)
             val = m_wram[addr - 0xE000u];
+        else if (addr >= 0xF000u && addr <= 0xFDFFu)
+            val = m_wram[wramBankOffset(m_svbk) + (addr - 0xF000u)];
         // 0xFE00–0xFE9F: OAM - routed to PPU
         else if (addr >= 0xFE00u && addr <= 0xFE9Fu)
             val = m_ppu ? m_ppu->readOAM(addr) : 0xFFu;
@@ -114,6 +130,9 @@ namespace SeaBoy
         // CGB palette registers - routed to PPU (PanDocs.4.7)
         else if (addr >= 0xFF68u && addr <= 0xFF6Bu)
             val = m_ppu ? m_ppu->read(addr) : 0xFFu;
+        // CGB WRAM bank select (0xFF70) - PanDocs.2 SVBK
+        else if (addr == 0xFF70u)
+            val = m_svbk | 0xF8u;
         else if (addr >= ADDR_HRAM_BASE && addr <= ADDR_HRAM_END)
             val = m_hram[addr - ADDR_HRAM_BASE];
         else if (addr == ADDR_IE)
@@ -141,11 +160,16 @@ namespace SeaBoy
         // 0xA000–0xBFFF: external RAM writes - delegated to Cartridge
         else if (addr >= ADDR_ERAM_BASE && addr <= ADDR_ERAM_END)
             { if (m_cart) m_cart->write(addr, val); }
-        else if (addr >= ADDR_WRAM_BASE && addr <= ADDR_WRAM_END)
-            m_wram[addr - ADDR_WRAM_BASE] = val;
-        // Echo RAM: 0xE000–0xFDFF mirrors WRAM - PanDocs.2
-        else if (addr >= 0xE000u && addr <= 0xFDFFu)
+        // WRAM: 0xC000–0xCFFF = bank 0, 0xD000–0xDFFF = switchable (SVBK) - PanDocs.2
+        else if (addr >= 0xC000u && addr <= 0xCFFFu)
+            m_wram[addr - 0xC000u] = val;
+        else if (addr >= 0xD000u && addr <= 0xDFFFu)
+            m_wram[wramBankOffset(m_svbk) + (addr - 0xD000u)] = val;
+        // Echo RAM: 0xE000–0xEFFF mirrors bank 0, 0xF000–0xFDFF mirrors switchable - PanDocs.2
+        else if (addr >= 0xE000u && addr <= 0xEFFFu)
             m_wram[addr - 0xE000u] = val;
+        else if (addr >= 0xF000u && addr <= 0xFDFFu)
+            m_wram[wramBankOffset(m_svbk) + (addr - 0xF000u)] = val;
         // 0xFE00–0xFE9F: OAM - routed to PPU
         else if (addr >= 0xFE00u && addr <= 0xFE9Fu)
             { if (m_ppu) m_ppu->writeOAM(addr, val); }
@@ -172,6 +196,9 @@ namespace SeaBoy
         // CGB palette registers - routed to PPU (PanDocs.4.7)
         else if (addr >= 0xFF68u && addr <= 0xFF6Bu)
             { if (m_ppu) m_ppu->write(addr, val); }
+        // CGB WRAM bank select (0xFF70) - PanDocs.2 SVBK
+        else if (addr == 0xFF70u)
+            { if (m_cgbMode) m_svbk = val & 0x07u; }
         // Serial port – PanDocs.7 Serial Data Transfer
         else if (addr == 0xFF01u)
             m_sb = val;
@@ -251,11 +278,15 @@ namespace SeaBoy
             return m_ppu ? m_ppu->peekVRAM(addr) : 0xFFu;
         if (addr >= ADDR_ERAM_BASE && addr <= ADDR_ERAM_END)
             return m_cart ? m_cart->read(addr) : 0xFFu;
-        if (addr >= ADDR_WRAM_BASE && addr <= ADDR_WRAM_END)
-            return m_wram[addr - ADDR_WRAM_BASE];
-        // Echo RAM: 0xE000–0xFDFF mirrors WRAM - PanDocs.2
-        if (addr >= 0xE000u && addr <= 0xFDFFu)
+        if (addr >= 0xC000u && addr <= 0xCFFFu)
+            return m_wram[addr - 0xC000u];
+        if (addr >= 0xD000u && addr <= 0xDFFFu)
+            return m_wram[wramBankOffset(m_svbk) + (addr - 0xD000u)];
+        // Echo RAM - PanDocs.2
+        if (addr >= 0xE000u && addr <= 0xEFFFu)
             return m_wram[addr - 0xE000u];
+        if (addr >= 0xF000u && addr <= 0xFDFFu)
+            return m_wram[wramBankOffset(m_svbk) + (addr - 0xF000u)];
         if (addr >= 0xFE00u && addr <= 0xFE9Fu)
             return m_ppu ? m_ppu->peekOAM(addr) : 0xFFu;
         // Prohibited area: 0xFEA0–0xFEFF returns 0x00 on DMG - PanDocs.2
@@ -276,6 +307,8 @@ namespace SeaBoy
             return m_ppu ? m_ppu->read(addr) : 0xFFu;
         if (addr >= 0xFF68u && addr <= 0xFF6Bu)
             return m_ppu ? m_ppu->read(addr) : 0xFFu;
+        if (addr == 0xFF70u)
+            return m_svbk | 0xF8u;
         if (addr >= ADDR_HRAM_BASE && addr <= ADDR_HRAM_END)
             return m_hram[addr - ADDR_HRAM_BASE];
         if (addr == ADDR_IE)

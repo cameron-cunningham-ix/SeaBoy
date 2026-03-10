@@ -117,6 +117,10 @@ namespace SeaBoy
         // MMU routes 0xFF10–0xFF26 and 0xFF30–0xFF3F to the APU; null until wired.
         void setAPU(APU* a) { m_apu = a; }
 
+        // CGB mode - enables WRAM banking via SVBK (0xFF70).
+        // Called by GameBoy::loadROM() after detecting CGB flag.
+        void setCGBMode(bool cgb) { m_cgbMode = cgb; }
+
         // Debug: read a byte without triggering the cycle callback.
         // Used by blargg_runner to inspect memory without side effects.
         uint8_t peek8(uint16_t addr) const;
@@ -144,10 +148,17 @@ namespace SeaBoy
         // APU - null until setAPU() is called by GameBoy. Not owned.
         APU* m_apu = nullptr;
 
-        uint8_t m_wram[0x2000]{};  // 8 KB WRAM
+        // WRAM: 8 KB on DMG (2 banks), 32 KB on CGB (8 banks of 4 KB) - PanDocs.2
+        // Always allocated as 32 KB; DMG uses only banks 0+1.
+        // 0xC000–0xCFFF: always bank 0. 0xD000–0xDFFF: switchable (SVBK).
+        uint8_t m_wram[0x8000]{};
         uint8_t m_hram[0x7F]{};    // 127 bytes HRAM (0xFF80–0xFFFE)
         uint8_t m_ifReg = 0xE1;    // IF - power-on value per PanDocs.22 Power Up Sequence
         uint8_t m_ie    = 0x00;    // IE
+
+        // CGB WRAM banking - PanDocs.2 SVBK (0xFF70)
+        uint8_t m_svbk    = 0;     // SVBK register (bits 0-2)
+        bool    m_cgbMode = false;
 
         // Serial port – PanDocs.7 Serial Data Transfer
         uint8_t     m_sb = 0;      // 0xFF01 SB: transfer data
