@@ -35,6 +35,19 @@ public:
     // Fast check to skip breakpoint scanning when none are set.
     bool breakpointsEmpty() const { return m_breakpoints.empty(); }
 
+    // Panel visibility - toggled from Window menu and panel X buttons
+    bool m_showGame          = true;
+    bool m_showControls      = true;
+    bool m_showCPURegisters  = true;
+    bool m_showBreakpoints   = true;
+    bool m_showDisassembly   = true;
+    bool m_showMemory        = true;
+    bool m_showPPUState      = true;
+    bool m_showIORegisters   = true;
+    bool m_showOAM           = true;
+    bool m_showTileViewer    = true;
+    bool m_showTilemapViewer = true;
+
 private:
     SeaBoy::GameBoy& m_gb;
     SDL_Renderer*     m_renderer;

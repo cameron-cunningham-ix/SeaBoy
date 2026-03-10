@@ -53,6 +53,7 @@ namespace SeaBoy
 
         // Debug access to PPU state (registers, VRAM, OAM)
         [[nodiscard]] const PPU& ppu() const { return m_ppu; }
+        [[nodiscard]] PPU& ppu() { return m_ppu; }
 
         // Debug access to Timer state (DIV, TIMA, TMA, TAC)
         [[nodiscard]] const Timer& timer() const { return m_timer; }

@@ -112,6 +112,7 @@ namespace SeaBoy
 
         // Palette access
         const Palettes& palettes() const { return m_palettes; }
+        Palettes& palettes() { return m_palettes; }
 
         // Debug-only accessors - read-only snapshots of internal state
         PPUMode  mode()      const { return m_mode; }

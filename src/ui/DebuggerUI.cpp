@@ -164,7 +164,7 @@ bool DebuggerUI::checkBreakpoints(uint16_t pc) const
 
 void DebuggerUI::renderControlPanel()
 {
-    if (!ImGui::Begin("Controls")) { ImGui::End(); return; }
+    if (!ImGui::Begin("Controls", &m_showControls)) { ImGui::End(); return; }
 
     if (ImGui::Button(m_paused ? "Resume (F5)" : "Pause (F5)"))
         m_paused = !m_paused;
@@ -197,7 +197,7 @@ void DebuggerUI::renderControlPanel()
 
 void DebuggerUI::renderCPURegisters()
 {
-    if (!ImGui::Begin("CPU Registers")) { ImGui::End(); return; }
+    if (!ImGui::Begin("CPU Registers", &m_showCPURegisters)) { ImGui::End(); return; }
 
     const auto& r = m_gb.cpu().registers();
 
@@ -224,7 +224,7 @@ void DebuggerUI::renderCPURegisters()
 
 void DebuggerUI::renderBreakpoints()
 {
-    if (!ImGui::Begin("Breakpoints")) { ImGui::End(); return; }
+    if (!ImGui::Begin("Breakpoints", &m_showBreakpoints)) { ImGui::End(); return; }
 
     ImGui::SetNextItemWidth(60.0f);
     bool enter = ImGui::InputText("##bp_addr", m_bpInputBuf, sizeof(m_bpInputBuf),
@@ -309,7 +309,7 @@ uint8_t DebuggerUI::disassemble(uint16_t addr, char* buf, int bufSize) const
 
 void DebuggerUI::renderDisassembly()
 {
-    if (!ImGui::Begin("Disassembly")) { ImGui::End(); return; }
+    if (!ImGui::Begin("Disassembly", &m_showDisassembly)) { ImGui::End(); return; }
 
     uint16_t pc = m_gb.cpu().registers().PC;
     char buf[64];
@@ -384,7 +384,7 @@ void DebuggerUI::renderDisassembly()
 
 void DebuggerUI::renderMemoryViewer()
 {
-    if (!ImGui::Begin("Memory")) { ImGui::End(); return; }
+    if (!ImGui::Begin("Memory", &m_showMemory)) { ImGui::End(); return; }
 
     // Address jump
     ImGui::SetNextItemWidth(60.0f);
@@ -448,7 +448,7 @@ void DebuggerUI::renderMemoryViewer()
 
 void DebuggerUI::renderPPUState()
 {
-    if (!ImGui::Begin("PPU State")) { ImGui::End(); return; }
+    if (!ImGui::Begin("PPU State", &m_showPPUState)) { ImGui::End(); return; }
 
     const auto& p = m_gb.ppu();
     static const char* kModes[] = {"HBlank (0)", "VBlank (1)", "OAMScan (2)", "Drawing (3)"};
@@ -485,7 +485,7 @@ void DebuggerUI::renderPPUState()
 
 void DebuggerUI::renderIORegisters()
 {
-    if (!ImGui::Begin("I/O Registers")) { ImGui::End(); return; }
+    if (!ImGui::Begin("I/O Registers", &m_showIORegisters)) { ImGui::End(); return; }
 
     // Timer
     ImGui::Text("Timer:");
@@ -528,7 +528,7 @@ void DebuggerUI::renderIORegisters()
 
 void DebuggerUI::renderOAMViewer()
 {
-    if (!ImGui::Begin("OAM")) { ImGui::End(); return; }
+    if (!ImGui::Begin("OAM", &m_showOAM)) { ImGui::End(); return; }
 
     const uint8_t* oam = m_gb.ppu().rawOAM();
 
@@ -639,7 +639,7 @@ void DebuggerUI::rebuildTileTexture()
 
 void DebuggerUI::renderTileViewer()
 {
-    if (!ImGui::Begin("Tile Viewer")) { ImGui::End(); return; }
+    if (!ImGui::Begin("Tile Viewer", &m_showTileViewer)) { ImGui::End(); return; }
 
     rebuildTileTexture();
 
@@ -742,7 +742,7 @@ void DebuggerUI::rebuildTilemapTexture()
 
 void DebuggerUI::renderTilemapViewer()
 {
-    if (!ImGui::Begin("Tilemap Viewer")) { ImGui::End(); return; }
+    if (!ImGui::Begin("Tilemap Viewer", &m_showTilemapViewer)) { ImGui::End(); return; }
 
     // Map selection
     ImGui::RadioButton("BG Map", &m_tilemapSelect, 0);
@@ -795,14 +795,14 @@ void DebuggerUI::renderTilemapViewer()
 
 void DebuggerUI::render()
 {
-    renderControlPanel();
-    renderCPURegisters();
-    renderBreakpoints();
-    renderDisassembly();
-    renderMemoryViewer();
-    renderPPUState();
-    renderIORegisters();
-    renderOAMViewer();
-    renderTileViewer();
-    renderTilemapViewer();
+    if (m_showControls)      renderControlPanel();
+    if (m_showCPURegisters)  renderCPURegisters();
+    if (m_showBreakpoints)   renderBreakpoints();
+    if (m_showDisassembly)   renderDisassembly();
+    if (m_showMemory)        renderMemoryViewer();
+    if (m_showPPUState)      renderPPUState();
+    if (m_showIORegisters)   renderIORegisters();
+    if (m_showOAM)           renderOAMViewer();
+    if (m_showTileViewer)    renderTileViewer();
+    if (m_showTilemapViewer) renderTilemapViewer();
 }

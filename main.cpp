@@ -22,7 +22,9 @@ int main(int argc, char *argv[])
     // Optionally load a ROM passed as a command-line argument
     if (argc > 1)
     {
-        if (!gameBoy.loadROM(argv[1]))
+        if (gameBoy.loadROM(argv[1]))
+            platform.m_currentROMPath = argv[1];
+        else
             fprintf(stderr, "Warning: could not load ROM '%s'\n", argv[1]);
     }
 
@@ -39,6 +41,8 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Warning: SDL audio failed to initialize: %s\n", SDL_GetError());
 
     DebuggerUI debugger(gameBoy, platform.getRenderer());
+    platform.setDebugger(&debugger);
+    platform.setGameBoy(&gameBoy);
 
     bool running = true;
     while (running)
@@ -52,9 +56,19 @@ int main(int argc, char *argv[])
         // Handle ROM open from File menu
         if (!platform.m_pendingROMPath.empty())
         {
-            if (!gameBoy.loadROM(platform.m_pendingROMPath))
+            if (gameBoy.loadROM(platform.m_pendingROMPath))
+                platform.m_currentROMPath = platform.m_pendingROMPath;
+            else
                 fprintf(stderr, "Warning: could not load ROM '%s'\n", platform.m_pendingROMPath.c_str());
             platform.m_pendingROMPath.clear();
+        }
+
+        // Handle Restart ROM
+        if (platform.m_pendingRestart)
+        {
+            if (!platform.m_currentROMPath.empty())
+                gameBoy.loadROM(platform.m_currentROMPath);
+            platform.m_pendingRestart = false;
         }
 
         // Audio-driven sync — skip when paused to avoid blocking the UI

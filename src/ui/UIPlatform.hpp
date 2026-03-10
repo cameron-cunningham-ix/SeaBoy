@@ -10,6 +10,7 @@
 #include "SDL3/SDL_main.h"
 #include "nfd.h"
 #include "src/core/GameBoy.hpp"
+#include "src/ui/DebuggerUI.hpp"
 
 // Key bindings for the 8 GameBoy buttons.
 // Stored as a plain struct so SettingsUI can read/write individual fields.
@@ -38,6 +39,9 @@ private:
     int textureWidth;
     int textureHeight;
 
+    // Keybinding rebind state
+    int m_rebindingIndex = -1; // -1 = not rebinding, 0–7 = which button
+
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
     SDL_Texture* texture = nullptr;
@@ -48,6 +52,20 @@ public:
 
     // ROM path requested via File > Open ROM. Consumed by main loop.
     std::string m_pendingROMPath;
+
+    // Path of currently loaded ROM (for Restart).
+    std::string m_currentROMPath;
+
+    // Restart flag — signals main loop to reload current ROM.
+    bool m_pendingRestart = false;
+
+    // Debugger reference for Window menu toggles. Set via setDebugger().
+    DebuggerUI* m_debugger = nullptr;
+    void setDebugger(DebuggerUI* dbg) { m_debugger = dbg; }
+
+    // GameBoy reference for palette changes. Set via setGameBoy().
+    SeaBoy::GameBoy* m_gameBoy = nullptr;
+    void setGameBoy(SeaBoy::GameBoy* gb) { m_gameBoy = gb; }
 
     /// @brief
     /// @param title Title of SDL window created, appears at top
@@ -194,8 +212,10 @@ public:
         ImGui::DockSpace(dockspaceId, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_PassthruCentralNode);
 
         // Menu bar
+        bool openKeybindings = false;
         if (ImGui::BeginMenuBar())
         {
+            // --- File menu ---
             if (ImGui::BeginMenu("File"))
             {
                 if (ImGui::MenuItem("Open ROM..."))
@@ -208,26 +228,94 @@ public:
                         NFD_FreePath(path);
                     }
                 }
+                if (ImGui::MenuItem("Restart", nullptr, false, !m_currentROMPath.empty()))
+                    m_pendingRestart = true;
+
+                ImGui::Separator();
+                ImGui::MenuItem("Save State", nullptr, false, false);
+                ImGui::MenuItem("Load State", nullptr, false, false);
+                ImGui::Separator();
+                ImGui::MenuItem("Save File", nullptr, false, false);
+                ImGui::MenuItem("Load Save File", nullptr, false, false);
+
                 ImGui::EndMenu();
             }
+
+            // --- Options menu ---
+            if (ImGui::BeginMenu("Options"))
+            {
+                if (ImGui::MenuItem("Keybindings..."))
+                    openKeybindings = true;
+
+                if (ImGui::BeginMenu("Palette"))
+                {
+                    struct PalettePreset { const char* name; uint32_t shades[4]; };
+                    static const PalettePreset presets[] = {
+                        { "Classic",       { 0xFFFFFFFF, 0xAAAAAAFF, 0x555555FF, 0x000000FF } },
+                        { "Green (DMG)",   { 0x9BBC0FFF, 0x8BAC0FFF, 0x306230FF, 0x0F380FFF } },
+                        { "Brown (Pocket)",{ 0xF5E6C8FF, 0xC6A882FF, 0x8B6F47FF, 0x4A3728FF } },
+                        { "Blue",          { 0xE0F8F8FF, 0x88C8E8FF, 0x3478A0FF, 0x183048FF } },
+                    };
+                    for (const auto& p : presets)
+                    {
+                        if (ImGui::MenuItem(p.name))
+                        {
+                            if (m_gameBoy)
+                                m_gameBoy->ppu().palettes().setShades(p.shades);
+                        }
+                    }
+                    ImGui::EndMenu();
+                }
+                ImGui::EndMenu();
+            }
+
+            // --- Window menu ---
+            if (m_debugger && ImGui::BeginMenu("Window"))
+            {
+                ImGui::MenuItem("Game",           nullptr, &m_debugger->m_showGame);
+                ImGui::Separator();
+                ImGui::MenuItem("Controls",       nullptr, &m_debugger->m_showControls);
+                ImGui::MenuItem("CPU Registers",  nullptr, &m_debugger->m_showCPURegisters);
+                ImGui::MenuItem("Breakpoints",    nullptr, &m_debugger->m_showBreakpoints);
+                ImGui::MenuItem("Disassembly",    nullptr, &m_debugger->m_showDisassembly);
+                ImGui::MenuItem("Memory",         nullptr, &m_debugger->m_showMemory);
+                ImGui::MenuItem("PPU State",      nullptr, &m_debugger->m_showPPUState);
+                ImGui::MenuItem("I/O Registers",  nullptr, &m_debugger->m_showIORegisters);
+                ImGui::MenuItem("OAM",            nullptr, &m_debugger->m_showOAM);
+                ImGui::MenuItem("Tile Viewer",    nullptr, &m_debugger->m_showTileViewer);
+                ImGui::MenuItem("Tilemap Viewer", nullptr, &m_debugger->m_showTilemapViewer);
+                ImGui::EndMenu();
+            }
+
             ImGui::EndMenuBar();
         }
+
+        // Keybindings popup modal — OpenPopup must be in same scope as BeginPopupModal
+        if (openKeybindings)
+            ImGui::OpenPopup("Keybindings");
+        renderKeybindingsPopup();
+
         ImGui::End(); // ##DockHost
 
-        // Game display window - dockable
-        ImGui::Begin("Game", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-        ImVec2 avail = ImGui::GetContentRegionAvail();
-        // Maintain aspect ratio (160:144)
-        float scale = (std::min)(avail.x / static_cast<float>(textureWidth),
-                                 avail.y / static_cast<float>(textureHeight));
-        ImVec2 imageSize(static_cast<float>(textureWidth) * scale,
-                         static_cast<float>(textureHeight) * scale);
-        // Center the image
-        ImVec2 cursor = ImGui::GetCursorPos();
-        ImGui::SetCursorPos(ImVec2(cursor.x + (avail.x - imageSize.x) * 0.5f,
-                                   cursor.y + (avail.y - imageSize.y) * 0.5f));
-        ImGui::Image(reinterpret_cast<ImTextureID>(texture), imageSize);
-        ImGui::End(); // Game
+        // Game display window - dockable (guarded by visibility flag)
+        bool showGame = !m_debugger || m_debugger->m_showGame;
+        if (showGame)
+        {
+            ImGui::Begin("Game", m_debugger ? &m_debugger->m_showGame : nullptr,
+                         ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+            ImVec2 avail = ImGui::GetContentRegionAvail();
+            // Maintain aspect ratio (160:144)
+            float scale = (std::min)(avail.x / static_cast<float>(textureWidth),
+                                     avail.y / static_cast<float>(textureHeight));
+            ImVec2 imageSize(static_cast<float>(textureWidth) * scale,
+                             static_cast<float>(textureHeight) * scale);
+            // Center the image
+            ImVec2 cursor = ImGui::GetCursorPos();
+            ImGui::SetCursorPos(ImVec2(cursor.x + (avail.x - imageSize.x) * 0.5f,
+                                       cursor.y + (avail.y - imageSize.y) * 0.5f));
+            ImGui::Image(reinterpret_cast<ImTextureID>(texture), imageSize);
+            ImGui::End(); // Game
+        }
 
         // Render additional UI (e.g. debugger panels)
         renderExtraUI();
@@ -269,6 +357,14 @@ public:
                     break;
                 case SDL_EVENT_KEY_DOWN:
                 {
+                    // Keybinding rebind capture — intercept the key press
+                    if (m_rebindingIndex >= 0 && !e.key.repeat)
+                    {
+                        if (e.key.scancode != SDL_SCANCODE_ESCAPE) // Escape cancels rebind
+                            *bindingField(m_rebindingIndex) = e.key.scancode;
+                        m_rebindingIndex = -1;
+                        break;
+                    }
                     if (!e.key.repeat && gb)
                         forwardKey(e.key.scancode, true, gb);
                     switch (e.key.scancode)
@@ -303,6 +399,73 @@ public:
     }
 
 private:
+    // Returns a pointer to the scancode field in m_bindings for the given index (0–7).
+    SDL_Scancode* bindingField(int index)
+    {
+        SDL_Scancode* fields[] = {
+            &m_bindings.a, &m_bindings.b, &m_bindings.start, &m_bindings.select,
+            &m_bindings.up, &m_bindings.down, &m_bindings.left, &m_bindings.right
+        };
+        return (index >= 0 && index < 8) ? fields[index] : nullptr;
+    }
+
+    // Keybindings popup modal — called from within the dockspace host window.
+    void renderKeybindingsPopup()
+    {
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        if (!ImGui::BeginPopupModal("Keybindings", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+            return;
+
+        static const char* buttonNames[] = {
+            "A", "B", "Start", "Select", "Up", "Down", "Left", "Right"
+        };
+
+        if (ImGui::BeginTable("##keybinds", 3, ImGuiTableFlags_BordersInnerH))
+        {
+            ImGui::TableSetupColumn("Button", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+            ImGui::TableSetupColumn("Key",    ImGuiTableColumnFlags_WidthFixed, 140.0f);
+            ImGui::TableSetupColumn("",       ImGuiTableColumnFlags_WidthFixed, 100.0f);
+            ImGui::TableHeadersRow();
+
+            for (int i = 0; i < 8; ++i)
+            {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::TextUnformatted(buttonNames[i]);
+
+                ImGui::TableSetColumnIndex(1);
+                if (m_rebindingIndex == i)
+                    ImGui::TextColored(ImVec4(1, 1, 0, 1), "Press a key...");
+                else
+                    ImGui::TextUnformatted(SDL_GetScancodeName(*bindingField(i)));
+
+                ImGui::TableSetColumnIndex(2);
+                ImGui::PushID(i);
+                if (m_rebindingIndex == i)
+                {
+                    if (ImGui::Button("Cancel"))
+                        m_rebindingIndex = -1;
+                }
+                else
+                {
+                    if (ImGui::Button("Rebind"))
+                        m_rebindingIndex = i;
+                }
+                ImGui::PopID();
+            }
+            ImGui::EndTable();
+        }
+
+        ImGui::Spacing();
+        if (ImGui::Button("Close"))
+        {
+            m_rebindingIndex = -1;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+
     // Maps a SDL scancode to a GameBoy button via m_bindings and forwards the event.
     void forwardKey(SDL_Scancode sc, bool pressed, SeaBoy::GameBoy* gb)
     {

@@ -25,13 +25,13 @@ namespace SeaBoy
 
     uint32_t Palettes::resolveBG(uint8_t colorID) const
     {
-        return s_shades[shadeIndex(m_bgp, colorID)];
+        return m_shades[shadeIndex(m_bgp, colorID)];
     }
 
     uint32_t Palettes::resolveOBJ(uint8_t colorID, uint8_t paletteNum) const
     {
         uint8_t palette = (paletteNum == 0) ? m_obp0 : m_obp1;
-        return s_shades[shadeIndex(palette, colorID)];
+        return m_shades[shadeIndex(palette, colorID)];
     }
 
     // --- CGB palette data port writes - PanDocs.4.7 CGB Palettes ---
