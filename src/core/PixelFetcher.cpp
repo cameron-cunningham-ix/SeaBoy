@@ -20,9 +20,11 @@ namespace SeaBoy
                             uint8_t wx, uint8_t windowLineCounter,
                             bool windowTriggered,
                             const Palettes& palettes,
-                            uint32_t* frameBufferLine)
+                            uint32_t* frameBufferLine,
+                            bool cgbMode)
     {
         m_vram        = vram;
+        m_cgbMode     = cgbMode;
         m_sprites     = sprites;
         m_spriteCount = spriteCount;
         m_palettes    = &palettes;
@@ -52,6 +54,7 @@ namespace SeaBoy
         m_fetchedTileIndex = 0;
         m_fetchedLo = 0;
         m_fetchedHi = 0;
+        m_fetchedAttr = 0;
 
         // Clear FIFOs
         clearBgFifo();
@@ -102,6 +105,9 @@ namespace SeaBoy
             uint16_t mapOffset = static_cast<uint16_t>(
                 tileRow * 32u + (m_bgTileX & 0x1Fu));
             m_fetchedTileIndex = m_vram[mapBase + mapOffset];
+            // CGB: read tile attribute from VRAM bank 1 at same map offset
+            // PanDocs.4.8.1 - BG Map Attributes (CGB)
+            m_fetchedAttr = m_cgbMode ? m_vram[0x2000u + mapBase + mapOffset] : 0;
             ++m_bgStep;
             break;
         }
@@ -118,7 +124,11 @@ namespace SeaBoy
                 pixelRow = m_windowLineCounter & 7u;
             else
                 pixelRow = static_cast<uint8_t>(m_ly + m_scy) & 7u;
-            m_fetchedLo = m_vram[addr + pixelRow * 2u];
+            // CGB: vertical flip (attr bit 6) and VRAM bank (attr bit 3)
+            if (m_cgbMode && (m_fetchedAttr & 0x40u))
+                pixelRow = 7u - pixelRow;
+            uint16_t bankOffset = (m_cgbMode && (m_fetchedAttr & 0x08u)) ? 0x2000u : 0u;
+            m_fetchedLo = m_vram[bankOffset + addr + pixelRow * 2u];
             ++m_bgStep;
             break;
         }
@@ -135,7 +145,11 @@ namespace SeaBoy
                 pixelRow = m_windowLineCounter & 7u;
             else
                 pixelRow = static_cast<uint8_t>(m_ly + m_scy) & 7u;
-            m_fetchedHi = m_vram[addr + pixelRow * 2u + 1u];
+            // CGB: vertical flip (attr bit 6) and VRAM bank (attr bit 3)
+            if (m_cgbMode && (m_fetchedAttr & 0x40u))
+                pixelRow = 7u - pixelRow;
+            uint16_t bankOffset = (m_cgbMode && (m_fetchedAttr & 0x08u)) ? 0x2000u : 0u;
+            m_fetchedHi = m_vram[bankOffset + addr + pixelRow * 2u + 1u];
             ++m_bgStep;
             break;
         }
@@ -163,15 +177,21 @@ namespace SeaBoy
 
     void PixelFetcher::pushToBgFifo()
     {
+        // CGB: horizontal flip (attr bit 5) reverses pixel order
+        bool hFlip = m_cgbMode && (m_fetchedAttr & 0x20u);
+
         // Push 8 pixels decoded from m_fetchedLo/m_fetchedHi
         for (uint8_t bit = 0; bit < 8; ++bit)
         {
-            uint8_t bitPos  = 7u - bit; // bit 7 = leftmost pixel
+            // bit 7 = leftmost pixel (normal); bit 0 = leftmost (hFlip)
+            uint8_t bitPos = hFlip ? bit : static_cast<uint8_t>(7u - bit);
             uint8_t colorID = static_cast<uint8_t>(
                 ((m_fetchedHi >> bitPos) & 1u) << 1u |
                 ((m_fetchedLo >> bitPos) & 1u));
             uint8_t idx = (m_bgFifoHead + m_bgFifoSize) & 7u;
-            m_bgFifo[idx].colorID = colorID;
+            m_bgFifo[idx].colorID     = colorID;
+            m_bgFifo[idx].cgbPalette  = m_fetchedAttr & 0x07u;
+            m_bgFifo[idx].cgbPriority = (m_fetchedAttr & 0x80u) != 0;
             ++m_bgFifoSize;
         }
     }
@@ -226,7 +246,9 @@ namespace SeaBoy
         {
             uint16_t rowAddr = static_cast<uint16_t>(
                 m_objTileIndex * 16u + m_objSpriteRow * 2u);
-            m_objFetchedLo = m_vram[rowAddr];
+            // CGB: OAM attr bit 3 selects VRAM bank for sprite tile data
+            uint16_t bankOffset = (m_cgbMode && (sp.attr & 0x08u)) ? 0x2000u : 0u;
+            m_objFetchedLo = m_vram[bankOffset + rowAddr];
             ++m_objFetchStep;
             break;
         }
@@ -239,7 +261,8 @@ namespace SeaBoy
         {
             uint16_t rowAddr = static_cast<uint16_t>(
                 m_objTileIndex * 16u + m_objSpriteRow * 2u);
-            m_objFetchedHi = m_vram[rowAddr + 1u];
+            uint16_t bankOffset = (m_cgbMode && (sp.attr & 0x08u)) ? 0x2000u : 0u;
+            m_objFetchedHi = m_vram[bankOffset + rowAddr + 1u];
             mixObjIntoFifo();
             m_spriteDone[m_currentSprite] = true;
             m_spriteFetch = false;
@@ -256,7 +279,9 @@ namespace SeaBoy
         const SpriteEntry& sp = m_sprites[m_currentSprite];
         bool xFlip      = (sp.attr & 0x20u) != 0;
         bool bgPriority = (sp.attr & 0x80u) != 0;
-        uint8_t palNum  = (sp.attr & 0x10u) ? 1u : 0u;
+        // CGB: OAM attr bits 0-2 = palette index (8 palettes)
+        // DMG: OAM attr bit 4 = 0=OBP0, 1=OBP1
+        uint8_t palNum  = m_cgbMode ? (sp.attr & 0x07u) : ((sp.attr & 0x10u) ? 1u : 0u);
 
         int spriteLeft = static_cast<int>(sp.x) - 8;
 
@@ -387,6 +412,29 @@ namespace SeaBoy
     uint32_t PixelFetcher::mixPixels(const BgFifoPixel& bg,
                                      const ObjFifoPixel& obj) const
     {
+        if (m_cgbMode)
+        {
+            // PanDocs.4.8.1 CGB pixel mixing
+            // LCDC bit 0 = master priority (NOT BG enable like DMG)
+            bool masterPriority = (m_lcdc & FetcherLCDC::BGEnable) != 0;
+
+            // OBJ not present or transparent: output BG
+            if (!obj.occupied || obj.colorID == 0)
+                return m_palettes->resolveBGCGB(bg.cgbPalette, bg.colorID);
+
+            // If master priority is ON, BG can override OBJ when:
+            //   - tile priority bit (bg.cgbPriority) is set, OR
+            //   - OBJ attr bit 7 (obj.bgPriority) is set
+            // AND bg.colorID != 0
+            if (masterPriority &&
+                (bg.cgbPriority || obj.bgPriority) &&
+                bg.colorID != 0)
+                return m_palettes->resolveBGCGB(bg.cgbPalette, bg.colorID);
+
+            return m_palettes->resolveOBJCGB(obj.palette, obj.colorID);
+        }
+
+        // DMG mode
         bool bgEnable = (m_lcdc & FetcherLCDC::BGEnable) != 0;
         uint8_t effectiveBgColorID = bgEnable ? bg.colorID : 0u;
 

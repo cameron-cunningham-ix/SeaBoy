@@ -25,14 +25,16 @@ namespace SeaBoy
     // A pixel in the BG/Window FIFO
     struct BgFifoPixel
     {
-        uint8_t colorID = 0; // 0-3
+        uint8_t colorID     = 0; // 0-3
+        uint8_t cgbPalette  = 0; // CGB: tile attr bits 0-2 (palette index 0-7)
+        bool    cgbPriority = false; // CGB: tile attr bit 7 (BG-to-OAM priority)
     };
 
     // A pixel in the OBJ FIFO
     struct ObjFifoPixel
     {
         uint8_t colorID    = 0;     // 0-3 (0 = transparent)
-        uint8_t palette    = 0;     // 0=OBP0, 1=OBP1
+        uint8_t palette    = 0;     // DMG: 0=OBP0, 1=OBP1; CGB: OAM attr bits 0-2
         bool    bgPriority = false; // attr.7: OBJ behind non-zero BG
         bool    occupied   = false; // true = slot has a sprite pixel
     };
@@ -47,7 +49,8 @@ namespace SeaBoy
                   uint8_t lcdc, uint8_t scx, uint8_t scy, uint8_t ly,
                   uint8_t wx, uint8_t windowLineCounter, bool windowTriggered,
                   const Palettes& palettes,
-                  uint32_t* frameBufferLine);
+                  uint32_t* frameBufferLine,
+                  bool cgbMode = false);
 
         // Advance 1 T-cycle. Returns true when 160 pixels have been output
         // (Mode 3 is complete).
@@ -64,7 +67,9 @@ namespace SeaBoy
         uint8_t m_fetchedTileIndex = 0;
         uint8_t m_fetchedLo = 0;
         uint8_t m_fetchedHi = 0;
+        uint8_t m_fetchedAttr = 0;  // CGB: tile attribute byte from VRAM bank 1
         bool    m_inWindow  = false; // currently rendering window (vs BG)
+        bool    m_cgbMode   = false;
 
         // BG FIFO - 8-entry ring buffer
         BgFifoPixel m_bgFifo[8]{};

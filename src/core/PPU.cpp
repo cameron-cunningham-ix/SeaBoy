@@ -146,7 +146,8 @@ namespace SeaBoy
                                   m_lcdc, m_scx, m_scy, m_ly, m_wx,
                                   m_windowLineCounter, m_windowTriggered,
                                   m_palettes,
-                                  &m_frameBuffer[m_ly * 160]);
+                                  &m_frameBuffer[m_ly * 160],
+                                  m_cgbMode);
                     if (m_fetcher.step())
                     {
                         m_mode = PPUMode::HBlank;
