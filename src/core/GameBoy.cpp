@@ -80,9 +80,13 @@ namespace SeaBoy
     void GameBoy::onBusCycle(void* ctx, uint32_t tCycles)
     {
         auto* gb = static_cast<GameBoy*>(ctx);
+        // Timer always runs at CPU speed (tCycles unchanged).
         gb->m_timer.tick(tCycles);
-        gb->m_ppu.tick(tCycles);
-        gb->m_apu.tick(tCycles, gb->m_timer.sysCounter());
+        // PanDocs.10 CGB Double Speed Mode: PPU and APU run at fixed rate.
+        // In double speed, CPU T-cycles are twice as fast, so halve them for PPU/APU.
+        uint32_t ppuCycles = gb->m_mmu.isDoubleSpeed() ? (tCycles / 2) : tCycles;
+        gb->m_ppu.tick(ppuCycles);
+        gb->m_apu.tick(ppuCycles, gb->m_timer.sysCounter());
     }
 
     void GameBoy::onJoypadIRQ(void* ctx)

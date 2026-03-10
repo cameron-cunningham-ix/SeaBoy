@@ -142,6 +142,10 @@ namespace SeaBoy
         // Called whenever we enter Mode 2 (OAMScan).
         void startOAMScan();
 
+        // CGB HDMA helpers - PanDocs.10 VRAM DMA Transfers
+        void writeHDMA5(uint8_t val);
+        void hdmaTransfer16();
+
         MMU&         m_mmu;
         Palettes     m_palettes;
         OAMScan      m_oamScan;
@@ -155,6 +159,17 @@ namespace SeaBoy
         // CGB state - PanDocs.10 VBK — VRAM Bank Select (CGB only)
         uint8_t m_vbk     = 0;     // VRAM bank select (0 or 1)
         bool    m_cgbMode = false;
+
+        // CGB HDMA - PanDocs.10 VRAM DMA Transfers
+        uint8_t  m_hdma1 = 0xFF;   // 0xFF51 source high
+        uint8_t  m_hdma2 = 0xFF;   // 0xFF52 source low (lower 4 bits ignored)
+        uint8_t  m_hdma3 = 0xFF;   // 0xFF53 dest high (only bits 4-0, ORed with 0x80)
+        uint8_t  m_hdma4 = 0xFF;   // 0xFF54 dest low (lower 4 bits ignored)
+        uint8_t  m_hdma5 = 0xFF;   // 0xFF55 length/mode/start
+        bool     m_hdmaActive  = false; // HBlank DMA in progress
+        uint16_t m_hdmaSrc     = 0;     // current source address
+        uint16_t m_hdmaDst     = 0;     // current VRAM destination (0x8000-0x9FFF range)
+        uint16_t m_hdmaRemain  = 0;     // bytes remaining
 
         // Mode state machine
         PPUMode  m_mode      = PPUMode::OAMScan;

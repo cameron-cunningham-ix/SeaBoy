@@ -121,6 +121,11 @@ namespace SeaBoy
         // Called by GameBoy::loadROM() after detecting CGB flag.
         void setCGBMode(bool cgb) { m_cgbMode = cgb; }
 
+        // CGB speed switching - PanDocs.10 CGB Double Speed Mode
+        // KEY1 (0xFF4D): bit 7 = current speed (0=normal, 1=double), bit 0 = prepare toggle
+        bool isDoubleSpeed() const { return (m_key1 & 0x80u) != 0; }
+        void toggleSpeed()         { m_key1 ^= 0x80u; m_key1 &= ~0x01u; }
+
         // Debug: read a byte without triggering the cycle callback.
         // Used by blargg_runner to inspect memory without side effects.
         uint8_t peek8(uint16_t addr) const;
@@ -159,6 +164,9 @@ namespace SeaBoy
         // CGB WRAM banking - PanDocs.2 SVBK (0xFF70)
         uint8_t m_svbk    = 0;     // SVBK register (bits 0-2)
         bool    m_cgbMode = false;
+
+        // CGB speed switching - PanDocs.10 KEY1 (0xFF4D)
+        uint8_t m_key1 = 0;        // bit 7 = current speed, bit 0 = prepare flag
 
         // Serial port – PanDocs.7 Serial Data Transfer
         uint8_t     m_sb = 0;      // 0xFF01 SB: transfer data

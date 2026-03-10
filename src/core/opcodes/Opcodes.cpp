@@ -265,7 +265,15 @@ uint32_t op_0F(CPU& cpu) {
 // ---------------------------------------------------------------------------
 
 // 0x10 STOP - 4T (1-byte opcode; second byte 0x00 is part of opcode encoding but not fetched here)
-uint32_t op_10(CPU&) { return 4; }
+// PanDocs.10 CGB Double Speed Mode: if KEY1 bit 0 is armed, toggle speed.
+uint32_t op_10(CPU& cpu)
+{
+    MMU& mmu = cpu.mmu();
+    uint8_t key1 = mmu.peek8(0xFF4Du);
+    if (key1 & 0x01u)
+        mmu.toggleSpeed();
+    return 4;
+}
 
 // 0x11 LD DE,n16 - 12T
 uint32_t op_11(CPU& cpu) { 

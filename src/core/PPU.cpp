@@ -32,6 +32,13 @@ namespace SeaBoy
     constexpr uint16_t ADDR_OCPS = 0xFF6A;
     constexpr uint16_t ADDR_OCPD = 0xFF6B;
 
+    // CGB HDMA registers - PanDocs.10 VRAM DMA Transfers
+    constexpr uint16_t ADDR_HDMA1 = 0xFF51;
+    constexpr uint16_t ADDR_HDMA2 = 0xFF52;
+    constexpr uint16_t ADDR_HDMA3 = 0xFF53;
+    constexpr uint16_t ADDR_HDMA4 = 0xFF54;
+    constexpr uint16_t ADDR_HDMA5 = 0xFF55;
+
     PPU::PPU(MMU& mmu)
         : m_mmu(mmu)
     {
@@ -64,6 +71,16 @@ namespace SeaBoy
         m_dmaSource     = 0;
         m_dmaByte       = 0;
         m_palettes.reset();
+
+        m_hdma1 = 0xFF;
+        m_hdma2 = 0xFF;
+        m_hdma3 = 0xFF;
+        m_hdma4 = 0xFF;
+        m_hdma5 = 0xFF;
+        m_hdmaActive = false;
+        m_hdmaSrc    = 0;
+        m_hdmaDst    = 0;
+        m_hdmaRemain = 0;
 
         std::memset(m_vram,        0, sizeof(m_vram));
         std::memset(m_oam,         0, sizeof(m_oam));
@@ -153,6 +170,9 @@ namespace SeaBoy
                         m_mode = PPUMode::HBlank;
                         if (m_fetcher.drewWindow())
                             ++m_windowLineCounter;
+                        // PanDocs.10 HDMA HBlank transfer: 16 bytes on Mode 3->0
+                        if (m_hdmaActive)
+                            hdmaTransfer16();
                         updateStatIRQ();
                     }
                 }
@@ -165,6 +185,9 @@ namespace SeaBoy
                         m_mode = PPUMode::HBlank;
                         if (m_fetcher.drewWindow())
                             ++m_windowLineCounter;
+                        // PanDocs.10 HDMA HBlank transfer: 16 bytes on Mode 3->0
+                        if (m_hdmaActive)
+                            hdmaTransfer16();
                         updateStatIRQ();
                     }
                 }
@@ -309,6 +332,17 @@ namespace SeaBoy
         case ADDR_BCPD: return m_palettes.readBCPD();
         case ADDR_OCPS: return m_palettes.readOCPS();
         case ADDR_OCPD: return m_palettes.readOCPD();
+        // CGB HDMA registers - PanDocs.10 VRAM DMA Transfers
+        case ADDR_HDMA1: return m_hdma1;
+        case ADDR_HDMA2: return m_hdma2;
+        case ADDR_HDMA3: return m_hdma3;
+        case ADDR_HDMA4: return m_hdma4;
+        case ADDR_HDMA5:
+            // Bit 7: 0 = HDMA active, 1 = HDMA not active (inverted!)
+            // Bits 0-6: remaining blocks - 1 (or 0x7F when inactive)
+            if (!m_hdmaActive)
+                return 0xFFu;
+            return static_cast<uint8_t>(((m_hdmaRemain / 16) - 1) & 0x7Fu);
         default:        return 0xFF;
         }
     }
@@ -379,8 +413,67 @@ namespace SeaBoy
         case ADDR_BCPD: m_palettes.writeBCPD(val); break;
         case ADDR_OCPS: m_palettes.writeOCPS(val); break;
         case ADDR_OCPD: m_palettes.writeOCPD(val); break;
+        // CGB HDMA registers - PanDocs.10 VRAM DMA Transfers
+        case ADDR_HDMA1: m_hdma1 = val; break;
+        case ADDR_HDMA2: m_hdma2 = val & 0xF0u; break; // lower 4 bits ignored
+        case ADDR_HDMA3: m_hdma3 = val & 0x1Fu; break;  // only bits 0-4 (dest is 0x8000-0x9FF0)
+        case ADDR_HDMA4: m_hdma4 = val & 0xF0u; break; // lower 4 bits ignored
+        case ADDR_HDMA5: writeHDMA5(val); break;
         default: break;
         }
+    }
+
+    // PanDocs.10 VRAM DMA Transfers — HDMA5 write handler
+    void PPU::writeHDMA5(uint8_t val)
+    {
+        if (!m_cgbMode) return;
+
+        // Writing with bit 7 = 0 while HBlank DMA is active: cancel it
+        if (m_hdmaActive && !(val & 0x80u))
+        {
+            m_hdmaActive = false;
+            m_hdma5 = val | 0x80u; // bit 7 set = inactive
+            return;
+        }
+
+        // Compute source and destination from HDMA1-4
+        m_hdmaSrc = static_cast<uint16_t>((m_hdma1 << 8) | m_hdma2);
+        m_hdmaDst = static_cast<uint16_t>(0x8000u | ((m_hdma3 << 8) | m_hdma4));
+        m_hdmaRemain = static_cast<uint16_t>(((val & 0x7Fu) + 1) * 16);
+
+        if (val & 0x80u)
+        {
+            // HBlank DMA: transfers 16 bytes per Mode 3->0 transition
+            m_hdmaActive = true;
+        }
+        else
+        {
+            // General DMA: immediate block copy
+            // CPU is halted for the duration. We do the entire copy now.
+            while (m_hdmaRemain > 0)
+                hdmaTransfer16();
+            m_hdmaActive = false;
+        }
+    }
+
+    // Transfer 16 bytes from source to VRAM destination.
+    // Source is read via m_mmu.peek8(); dest writes directly to m_vram with bank offset.
+    void PPU::hdmaTransfer16()
+    {
+        for (int i = 0; i < 16; ++i)
+        {
+            uint8_t byte = m_mmu.peek8(m_hdmaSrc);
+            // Write to VRAM at current bank (destination is always in 0x8000-0x9FFF)
+            uint16_t vramOffset = (m_hdmaDst & 0x1FFFu) +
+                (m_cgbMode ? (static_cast<uint16_t>(m_vbk & 1) << 13) : 0u);
+            m_vram[vramOffset] = byte;
+            ++m_hdmaSrc;
+            ++m_hdmaDst;
+        }
+        m_hdmaRemain -= 16;
+
+        if (m_hdmaRemain == 0)
+            m_hdmaActive = false;
     }
 
     void PPU::triggerOAMCorrupt(OAMCorruptType type)

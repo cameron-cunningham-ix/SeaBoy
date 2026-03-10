@@ -29,6 +29,7 @@ namespace SeaBoy
         m_ie    = 0x00;
         m_svbk    = 0;
         m_cgbMode = false;
+        m_key1    = 0;
 
         m_sb = 0;
         m_sc = 0;
@@ -124,8 +125,14 @@ namespace SeaBoy
         // LCD registers - routed to PPU (PanDocs.4 LCD I/O Registers)
         else if (addr >= 0xFF40u && addr <= 0xFF4Bu)
             val = m_ppu ? m_ppu->read(addr) : 0xFFu;
+        // CGB speed switching KEY1 (0xFF4D) - PanDocs.10
+        else if (addr == 0xFF4Du)
+            val = m_key1 | 0x7Eu; // only bits 0 and 7 meaningful
         // CGB VRAM bank select (0xFF4F) - routed to PPU
         else if (addr == 0xFF4Fu)
+            val = m_ppu ? m_ppu->read(addr) : 0xFFu;
+        // CGB HDMA registers (0xFF51-0xFF55) - routed to PPU
+        else if (addr >= 0xFF51u && addr <= 0xFF55u)
             val = m_ppu ? m_ppu->read(addr) : 0xFFu;
         // CGB palette registers - routed to PPU (PanDocs.4.7)
         else if (addr >= 0xFF68u && addr <= 0xFF6Bu)
@@ -190,8 +197,14 @@ namespace SeaBoy
         // LCD registers - routed to PPU (PanDocs.4 LCD I/O Registers)
         else if (addr >= 0xFF40u && addr <= 0xFF4Bu)
             { if (m_ppu) m_ppu->write(addr, val); }
+        // CGB speed switching KEY1 (0xFF4D) - PanDocs.10
+        else if (addr == 0xFF4Du)
+            { if (m_cgbMode) m_key1 = (m_key1 & 0x80u) | (val & 0x01u); } // only bit 0 writable
         // CGB VRAM bank select (0xFF4F) - routed to PPU
         else if (addr == 0xFF4Fu)
+            { if (m_ppu) m_ppu->write(addr, val); }
+        // CGB HDMA registers (0xFF51-0xFF55) - routed to PPU
+        else if (addr >= 0xFF51u && addr <= 0xFF55u)
             { if (m_ppu) m_ppu->write(addr, val); }
         // CGB palette registers - routed to PPU (PanDocs.4.7)
         else if (addr >= 0xFF68u && addr <= 0xFF6Bu)
@@ -303,7 +316,11 @@ namespace SeaBoy
             return m_apu ? m_apu->read(addr) : 0xFFu;
         if (addr >= 0xFF40u && addr <= 0xFF4Bu)
             return m_ppu ? m_ppu->read(addr) : 0xFFu;
+        if (addr == 0xFF4Du)
+            return m_key1 | 0x7Eu;
         if (addr == 0xFF4Fu)
+            return m_ppu ? m_ppu->read(addr) : 0xFFu;
+        if (addr >= 0xFF51u && addr <= 0xFF55u)
             return m_ppu ? m_ppu->read(addr) : 0xFFu;
         if (addr >= 0xFF68u && addr <= 0xFF6Bu)
             return m_ppu ? m_ppu->read(addr) : 0xFFu;
