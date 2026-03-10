@@ -119,6 +119,7 @@ add_executable(SeaBoy
   src/cartridge/MBC1.cpp
   src/cartridge/MBC2.cpp
   src/cartridge/MBC3.cpp
+  src/cartridge/MBC5.cpp
   src/ui/DebuggerUI.cpp
 )
 
@@ -187,6 +188,7 @@ add_executable(sm83_runner
   src/cartridge/MBC1.cpp
   src/cartridge/MBC2.cpp
   src/cartridge/MBC3.cpp
+  src/cartridge/MBC5.cpp
 )
 
 target_include_directories(sm83_runner PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
@@ -230,6 +232,7 @@ add_executable(blargg_runner
   src/cartridge/MBC1.cpp
   src/cartridge/MBC2.cpp
   src/cartridge/MBC3.cpp
+  src/cartridge/MBC5.cpp
 )
 
 target_include_directories(blargg_runner PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
@@ -279,6 +282,7 @@ add_executable(mealybug_runner
   src/cartridge/MBC1.cpp
   src/cartridge/MBC2.cpp
   src/cartridge/MBC3.cpp
+  src/cartridge/MBC5.cpp
 )
 
 target_include_directories(mealybug_runner PRIVATE  ${CMAKE_CURRENT_SOURCE_DIR})
@@ -326,6 +330,7 @@ add_executable(mooneye_runner
   src/cartridge/MBC1.cpp
   src/cartridge/MBC2.cpp
   src/cartridge/MBC3.cpp
+  src/cartridge/MBC5.cpp
 )
 
 target_include_directories(mooneye_runner PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
@@ -371,6 +376,7 @@ add_executable(microtest_runner
   src/cartridge/MBC1.cpp
   src/cartridge/MBC2.cpp
   src/cartridge/MBC3.cpp
+  src/cartridge/MBC5.cpp
 )
 
 target_include_directories(microtest_runner PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
