@@ -3,7 +3,11 @@
 #include <cmath>
 #include <string>
 #include <algorithm>
+#include <filesystem>
+#include <fstream>
+#include <sstream>
 #include "imgui.h"
+#include "imgui_internal.h" // DockBuilder API for layout save/load
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlrenderer3.h"
 #include "SDL3/SDL.h"
@@ -41,6 +45,12 @@ private:
 
     // Keybinding rebind state
     int m_rebindingIndex = -1; // -1 = not rebinding, 0–7 = which button
+
+    // Layout save/load state
+    std::string m_currentLayoutName;
+    std::string m_pendingLayoutLoad; // deferred load — applied before next DockSpace()
+    bool m_openSaveLayoutPopup = false;
+    char m_layoutNameBuf[128]{};
 
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
@@ -133,6 +143,7 @@ public:
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
+        io.IniFilename = nullptr; // We manage layouts ourselves
 
         ImFontConfig fontConfig;
         ImFont* roboto = io.Fonts->AddFontFromFileTTF("fonts/Roboto/Roboto-Regular.ttf", 16.0f * mainScale, &fontConfig);
@@ -206,6 +217,9 @@ public:
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
         ImGui::Begin("##DockHost", nullptr, hostFlags);
         ImGui::PopStyleVar(3);
+
+        // Apply deferred layout load before DockSpace rebuilds the tree
+        applyPendingLayout();
 
         // Dockspace
         ImGuiID dockspaceId = ImGui::GetID("MainDockspace");
@@ -284,6 +298,42 @@ public:
                 ImGui::MenuItem("OAM",            nullptr, &m_debugger->m_showOAM);
                 ImGui::MenuItem("Tile Viewer",    nullptr, &m_debugger->m_showTileViewer);
                 ImGui::MenuItem("Tilemap Viewer", nullptr, &m_debugger->m_showTilemapViewer);
+
+                ImGui::Separator();
+
+                // Save Layout
+                std::string saveLabel = m_currentLayoutName.empty()
+                    ? "Save Layout..."
+                    : "Save Layout (" + m_currentLayoutName + ")";
+                if (ImGui::MenuItem(saveLabel.c_str()))
+                {
+                    if (m_currentLayoutName.empty())
+                        m_openSaveLayoutPopup = true;
+                    else
+                        saveLayout(m_currentLayoutName);
+                }
+
+                if (ImGui::MenuItem("Save Layout As..."))
+                    m_openSaveLayoutPopup = true;
+
+                // Load Layout submenu
+                if (ImGui::BeginMenu("Load Layout"))
+                {
+                    auto layouts = enumerateLayouts();
+                    if (layouts.empty())
+                        ImGui::MenuItem("(no saved layouts)", nullptr, false, false);
+                    else
+                    {
+                        for (const auto& layoutName : layouts)
+                        {
+                            bool isCurrent = (layoutName == m_currentLayoutName);
+                            if (ImGui::MenuItem(layoutName.c_str(), nullptr, isCurrent))
+                                loadLayout(layoutName);
+                        }
+                    }
+                    ImGui::EndMenu();
+                }
+
                 ImGui::EndMenu();
             }
 
@@ -294,6 +344,14 @@ public:
         if (openKeybindings)
             ImGui::OpenPopup("Keybindings");
         renderKeybindingsPopup();
+
+        // Save Layout popup — deferred OpenPopup from menu
+        if (m_openSaveLayoutPopup)
+        {
+            ImGui::OpenPopup("Save Layout As");
+            m_openSaveLayoutPopup = false;
+        }
+        renderSaveLayoutPopup();
 
         ImGui::End(); // ##DockHost
 
@@ -461,6 +519,146 @@ private:
         if (ImGui::Button("Close"))
         {
             m_rebindingIndex = -1;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+
+    // --- Layout save/load helpers ---
+
+    std::string getLayoutDir()
+    {
+        const char* base = SDL_GetBasePath();
+        return std::string(base ? base : "./") + "layouts";
+    }
+
+    std::vector<std::string> enumerateLayouts()
+    {
+        std::vector<std::string> names;
+        std::string dir = getLayoutDir();
+        if (!std::filesystem::exists(dir))
+            return names;
+        for (const auto& entry : std::filesystem::directory_iterator(dir))
+        {
+            if (entry.path().extension() == ".ini")
+                names.push_back(entry.path().stem().string());
+        }
+        std::sort(names.begin(), names.end());
+        return names;
+    }
+
+    void saveLayout(const std::string& name)
+    {
+        std::string dir = getLayoutDir();
+        std::filesystem::create_directories(dir);
+        std::string path = dir + "/" + name + ".ini";
+
+        size_t len = 0;
+        const char* iniData = ImGui::SaveIniSettingsToMemory(&len);
+
+        std::ofstream out(path, std::ios::binary);
+        out.write(iniData, static_cast<std::streamsize>(len));
+
+        // Append visibility section
+        out << "\n[SeaBoy][Visibility]\n";
+        if (m_debugger)
+        {
+            out << "showGame=" << m_debugger->m_showGame << "\n";
+            out << "showControls=" << m_debugger->m_showControls << "\n";
+            out << "showCPURegisters=" << m_debugger->m_showCPURegisters << "\n";
+            out << "showBreakpoints=" << m_debugger->m_showBreakpoints << "\n";
+            out << "showDisassembly=" << m_debugger->m_showDisassembly << "\n";
+            out << "showMemory=" << m_debugger->m_showMemory << "\n";
+            out << "showPPUState=" << m_debugger->m_showPPUState << "\n";
+            out << "showIORegisters=" << m_debugger->m_showIORegisters << "\n";
+            out << "showOAM=" << m_debugger->m_showOAM << "\n";
+            out << "showTileViewer=" << m_debugger->m_showTileViewer << "\n";
+            out << "showTilemapViewer=" << m_debugger->m_showTilemapViewer << "\n";
+        }
+
+        m_currentLayoutName = name;
+    }
+
+    // Defers loading to next frame (before DockSpace() is called).
+    void loadLayout(const std::string& name)
+    {
+        m_pendingLayoutLoad = name;
+    }
+
+    // Actually applies the layout — must be called before DockSpace().
+    void applyPendingLayout()
+    {
+        if (m_pendingLayoutLoad.empty()) return;
+
+        std::string path = getLayoutDir() + "/" + m_pendingLayoutLoad + ".ini";
+        std::ifstream in(path, std::ios::binary);
+        if (!in) { m_pendingLayoutLoad.clear(); return; }
+
+        std::string content((std::istreambuf_iterator<char>(in)),
+                             std::istreambuf_iterator<char>());
+
+        // Extract and apply visibility section
+        const std::string marker = "[SeaBoy][Visibility]";
+        size_t pos = content.find(marker);
+        std::string imguiIni = (pos != std::string::npos) ? content.substr(0, pos) : content;
+
+        if (pos != std::string::npos && m_debugger)
+        {
+            std::istringstream vis(content.substr(pos + marker.size()));
+            std::string line;
+            while (std::getline(vis, line))
+            {
+                auto eq = line.find('=');
+                if (eq == std::string::npos) continue;
+                std::string key = line.substr(0, eq);
+                bool val = (line.substr(eq + 1)[0] == '1');
+                if      (key == "showGame")          m_debugger->m_showGame = val;
+                else if (key == "showControls")      m_debugger->m_showControls = val;
+                else if (key == "showCPURegisters")  m_debugger->m_showCPURegisters = val;
+                else if (key == "showBreakpoints")   m_debugger->m_showBreakpoints = val;
+                else if (key == "showDisassembly")   m_debugger->m_showDisassembly = val;
+                else if (key == "showMemory")        m_debugger->m_showMemory = val;
+                else if (key == "showPPUState")      m_debugger->m_showPPUState = val;
+                else if (key == "showIORegisters")   m_debugger->m_showIORegisters = val;
+                else if (key == "showOAM")           m_debugger->m_showOAM = val;
+                else if (key == "showTileViewer")    m_debugger->m_showTileViewer = val;
+                else if (key == "showTilemapViewer") m_debugger->m_showTilemapViewer = val;
+            }
+        }
+
+        // Clear existing dock tree so DockSpace() rebuilds from loaded ini
+        ImGuiID dockId = ImGui::GetID("MainDockspace");
+        ImGui::DockBuilderRemoveNode(dockId);
+
+        ImGui::LoadIniSettingsFromMemory(imguiIni.c_str(), imguiIni.size());
+        m_currentLayoutName = m_pendingLayoutLoad;
+        m_pendingLayoutLoad.clear();
+    }
+
+    void renderSaveLayoutPopup()
+    {
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        if (!ImGui::BeginPopupModal("Save Layout As", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+            return;
+
+        ImGui::Text("Layout name:");
+        bool enter = ImGui::InputText("##layoutname", m_layoutNameBuf, sizeof(m_layoutNameBuf),
+                                      ImGuiInputTextFlags_EnterReturnsTrue);
+        if (ImGui::IsWindowAppearing())
+            ImGui::SetKeyboardFocusHere(-1);
+
+        bool validName = m_layoutNameBuf[0] != '\0';
+        if ((ImGui::Button("Save") || enter) && validName)
+        {
+            saveLayout(m_layoutNameBuf);
+            m_layoutNameBuf[0] = '\0';
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel"))
+        {
+            m_layoutNameBuf[0] = '\0';
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
