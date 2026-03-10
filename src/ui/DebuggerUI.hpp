@@ -48,8 +48,29 @@ private:
     std::vector<uint16_t> m_breakpoints;
     char m_bpInputBuf[8]{};
 
+    // Memory viewer state
+    char m_memAddrBuf[8]{};
+
+    // Tile/tilemap viewer textures (created lazily)
+    SDL_Texture* m_tileTexture    = nullptr; // 128×192 (16×24 tiles)
+    SDL_Texture* m_tilemapTexture = nullptr; // 256×256 (32×32 tiles)
+    int  m_tilemapSelect = 0; // 0 = BG (9800), 1 = Window (9C00)
+
+    void rebuildTileTexture();
+    void rebuildTilemapTexture();
+
     // Panel rendering
     void renderControlPanel();
     void renderCPURegisters();
     void renderBreakpoints();
+    void renderDisassembly();
+    void renderMemoryViewer();
+    void renderPPUState();
+    void renderIORegisters();
+    void renderOAMViewer();
+    void renderTileViewer();
+    void renderTilemapViewer();
+
+    // Disassembler — decode one instruction at addr, return byte length
+    uint8_t disassemble(uint16_t addr, char* outBuf, int bufSize) const;
 };

@@ -12,6 +12,7 @@
 #   --no-mealybug        Skip Mealybug PPU visual tests
 #   --no-mooneye         Skip Mooneye hardware tests
 #   --no-microtest       Skip gbmicrotest cycle-accurate tests
+#   --no-samesuite       Skip SameSuite APU/DMA/PPU tests
 #
 # Exit code: 0 if all enabled suites pass, 1 if any fail.
 
@@ -56,6 +57,7 @@ RUN_BLARGG=1
 RUN_MEALYBUG=1
 RUN_MOONEYE=1
 RUN_MICROTEST=1
+RUN_SAMESUITE=1
 
 # ---------------------------------------------------------------------------
 # Argument parsing
@@ -69,6 +71,7 @@ while [[ $# -gt 0 ]]; do
         --no-mealybug) RUN_MEALYBUG=0; shift  ;;
         --no-mooneye) RUN_MOONEYE=0;  shift   ;;
         --no-microtest) RUN_MICROTEST=0; shift ;;
+        --no-samesuite) RUN_SAMESUITE=0; shift ;;
         -h|--help)    sed -n '2,16p' "$0"; exit 0 ;;
         *) echo "Unknown option: $1" >&2; exit 1 ;;
     esac
@@ -89,12 +92,12 @@ fi
 # ---------------------------------------------------------------------------
 # Summary state
 # ---------------------------------------------------------------------------
-# Indices: 0=Build 1=Blargg 2=SM83 3=Mealybug 4=Mooneye 5=Microtest
-SUITE_NAMES=("Build" "Blargg" "SM83" "Mealybug" "Mooneye" "Microtest")
-SUITE_STATUS=("SKIP" "SKIP" "SKIP" "SKIP" "SKIP" "SKIP")
-SUITE_PASS=(0 0 0 0 0 0)
-SUITE_FAIL=(0 0 0 0 0 0)
-SUITE_NOTES=("" "" "use --sm83 to enable" "" "" "")
+# Indices: 0=Build 1=Blargg 2=SM83 3=Mealybug 4=Mooneye 5=Microtest 6=SameSuite
+SUITE_NAMES=("Build" "Blargg" "SM83" "Mealybug" "Mooneye" "Microtest" "SameSuite")
+SUITE_STATUS=("SKIP" "SKIP" "SKIP" "SKIP" "SKIP" "SKIP" "SKIP")
+SUITE_PASS=(0 0 0 0 0 0 0)
+SUITE_FAIL=(0 0 0 0 0 0 0)
+SUITE_NOTES=("" "" "use --sm83 to enable" "" "" "" "")
 
 BLARGG_ROM_LABELS=()
 BLARGG_ROM_STATUS=()
@@ -390,6 +393,43 @@ if [[ $RUN_MICROTEST -eq 1 ]]; then
 fi
 
 # ===========================================================================
+# STEP 6: SAMESUITE
+# ===========================================================================
+if [[ $RUN_SAMESUITE -eq 1 ]]; then
+    echo -e "${C_BOLD}--- SameSuite APU/DMA/PPU Tests ---${C_RESET}"
+    SAMESUITE_SCRIPT="$SCRIPT_DIR/run_samesuite.sh"
+
+    if [[ ! -f "$SAMESUITE_SCRIPT" ]]; then
+        echo "ERROR: run_samesuite.sh not found"
+        SUITE_STATUS[6]="FAIL"
+        OVERALL_FAIL=1
+    else
+        set +e
+        ss_output=$(bash "$SAMESUITE_SCRIPT" "$BUILD_DIR" 2>&1)
+        ss_exit=$?
+        set -e
+
+        printf '%s\n' "$ss_output" | sed 's/^/  /'
+        echo ""
+
+        if parse_results "$ss_output"; then
+            SUITE_PASS[6]=$PARSED_PASS
+            SUITE_FAIL[6]=$PARSED_FAIL
+        else
+            SUITE_NOTES[6]="no results line"
+        fi
+
+        if [[ $ss_exit -eq 0 ]]; then
+            SUITE_STATUS[6]="PASS"
+        else
+            SUITE_STATUS[6]="FAIL"
+            OVERALL_FAIL=1
+        fi
+    fi
+    echo ""
+fi
+
+# ===========================================================================
 # SUMMARY TABLE
 # ===========================================================================
 echo -e "${C_BOLD}$SEP${C_RESET}"
@@ -427,8 +467,8 @@ else
         "SM83" "$(color_status "${SUITE_STATUS[2]}")" "-" "-" "${SUITE_NOTES[2]}"
 fi
 
-# Mealybug + Mooneye + Microtest
-for idx in 3 4 5; do
+# Mealybug + Mooneye + Microtest + SameSuite
+for idx in 3 4 5 6; do
     st="${SUITE_STATUS[$idx]}"
     if [[ "$st" == "SKIP" ]]; then
         printf "%-16s  %b  %-9s  %-9s  %s\n" \
@@ -444,8 +484,8 @@ done
 
 echo "$DASH"
 
-total_pass=$(( SUITE_PASS[1] + SUITE_PASS[2] + SUITE_PASS[3] + SUITE_PASS[4] + SUITE_PASS[5] ))
-total_fail=$(( SUITE_FAIL[1] + SUITE_FAIL[2] + SUITE_FAIL[3] + SUITE_FAIL[4] + SUITE_FAIL[5] ))
+total_pass=$(( SUITE_PASS[1] + SUITE_PASS[2] + SUITE_PASS[3] + SUITE_PASS[4] + SUITE_PASS[5] + SUITE_PASS[6] ))
+total_fail=$(( SUITE_FAIL[1] + SUITE_FAIL[2] + SUITE_FAIL[3] + SUITE_FAIL[4] + SUITE_FAIL[5] + SUITE_FAIL[6] ))
 overall_label="PASS"; [[ $OVERALL_FAIL -ne 0 ]] && overall_label="FAIL"
 
 printf "${C_BOLD}%-16s  %b  %-9s  %-9s${C_RESET}\n" \

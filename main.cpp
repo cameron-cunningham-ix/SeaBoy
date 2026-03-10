@@ -4,8 +4,8 @@
 #include <time.h>
 #include "SDL3/SDL.h"
 #include "SDL3/SDL_main.h"
-#include "src/ui/UIPlatform.h"
-#include "src/ui/DebuggerUI.h"
+#include "src/ui/UIPlatform.hpp"
+#include "src/ui/DebuggerUI.hpp"
 #include "src/core/GameBoy.hpp"
 
 int main(int argc, char *argv[])
