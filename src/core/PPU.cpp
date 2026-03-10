@@ -24,6 +24,7 @@ namespace SeaBoy
     constexpr uint16_t ADDR_OBP1 = 0xFF49;
     constexpr uint16_t ADDR_WY   = 0xFF4A;
     constexpr uint16_t ADDR_WX   = 0xFF4B;
+    constexpr uint16_t ADDR_VBK  = 0xFF4F; // CGB VRAM bank select
 
     // CGB palette registers - PanDocs.4.7 CGB Palettes
     constexpr uint16_t ADDR_BCPS = 0xFF68;
@@ -37,8 +38,10 @@ namespace SeaBoy
         reset();
     }
 
-    void PPU::reset()
+    void PPU::reset(bool cgb)
     {
+        m_cgbMode     = cgb;
+        m_vbk         = 0;
         m_mode        = PPUMode::OAMScan;
         m_lineCycle   = 0;
         m_ly          = 0;
@@ -229,14 +232,17 @@ namespace SeaBoy
         // VRAM locked during Mode 3 (Drawing) - PanDocs.4.3 LCD Access Timing
         if ((m_lcdc & LCDC::LCDEnable) && m_mode == PPUMode::Drawing)
             return 0xFF;
-        return m_vram[addr & 0x1FFFu];
+        // PanDocs.10 VBK — CGB VRAM bank offset
+        uint16_t offset = (addr & 0x1FFFu) + (m_cgbMode ? (static_cast<uint16_t>(m_vbk & 1) << 13) : 0u);
+        return m_vram[offset];
     }
 
     void PPU::writeVRAM(uint16_t addr, uint8_t val)
     {
         if ((m_lcdc & LCDC::LCDEnable) && m_mode == PPUMode::Drawing)
             return;
-        m_vram[addr & 0x1FFFu] = val;
+        uint16_t offset = (addr & 0x1FFFu) + (m_cgbMode ? (static_cast<uint16_t>(m_vbk & 1) << 13) : 0u);
+        m_vram[offset] = val;
     }
 
     uint8_t PPU::readOAM(uint16_t addr) const
@@ -295,6 +301,8 @@ namespace SeaBoy
         case ADDR_OBP1: return m_palettes.readOBP1();
         case ADDR_WY:   return m_wy;
         case ADDR_WX:   return m_wx;
+        // CGB VRAM bank select - PanDocs.10 VBK
+        case ADDR_VBK:  return m_vbk | 0xFEu;
         // CGB palette registers - PanDocs.4.7 CGB Palettes
         case ADDR_BCPS: return m_palettes.readBCPS();
         case ADDR_BCPD: return m_palettes.readBCPD();
@@ -363,6 +371,8 @@ namespace SeaBoy
         case ADDR_OBP1: m_palettes.writeOBP1(val); break;
         case ADDR_WY:   m_wy = val; break;
         case ADDR_WX:   m_wx = val; break;
+        // CGB VRAM bank select - PanDocs.10 VBK
+        case ADDR_VBK:  if (m_cgbMode) m_vbk = val & 0x01u; break;
         // CGB palette registers - PanDocs.4.7 CGB Palettes
         case ADDR_BCPS: m_palettes.writeBCPS(val); break;
         case ADDR_BCPD: m_palettes.writeBCPD(val); break;

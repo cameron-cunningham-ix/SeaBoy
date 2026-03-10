@@ -62,7 +62,7 @@ namespace SeaBoy
         uint8_t headerChecksum = (data.size() > 0x014Du) ? data[0x014D] : 0x00;
         m_cpu.reset(m_cgbMode, headerChecksum);
         m_timer.reset();
-        m_ppu.reset();
+        m_ppu.reset(m_cgbMode);
         m_apu.reset();
 
         return true;

@@ -108,6 +108,9 @@ namespace SeaBoy
         // LCD registers - routed to PPU (PanDocs.4 LCD I/O Registers)
         else if (addr >= 0xFF40u && addr <= 0xFF4Bu)
             val = m_ppu ? m_ppu->read(addr) : 0xFFu;
+        // CGB VRAM bank select (0xFF4F) - routed to PPU
+        else if (addr == 0xFF4Fu)
+            val = m_ppu ? m_ppu->read(addr) : 0xFFu;
         // CGB palette registers - routed to PPU (PanDocs.4.7)
         else if (addr >= 0xFF68u && addr <= 0xFF6Bu)
             val = m_ppu ? m_ppu->read(addr) : 0xFFu;
@@ -162,6 +165,9 @@ namespace SeaBoy
             { if (m_apu) m_apu->write(addr, val); }
         // LCD registers - routed to PPU (PanDocs.4 LCD I/O Registers)
         else if (addr >= 0xFF40u && addr <= 0xFF4Bu)
+            { if (m_ppu) m_ppu->write(addr, val); }
+        // CGB VRAM bank select (0xFF4F) - routed to PPU
+        else if (addr == 0xFF4Fu)
             { if (m_ppu) m_ppu->write(addr, val); }
         // CGB palette registers - routed to PPU (PanDocs.4.7)
         else if (addr >= 0xFF68u && addr <= 0xFF6Bu)
@@ -265,6 +271,8 @@ namespace SeaBoy
         if ((addr >= 0xFF10u && addr <= 0xFF26u) || (addr >= 0xFF30u && addr <= 0xFF3Fu))
             return m_apu ? m_apu->read(addr) : 0xFFu;
         if (addr >= 0xFF40u && addr <= 0xFF4Bu)
+            return m_ppu ? m_ppu->read(addr) : 0xFFu;
+        if (addr == 0xFF4Fu)
             return m_ppu ? m_ppu->read(addr) : 0xFFu;
         if (addr >= 0xFF68u && addr <= 0xFF6Bu)
             return m_ppu ? m_ppu->read(addr) : 0xFFu;

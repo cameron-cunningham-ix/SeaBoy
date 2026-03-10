@@ -76,7 +76,7 @@ namespace SeaBoy
     public:
         explicit PPU(MMU& mmu);
 
-        void reset();
+        void reset(bool cgb = false);
 
         // Advance PPU by tCycles T-cycles. Called from GameBoy::onBusCycle.
         void tick(uint32_t tCycles);
@@ -101,7 +101,11 @@ namespace SeaBoy
         void triggerOAMCorrupt(OAMCorruptType type);
 
         // Ungated reads - used by peek8 (debugger) and DMA.
-        uint8_t peekVRAM(uint16_t addr) const { return m_vram[addr & 0x1FFFu]; }
+        // In CGB mode, applies current VRAM bank offset.
+        uint8_t peekVRAM(uint16_t addr) const {
+            uint16_t offset = (addr & 0x1FFFu) + (m_cgbMode ? (static_cast<uint16_t>(m_vbk & 1) << 13) : 0u);
+            return m_vram[offset];
+        }
         uint8_t peekOAM(uint16_t addr)  const { return m_oam[addr - 0xFE00u]; }
 
         // Framebuffer access - 160×144 RGBA8888 pixels
@@ -127,6 +131,8 @@ namespace SeaBoy
         uint8_t  wx()        const { return m_wx; }
         const uint8_t* rawOAM()  const { return m_oam; }
         const uint8_t* rawVRAM() const { return m_vram; }
+        uint8_t vbk() const { return m_vbk; }
+        bool cgbMode() const { return m_cgbMode; }
 
     private:
         // STAT interrupt edge detection - PanDocs.9.1 INT 48 STAT interrupt
@@ -141,9 +147,14 @@ namespace SeaBoy
         OAMScan      m_oamScan;
         PixelFetcher m_fetcher;
 
-        // VRAM (8 KB) and OAM (160 bytes) - owned by PPU - PanDocs.2 Memory Map
-        uint8_t m_vram[0x2000]{};
+        // VRAM: 8 KB on DMG (1 bank), 16 KB on CGB (2 banks) - PanDocs.2 Memory Map
+        // Always allocated as 16 KB; DMG uses only bank 0.
+        uint8_t m_vram[0x4000]{};
         uint8_t m_oam[160]{};
+
+        // CGB state - PanDocs.10 VBK — VRAM Bank Select (CGB only)
+        uint8_t m_vbk     = 0;     // VRAM bank select (0 or 1)
+        bool    m_cgbMode = false;
 
         // Mode state machine
         PPUMode  m_mode      = PPUMode::OAMScan;
