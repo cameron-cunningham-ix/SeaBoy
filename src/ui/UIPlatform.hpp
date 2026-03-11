@@ -250,6 +250,10 @@ public:
                 ImGui::Separator();
                 {
                     bool hasROM = m_gameBoy && !m_currentROMPath.empty();
+                    bool hasBattery = hasROM &&
+                        m_gameBoy->mmu().cartridge() &&
+                        m_gameBoy->mmu().cartridge()->sramSize() > 0;
+
                     if (ImGui::MenuItem("Save State", "F5", false, hasROM))
                     {
                         std::string ssPath = saveStatePath();
@@ -260,21 +264,21 @@ public:
                         std::string ssPath = saveStatePath();
                         m_gameBoy->loadState(ssPath);
                     }
-                }
-                ImGui::Separator();
-                {
-                    bool hasBattery = m_gameBoy && !m_currentROMPath.empty() &&
-                        m_gameBoy->mmu().cartridge() &&
-                        m_gameBoy->mmu().cartridge()->sramSize() > 0;
+                    ImGui::Separator();
                     if (ImGui::MenuItem("Save File", nullptr, false, hasBattery))
                     {
                         std::string savPath = SeaBoy::SaveFile::getSavePath(m_currentROMPath);
                         m_gameBoy->saveSRAM(savPath);
                     }
-                    if (ImGui::MenuItem("Load Save File", nullptr, false, hasBattery))
+                    if (ImGui::MenuItem("Load Save File...", nullptr, false, hasROM))
                     {
-                        std::string savPath = SeaBoy::SaveFile::getSavePath(m_currentROMPath);
-                        m_gameBoy->loadSRAM(savPath);
+                        nfdchar_t* path = nullptr;
+                        nfdfilteritem_t filters[1] = { { "Save File", "sav" } };
+                        if (NFD_OpenDialog(&path, filters, 1, nullptr) == NFD_OKAY)
+                        {
+                            m_gameBoy->loadSRAM(path);
+                            NFD_FreePath(path);
+                        }
                     }
                 }
 
