@@ -64,6 +64,12 @@ namespace SeaBoy
         void serialize(BinaryWriter& w) const;
         void deserialize(BinaryReader& r);
 
+        // Restore external pointers after deserialize (without resetting fetcher state).
+        void restorePointers(const uint8_t* vram,
+                             const SpriteEntry* sprites, uint8_t spriteCount,
+                             const Palettes& palettes,
+                             uint32_t* frameBufferLine);
+
     private:
         // --- BG/Window fetcher ---
         // Steps 0,1: GetTile; 2,3: GetTileLo; 4,5: GetTileHi; 6,7: Sleep; 8+: Push

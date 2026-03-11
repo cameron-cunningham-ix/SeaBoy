@@ -506,4 +506,16 @@ namespace SeaBoy
         m_objFifo[m_objFifoSize] = ObjFifoPixel{}; // clear vacated slot
         return p;
     }
+
+    void PixelFetcher::restorePointers(const uint8_t* vram,
+                                        const SpriteEntry* sprites, uint8_t spriteCount,
+                                        const Palettes& palettes,
+                                        uint32_t* frameBufferLine)
+    {
+        m_vram        = vram;
+        m_sprites     = sprites;
+        m_spriteCount = spriteCount;
+        m_palettes    = &palettes;
+        m_fbLine      = frameBufferLine;
+    }
 }

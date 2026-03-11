@@ -68,6 +68,9 @@ public:
     // Path of currently loaded ROM (for Restart).
     std::string m_currentROMPath;
 
+    // Active save state slot (1–9).
+    int m_saveSlot = 1;
+
     // Restart flag — signals main loop to reload current ROM.
     bool m_pendingRestart = false;
 
@@ -254,15 +257,39 @@ public:
                         m_gameBoy->mmu().cartridge() &&
                         m_gameBoy->mmu().cartridge()->sramSize() > 0;
 
-                    if (ImGui::MenuItem("Save State", "F5", false, hasROM))
+                    if (ImGui::BeginMenu("Save State", hasROM))
                     {
-                        std::string ssPath = saveStatePath();
-                        m_gameBoy->saveState(ssPath);
+                        for (int i = 1; i <= 9; i++)
+                        {
+                            std::string path = saveStatePath(i);
+                            bool exists = std::filesystem::exists(path);
+                            std::string label = "Slot " + std::to_string(i);
+                            if (!exists) label += " (empty)";
+                            if (i == m_saveSlot) label += " *";
+                            if (ImGui::MenuItem(label.c_str(), i == m_saveSlot ? "F5" : nullptr))
+                            {
+                                m_saveSlot = i;
+                                m_gameBoy->saveState(path);
+                            }
+                        }
+                        ImGui::EndMenu();
                     }
-                    if (ImGui::MenuItem("Load State", "F8", false, hasROM))
+                    if (ImGui::BeginMenu("Load State", hasROM))
                     {
-                        std::string ssPath = saveStatePath();
-                        m_gameBoy->loadState(ssPath);
+                        for (int i = 1; i <= 9; i++)
+                        {
+                            std::string path = saveStatePath(i);
+                            bool exists = std::filesystem::exists(path);
+                            std::string label = "Slot " + std::to_string(i);
+                            if (!exists) label += " (empty)";
+                            if (i == m_saveSlot) label += " *";
+                            if (ImGui::MenuItem(label.c_str(), i == m_saveSlot ? "F8" : nullptr, false, exists))
+                            {
+                                m_saveSlot = i;
+                                m_gameBoy->loadState(path);
+                            }
+                        }
+                        ImGui::EndMenu();
                     }
                     ImGui::Separator();
                     if (ImGui::MenuItem("Save File", nullptr, false, hasBattery))
@@ -462,11 +489,16 @@ public:
                             break;
                         case SDL_SCANCODE_F5:
                             if (m_gameBoy && !m_currentROMPath.empty())
-                                m_gameBoy->saveState(saveStatePath());
+                                m_gameBoy->saveState(saveStatePath(m_saveSlot));
                             break;
                         case SDL_SCANCODE_F8:
                             if (m_gameBoy && !m_currentROMPath.empty())
-                                m_gameBoy->loadState(saveStatePath());
+                                m_gameBoy->loadState(saveStatePath(m_saveSlot));
+                            break;
+                        case SDL_SCANCODE_1: case SDL_SCANCODE_2: case SDL_SCANCODE_3:
+                        case SDL_SCANCODE_4: case SDL_SCANCODE_5: case SDL_SCANCODE_6:
+                        case SDL_SCANCODE_7: case SDL_SCANCODE_8: case SDL_SCANCODE_9:
+                            m_saveSlot = (e.key.scancode - SDL_SCANCODE_1) + 1;
                             break;
                     }
                 }
@@ -495,13 +527,13 @@ public:
     }
 
 private:
-    // Derive save state file path from current ROM path (replaces extension with .ss0).
-    std::string saveStatePath() const
+    // Derive save state file path from current ROM path (e.g., rom.ss1 through rom.ss9).
+    std::string saveStatePath(int slot) const
     {
         size_t dot = m_currentROMPath.rfind('.');
         std::string base = (dot != std::string::npos)
             ? m_currentROMPath.substr(0, dot) : m_currentROMPath;
-        return base + ".ss0";
+        return base + ".ss" + std::to_string(slot);
     }
 
     // Returns a pointer to the scancode field in m_bindings for the given index (0–7).

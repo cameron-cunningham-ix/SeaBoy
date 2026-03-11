@@ -364,6 +364,20 @@ namespace SeaBoy
 
         m_palettes.deserialize(r);
         m_fetcher.deserialize(r);
+
+        // Re-establish PixelFetcher's external pointers after deserialize.
+        // If the PPU was in Drawing mode (Mode 3), the fetcher needs valid
+        // pointers to VRAM, sprites, palettes, and the framebuffer line.
+        // We must NOT call init() here as it resets the mid-scanline state.
+        if (m_mode == PPUMode::Drawing)
+        {
+            uint8_t spriteH = (m_lcdc & 0x04) ? 16 : 8;
+            m_oamScan.scan(m_oam, m_ly, spriteH);
+            m_fetcher.restorePointers(m_vram,
+                                      m_oamScan.sprites(), m_oamScan.count(),
+                                      m_palettes,
+                                      &m_frameBuffer[m_ly * 160]);
+        }
     }
 
     // ---- APU serialize/deserialize ----
