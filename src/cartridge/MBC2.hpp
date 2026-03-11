@@ -21,6 +21,13 @@ namespace SeaBoy
         uint8_t read(uint16_t addr) const override;
         void    write(uint16_t addr, uint8_t val) override;
 
+        void serialize(BinaryWriter& w) const override;
+        void deserialize(BinaryReader& r) override;
+
+        const uint8_t* sram() const override { return m_ram; }
+        size_t sramSize() const override { return 512; }
+        void loadSRAM(const uint8_t* data, size_t size) override;
+
     private:
         // PanDocs.17.3 MBC2 - 512 × 4-bit internal RAM (stored as full bytes, upper nibble masked)
         uint8_t m_ram[512]{};

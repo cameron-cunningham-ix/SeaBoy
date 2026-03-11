@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+#include "SaveState.hpp"
+
 // PanDocs.4.7 Palettes - DMG palette registers
 // BGP  (0xFF47): Background palette data
 // OBP0 (0xFF48): Object palette 0 data
@@ -61,6 +63,10 @@ namespace SeaBoy
             for (int i = 0; i < 4; ++i) m_shades[i] = shades[i];
         }
         const uint32_t* shades() const { return m_shades; }
+
+        // Save state serialization
+        void serialize(BinaryWriter& w) const;
+        void deserialize(BinaryReader& r);
 
     private:
         // DMG shade table: white, light gray, dark gray, black (RGBA8888)

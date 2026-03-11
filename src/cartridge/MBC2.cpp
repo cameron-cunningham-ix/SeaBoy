@@ -1,4 +1,5 @@
 #include "MBC2.hpp"
+#include "../core/SaveState.hpp"
 
 #include <cstring>
 
@@ -65,6 +66,26 @@ namespace SeaBoy
             uint16_t offset = (addr - 0xA000u) & 0x01FFu;
             m_ram[offset] = val & 0x0Fu;  // store only lower nibble
         }
+    }
+
+    void MBC2::serialize(BinaryWriter& w) const
+    {
+        w.write8(m_romBank);
+        w.writeBool(m_ramEnable);
+        w.writeBlock(m_ram, sizeof(m_ram));
+    }
+
+    void MBC2::deserialize(BinaryReader& r)
+    {
+        m_romBank   = r.read8();
+        m_ramEnable = r.readBool();
+        r.readBlock(m_ram, sizeof(m_ram));
+    }
+
+    void MBC2::loadSRAM(const uint8_t* data, size_t size)
+    {
+        size_t copySize = (size < sizeof(m_ram)) ? size : sizeof(m_ram);
+        std::memcpy(m_ram, data, copySize);
     }
 
 }

@@ -126,6 +126,14 @@ namespace SeaBoy
         bool isDoubleSpeed() const { return (m_key1 & 0x80u) != 0; }
         void toggleSpeed()         { m_key1 ^= 0x80u; m_key1 &= ~0x01u; }
 
+        // Save state serialization
+        void serialize(BinaryWriter& w) const;
+        void deserialize(BinaryReader& r);
+
+        // Cartridge access for save state / save file.
+        Cartridge* cartridge() { return m_cart.get(); }
+        const Cartridge* cartridge() const { return m_cart.get(); }
+
         // Debug: read a byte without triggering the cycle callback.
         // Used by blargg_runner to inspect memory without side effects.
         uint8_t peek8(uint16_t addr) const;

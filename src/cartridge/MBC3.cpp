@@ -1,4 +1,7 @@
 #include "MBC3.hpp"
+#include "../core/SaveState.hpp"
+
+#include <cstring>
 
 namespace SeaBoy
 {
@@ -133,6 +136,73 @@ namespace SeaBoy
                     default:   break;
                 }
             }
+        }
+    }
+
+    void MBC3::serialize(BinaryWriter& w) const
+    {
+        w.write8(m_romBank);
+        w.write8(m_ramBank);
+        w.writeBool(m_ramEnable);
+        // RTC live registers
+        w.write8(m_rtcS);
+        w.write8(m_rtcM);
+        w.write8(m_rtcH);
+        w.write8(m_rtcDL);
+        w.write8(m_rtcDH);
+        // RTC latched copies
+        w.write8(m_latchS);
+        w.write8(m_latchM);
+        w.write8(m_latchH);
+        w.write8(m_latchDL);
+        w.write8(m_latchDH);
+        w.write8(m_latchState);
+        w.writeBool(m_hasRTC);
+        // RAM
+        w.write32(static_cast<uint32_t>(m_ram.size()));
+        if (!m_ram.empty())
+            w.writeBlock(m_ram.data(), m_ram.size());
+    }
+
+    void MBC3::deserialize(BinaryReader& r)
+    {
+        m_romBank   = r.read8();
+        m_ramBank   = r.read8();
+        m_ramEnable = r.readBool();
+        m_rtcS      = r.read8();
+        m_rtcM      = r.read8();
+        m_rtcH      = r.read8();
+        m_rtcDL     = r.read8();
+        m_rtcDH     = r.read8();
+        m_latchS    = r.read8();
+        m_latchM    = r.read8();
+        m_latchH    = r.read8();
+        m_latchDL   = r.read8();
+        m_latchDH   = r.read8();
+        m_latchState = r.read8();
+        m_hasRTC    = r.readBool();
+        uint32_t ramSize = r.read32();
+        m_ram.resize(ramSize);
+        if (ramSize > 0)
+            r.readBlock(m_ram.data(), ramSize);
+    }
+
+    void MBC3::loadSRAM(const uint8_t* data, size_t size)
+    {
+        // SRAM data, optionally followed by 5 RTC bytes
+        size_t ramCopy = (size < m_ram.size()) ? size : m_ram.size();
+        if (!m_ram.empty())
+            std::memcpy(m_ram.data(), data, ramCopy);
+
+        // If extra bytes present after SRAM, treat as RTC registers
+        if (m_hasRTC && size > m_ram.size() + 4)
+        {
+            const uint8_t* rtc = data + m_ram.size();
+            m_rtcS  = rtc[0];
+            m_rtcM  = rtc[1];
+            m_rtcH  = rtc[2];
+            m_rtcDL = rtc[3];
+            m_rtcDH = rtc[4];
         }
     }
 

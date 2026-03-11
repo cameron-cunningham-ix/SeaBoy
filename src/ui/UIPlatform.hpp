@@ -14,6 +14,8 @@
 #include "SDL3/SDL_main.h"
 #include "nfd.h"
 #include "src/core/GameBoy.hpp"
+#include "src/core/SaveState.hpp"
+#include "src/cartridge/Cartridge.hpp"
 #include "src/ui/DebuggerUI.hpp"
 
 // Key bindings for the 8 GameBoy buttons.
@@ -246,11 +248,35 @@ public:
                     m_pendingRestart = true;
 
                 ImGui::Separator();
-                ImGui::MenuItem("Save State", nullptr, false, false);
-                ImGui::MenuItem("Load State", nullptr, false, false);
+                {
+                    bool hasROM = m_gameBoy && !m_currentROMPath.empty();
+                    if (ImGui::MenuItem("Save State", "F5", false, hasROM))
+                    {
+                        std::string ssPath = saveStatePath();
+                        m_gameBoy->saveState(ssPath);
+                    }
+                    if (ImGui::MenuItem("Load State", "F8", false, hasROM))
+                    {
+                        std::string ssPath = saveStatePath();
+                        m_gameBoy->loadState(ssPath);
+                    }
+                }
                 ImGui::Separator();
-                ImGui::MenuItem("Save File", nullptr, false, false);
-                ImGui::MenuItem("Load Save File", nullptr, false, false);
+                {
+                    bool hasBattery = m_gameBoy && !m_currentROMPath.empty() &&
+                        m_gameBoy->mmu().cartridge() &&
+                        m_gameBoy->mmu().cartridge()->sramSize() > 0;
+                    if (ImGui::MenuItem("Save File", nullptr, false, hasBattery))
+                    {
+                        std::string savPath = SeaBoy::SaveFile::getSavePath(m_currentROMPath);
+                        m_gameBoy->saveSRAM(savPath);
+                    }
+                    if (ImGui::MenuItem("Load Save File", nullptr, false, hasBattery))
+                    {
+                        std::string savPath = SeaBoy::SaveFile::getSavePath(m_currentROMPath);
+                        m_gameBoy->loadSRAM(savPath);
+                    }
+                }
 
                 ImGui::EndMenu();
             }
@@ -430,6 +456,14 @@ public:
                         case SDL_SCANCODE_ESCAPE:
                             running = false;
                             break;
+                        case SDL_SCANCODE_F5:
+                            if (m_gameBoy && !m_currentROMPath.empty())
+                                m_gameBoy->saveState(saveStatePath());
+                            break;
+                        case SDL_SCANCODE_F8:
+                            if (m_gameBoy && !m_currentROMPath.empty())
+                                m_gameBoy->loadState(saveStatePath());
+                            break;
                     }
                 }
                 break;
@@ -457,6 +491,15 @@ public:
     }
 
 private:
+    // Derive save state file path from current ROM path (replaces extension with .ss0).
+    std::string saveStatePath() const
+    {
+        size_t dot = m_currentROMPath.rfind('.');
+        std::string base = (dot != std::string::npos)
+            ? m_currentROMPath.substr(0, dot) : m_currentROMPath;
+        return base + ".ss0";
+    }
+
     // Returns a pointer to the scancode field in m_bindings for the given index (0–7).
     SDL_Scancode* bindingField(int index)
     {

@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+#include "SaveState.hpp"
+
 // PanDocs.8 Timer and Divider Registers
 // https://gbdev.io/pandocs/Timer_and_Divider_Registers.html
 //
@@ -46,6 +48,10 @@ namespace SeaBoy
         // Expose the 16-bit internal counter for DIV-APU (APU frame sequencer).
         // The APU detects falling edges on bit 12 of this counter.
         uint16_t sysCounter() const { return m_counter; }
+
+        // Save state serialization
+        void serialize(BinaryWriter& w) const;
+        void deserialize(BinaryReader& r);
 
     private:
         // Returns the internal counter bit index selected by TAC[1:0]

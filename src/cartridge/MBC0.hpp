@@ -14,6 +14,9 @@ namespace SeaBoy
 
         uint8_t read(uint16_t addr) const override;
         void    write(uint16_t addr, uint8_t val) override;
+
+        void serialize(BinaryWriter& w) const override;
+        void deserialize(BinaryReader& r) override;
     };
 
 }

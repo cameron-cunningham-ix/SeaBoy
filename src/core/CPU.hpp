@@ -6,6 +6,7 @@
 #include <cstdint>
 
 #include "Registers.hpp"
+#include "SaveState.hpp"
 
 // PanDocs.14 & GBCTR - Sharp SM83 CPU
 // Cycle unit: T-cycles (4 T-cycles per M-cycle).
@@ -47,6 +48,10 @@ namespace SeaBoy
         void setHalted(bool v)       { m_halted       = v; }
         void setHaltBug(bool v)      { m_haltBug      = v; }
         void setIMEScheduled(bool v) { m_imeScheduled = v; }
+
+        // Save state serialization
+        void serialize(BinaryWriter& w) const;
+        void deserialize(BinaryReader& r);
 
         // Fetch one byte at PC and advance PC (used by handlers for immediate operands)
         uint8_t  fetch8();

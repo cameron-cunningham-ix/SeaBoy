@@ -1,4 +1,5 @@
 #include "MBC0.hpp"
+#include "../core/SaveState.hpp"
 
 namespace SeaBoy
 {
@@ -16,5 +17,8 @@ namespace SeaBoy
 
     // ROM-only: all writes are silently ignored.
     void MBC0::write(uint16_t /*addr*/, uint8_t /*val*/) {}
+
+    void MBC0::serialize(BinaryWriter& /*w*/) const {}
+    void MBC0::deserialize(BinaryReader& /*r*/) {}
 
 }

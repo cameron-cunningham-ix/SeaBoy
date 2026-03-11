@@ -1,4 +1,5 @@
 #include "GameBoy.hpp"
+#include "SaveState.hpp"
 
 #include <cstdio>
 #include <cstring>
@@ -67,6 +68,15 @@ namespace SeaBoy
         m_ppu.reset(m_cgbMode);
         m_apu.reset();
 
+        m_romPath = path;
+
+        // Auto-load .sav file if the cartridge has battery backup
+        if (SaveFile::hasBattery(data.data(), data.size()))
+        {
+            std::string savPath = SaveFile::getSavePath(path);
+            SaveFile::load(*this, savPath);
+        }
+
         return true;
     }
 
@@ -94,6 +104,26 @@ namespace SeaBoy
         // PanDocs.6 Joypad Input - request joypad interrupt (IF bit 4)
         auto* gb = static_cast<GameBoy*>(ctx);
         gb->m_mmu.writeIF(gb->m_mmu.readIF() | 0x10u);
+    }
+
+    bool GameBoy::saveState(const std::string& path) const
+    {
+        return SaveState::save(*this, path);
+    }
+
+    bool GameBoy::loadState(const std::string& path)
+    {
+        return SaveState::load(*this, path);
+    }
+
+    bool GameBoy::saveSRAM(const std::string& path) const
+    {
+        return SaveFile::save(*this, path);
+    }
+
+    bool GameBoy::loadSRAM(const std::string& path)
+    {
+        return SaveFile::load(*this, path);
     }
 
 }

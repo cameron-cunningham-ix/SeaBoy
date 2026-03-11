@@ -1,4 +1,7 @@
 #include "MBC1.hpp"
+#include "../core/SaveState.hpp"
+
+#include <cstring>
 
 namespace SeaBoy
 {
@@ -78,6 +81,35 @@ namespace SeaBoy
             if (offset < m_ram.size())
                 m_ram[offset] = val;
         }
+    }
+
+    void MBC1::serialize(BinaryWriter& w) const
+    {
+        w.write8(m_romBank);
+        w.write8(m_ramBank);
+        w.writeBool(m_ramEnable);
+        w.writeBool(m_mode);
+        w.write32(static_cast<uint32_t>(m_ram.size()));
+        if (!m_ram.empty())
+            w.writeBlock(m_ram.data(), m_ram.size());
+    }
+
+    void MBC1::deserialize(BinaryReader& r)
+    {
+        m_romBank   = r.read8();
+        m_ramBank   = r.read8();
+        m_ramEnable = r.readBool();
+        m_mode      = r.readBool();
+        uint32_t ramSize = r.read32();
+        m_ram.resize(ramSize);
+        if (ramSize > 0)
+            r.readBlock(m_ram.data(), ramSize);
+    }
+
+    void MBC1::loadSRAM(const uint8_t* data, size_t size)
+    {
+        size_t copySize = (size < m_ram.size()) ? size : m_ram.size();
+        std::memcpy(m_ram.data(), data, copySize);
     }
 
 }

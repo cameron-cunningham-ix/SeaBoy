@@ -5,6 +5,7 @@
 #include "OAMScan.hpp"
 #include "Palettes.hpp"
 #include "PixelFetcher.hpp"
+#include "SaveState.hpp"
 
 // PanDocs.4 LCD - Pixel Processing Unit
 //
@@ -117,6 +118,10 @@ namespace SeaBoy
         // Palette access
         const Palettes& palettes() const { return m_palettes; }
         Palettes& palettes() { return m_palettes; }
+
+        // Save state serialization
+        void serialize(BinaryWriter& w) const;
+        void deserialize(BinaryReader& r);
 
         // Debug-only accessors - read-only snapshots of internal state
         PPUMode  mode()      const { return m_mode; }

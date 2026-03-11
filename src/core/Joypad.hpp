@@ -4,6 +4,8 @@
 
 #include <cstdint>
 
+#include "SaveState.hpp"
+
 // PanDocs.6 Joypad Input (0xFF00 P1/JOYP)
 // Active-low button matrix: 0 = pressed, 1 = released.
 // Bit 5 selects the action button group (A / B / Select / Start).
@@ -39,6 +41,10 @@ namespace SeaBoy
 
         // P1/JOYP register write - stores select bits (4-5) only; bits 0-3 are read-only.
         void write(uint8_t v);
+
+        // Save state serialization
+        void serialize(BinaryWriter& w) const;
+        void deserialize(BinaryReader& r);
 
     private:
         // Bits 5-4: select lines (0 = group selected). Default: neither group selected.

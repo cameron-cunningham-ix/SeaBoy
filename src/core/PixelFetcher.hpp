@@ -4,6 +4,7 @@
 
 #include "OAMScan.hpp"
 #include "Palettes.hpp"
+#include "SaveState.hpp"
 
 // PanDocs.4.8.1 Pixel FIFO
 //
@@ -58,6 +59,10 @@ namespace SeaBoy
 
         // Did the window layer render any pixels this scanline?
         bool drewWindow() const { return m_drewWindow; }
+
+        // Save state serialization
+        void serialize(BinaryWriter& w) const;
+        void deserialize(BinaryReader& r);
 
     private:
         // --- BG/Window fetcher ---

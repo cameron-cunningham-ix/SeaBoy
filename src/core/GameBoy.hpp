@@ -64,6 +64,27 @@ namespace SeaBoy
         // CGB mode flag - true if the loaded ROM has CGB flag 0x80 or 0xC0.
         [[nodiscard]] bool isCGB() const { return m_cgbMode; }
 
+        // Joypad access (const)
+        [[nodiscard]] const Joypad& joypad() const { return m_joypad; }
+
+        // ROM path of currently loaded ROM.
+        [[nodiscard]] const std::string& romPath() const { return m_romPath; }
+
+        // Save state: snapshot full emulator state to file.
+        bool saveState(const std::string& path) const;
+        bool loadState(const std::string& path);
+
+        // Save file: persist/restore battery-backed SRAM.
+        bool saveSRAM(const std::string& path) const;
+        bool loadSRAM(const std::string& path);
+
+        // Mutable accessors for save state deserialization (friend-like access).
+        CPU&    cpuMut()    { return m_cpu; }
+        MMU&    mmuMut()    { return m_mmu; }
+        PPU&    ppuMut()    { return m_ppu; }
+        Timer&  timerMut()  { return m_timer; }
+        Joypad& joypadMut() { return m_joypad; }
+
     private:
         // Member declaration order determines construction order.
         // MMU must be constructed before CPU, Timer, PPU, and APU (all hold MMU&).
@@ -74,6 +95,7 @@ namespace SeaBoy
         APU    m_apu;
         Joypad m_joypad;
         bool   m_cgbMode = false;
+        std::string m_romPath;
 
         // M-cycle callback - ticks timer and PPU during CPU execution.
         static void onBusCycle(void* ctx, uint32_t tCycles);

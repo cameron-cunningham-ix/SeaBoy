@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+#include "SaveState.hpp"
+
 // PanDocs Audio - Game Boy Audio Processing Unit
 // https://gbdev.io/pandocs/Audio.html
 //
@@ -47,6 +49,10 @@ namespace SeaBoy
         // Drain audio samples into outBuffer (interleaved stereo float pairs).
         // Returns number of stereo pairs written (up to maxPairs).
         uint32_t drainSamples(float* outBuffer, uint32_t maxPairs);
+
+        // Save state serialization
+        void serialize(BinaryWriter& w) const;
+        void deserialize(BinaryReader& r);
 
     private:
         // -- Duty cycle table --------------------------------------------

@@ -112,6 +112,7 @@ add_executable(SeaBoy
   src/core/OAMScan.cpp
   src/core/PixelFetcher.cpp
   src/core/Palettes.cpp
+  src/core/SaveState.cpp
   src/core/opcodes/Opcodes.cpp
   src/core/opcodes/OpcodesCB.cpp
   src/cartridge/Cartridge.cpp
@@ -225,6 +226,7 @@ add_executable(blargg_runner
   src/core/OAMScan.cpp
   src/core/PixelFetcher.cpp
   src/core/Palettes.cpp
+  src/core/SaveState.cpp
   src/core/opcodes/Opcodes.cpp
   src/core/opcodes/OpcodesCB.cpp
   src/cartridge/Cartridge.cpp
@@ -275,6 +277,7 @@ add_executable(mealybug_runner
   src/core/OAMScan.cpp
   src/core/PixelFetcher.cpp
   src/core/Palettes.cpp
+  src/core/SaveState.cpp
   src/core/opcodes/Opcodes.cpp
   src/core/opcodes/OpcodesCB.cpp
   src/cartridge/Cartridge.cpp
@@ -323,6 +326,7 @@ add_executable(mooneye_runner
   src/core/OAMScan.cpp
   src/core/PixelFetcher.cpp
   src/core/Palettes.cpp
+  src/core/SaveState.cpp
   src/core/opcodes/Opcodes.cpp
   src/core/opcodes/OpcodesCB.cpp
   src/cartridge/Cartridge.cpp
@@ -369,6 +373,7 @@ add_executable(microtest_runner
   src/core/OAMScan.cpp
   src/core/PixelFetcher.cpp
   src/core/Palettes.cpp
+  src/core/SaveState.cpp
   src/core/opcodes/Opcodes.cpp
   src/core/opcodes/OpcodesCB.cpp
   src/cartridge/Cartridge.cpp

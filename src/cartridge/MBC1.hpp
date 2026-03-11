@@ -20,6 +20,13 @@ namespace SeaBoy
         uint8_t read(uint16_t addr) const override;
         void    write(uint16_t addr, uint8_t val) override;
 
+        void serialize(BinaryWriter& w) const override;
+        void deserialize(BinaryReader& r) override;
+
+        const uint8_t* sram() const override { return m_ram.data(); }
+        size_t sramSize() const override { return m_ram.size(); }
+        void loadSRAM(const uint8_t* data, size_t size) override;
+
     private:
         // PanDocs.17.2 - up to 4 banks × 8 KB = 32 KB external RAM
         std::vector<uint8_t> m_ram;

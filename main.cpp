@@ -7,6 +7,8 @@
 #include "src/ui/UIPlatform.hpp"
 #include "src/ui/DebuggerUI.hpp"
 #include "src/core/GameBoy.hpp"
+#include "src/core/SaveState.hpp"
+#include "src/cartridge/Cartridge.hpp"
 
 int main(int argc, char *argv[])
 {
@@ -56,6 +58,13 @@ int main(int argc, char *argv[])
         // Handle ROM open from File menu
         if (!platform.m_pendingROMPath.empty())
         {
+            // Auto-save SRAM for the current ROM before switching
+            if (!platform.m_currentROMPath.empty() &&
+                gameBoy.mmu().cartridge() && gameBoy.mmu().cartridge()->sramSize() > 0)
+            {
+                gameBoy.saveSRAM(SeaBoy::SaveFile::getSavePath(platform.m_currentROMPath));
+            }
+
             if (gameBoy.loadROM(platform.m_pendingROMPath))
                 platform.m_currentROMPath = platform.m_pendingROMPath;
             else
@@ -122,6 +131,13 @@ int main(int argc, char *argv[])
         // Push the PPU framebuffer to the display texture
         platform.writeToBuffer(gameBoy.getFrameBuffer());
         platform.renderUI([&]() { debugger.render(); });
+    }
+
+    // Auto-save SRAM on exit
+    if (!platform.m_currentROMPath.empty() &&
+        gameBoy.mmu().cartridge() && gameBoy.mmu().cartridge()->sramSize() > 0)
+    {
+        gameBoy.saveSRAM(SeaBoy::SaveFile::getSavePath(platform.m_currentROMPath));
     }
 
     return 0;
