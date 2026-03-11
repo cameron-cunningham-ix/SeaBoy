@@ -69,6 +69,8 @@ int main(int argc, char *argv[])
             {
                 platform.m_currentROMPath = platform.m_pendingROMPath;
                 platform.m_currentSavePath = SeaBoy::SaveFile::getSavePath(platform.m_currentROMPath);
+                if (platform.m_startPaused)
+                    debugger.pause();
             }
             else
                 fprintf(stderr, "Warning: could not load ROM '%s'\n", platform.m_pendingROMPath.c_str());
@@ -81,6 +83,8 @@ int main(int argc, char *argv[])
             if (!platform.m_currentROMPath.empty())
             {
                 gameBoy.loadROM(platform.m_currentROMPath);
+                if (platform.m_startPaused)
+                    debugger.pause();
                 // If user chose a custom .sav via "Load Save File...", load it
                 // (overrides the default .sav that loadROM auto-loaded).
                 std::string defaultSav = SeaBoy::SaveFile::getSavePath(platform.m_currentROMPath);

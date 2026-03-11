@@ -37,16 +37,16 @@ public:
 
     // Panel visibility - toggled from Window menu and panel X buttons
     bool m_showGame          = true;
-    bool m_showControls      = true;
-    bool m_showCPURegisters  = true;
-    bool m_showBreakpoints   = true;
-    bool m_showDisassembly   = true;
-    bool m_showMemory        = true;
-    bool m_showPPUState      = true;
-    bool m_showIORegisters   = true;
-    bool m_showOAM           = true;
-    bool m_showTileViewer    = true;
-    bool m_showTilemapViewer = true;
+    bool m_showControls      = false;
+    bool m_showCPURegisters  = false;
+    bool m_showBreakpoints   = false;
+    bool m_showDisassembly   = false;
+    bool m_showMemory        = false;
+    bool m_showPPUState      = false;
+    bool m_showIORegisters   = false;
+    bool m_showOAM           = false;
+    bool m_showTileViewer    = false;
+    bool m_showTilemapViewer = false;
 
 private:
     SeaBoy::GameBoy& m_gb;

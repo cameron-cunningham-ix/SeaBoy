@@ -77,6 +77,12 @@ public:
     // Restart flag — signals main loop to reload current ROM.
     bool m_pendingRestart = false;
 
+    // First-frame flag for initial dock layout.
+    bool m_dockInitNeeded = true;
+
+    // When true, pause emulation automatically after loading a ROM.
+    bool m_startPaused = false;
+
     // Debugger reference for Window menu toggles. Set via setDebugger().
     DebuggerUI* m_debugger = nullptr;
     void setDebugger(DebuggerUI* dbg) { m_debugger = dbg; }
@@ -233,6 +239,13 @@ public:
         ImGuiID dockspaceId = ImGui::GetID("MainDockspace");
         ImGui::DockSpace(dockspaceId, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_PassthruCentralNode);
 
+        // On first frame, dock the Game window into the central node
+        if (m_dockInitNeeded)
+        {
+            m_dockInitNeeded = false;
+            ImGui::DockBuilderDockWindow("Game", dockspaceId);
+        }
+
         // Menu bar
         bool openKeybindings = false;
         if (ImGui::BeginMenuBar())
@@ -344,6 +357,8 @@ public:
             // --- Options menu ---
             if (ImGui::BeginMenu("Options"))
             {
+                ImGui::MenuItem("Start Paused", nullptr, &m_startPaused);
+                ImGui::Separator();
                 if (ImGui::MenuItem("Keybindings..."))
                     openKeybindings = true;
 
