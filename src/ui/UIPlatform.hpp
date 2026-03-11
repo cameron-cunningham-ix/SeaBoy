@@ -282,7 +282,7 @@ public:
                             std::string label = "Slot " + std::to_string(i);
                             if (!exists) label += " (empty)";
                             if (i == m_saveSlot) label += " *";
-                            if (ImGui::MenuItem(label.c_str(), i == m_saveSlot ? "F5" : nullptr))
+                            if (ImGui::MenuItem(label.c_str(), i == m_saveSlot ? "Shift+F5" : nullptr))
                             {
                                 m_saveSlot = i;
                                 m_gameBoy->saveState(path);
@@ -299,7 +299,7 @@ public:
                             std::string label = "Slot " + std::to_string(i);
                             if (!exists) label += " (empty)";
                             if (i == m_saveSlot) label += " *";
-                            if (ImGui::MenuItem(label.c_str(), i == m_saveSlot ? "F8" : nullptr, false, exists))
+                            if (ImGui::MenuItem(label.c_str(), i == m_saveSlot ? "Shift+F8" : nullptr, false, exists))
                             {
                                 m_saveSlot = i;
                                 m_gameBoy->loadState(path);
@@ -532,11 +532,11 @@ public:
                             running = false;
                             break;
                         case SDL_SCANCODE_F5:
-                            if (m_gameBoy && !m_currentROMPath.empty())
+                            if ((e.key.mod & SDL_KMOD_SHIFT) && m_gameBoy && !m_currentROMPath.empty())
                                 m_gameBoy->saveState(saveStatePath(m_saveSlot));
                             break;
                         case SDL_SCANCODE_F8:
-                            if (m_gameBoy && !m_currentROMPath.empty())
+                            if ((e.key.mod & SDL_KMOD_SHIFT) && m_gameBoy && !m_currentROMPath.empty())
                                 m_gameBoy->loadState(saveStatePath(m_saveSlot));
                             break;
                         case SDL_SCANCODE_1: case SDL_SCANCODE_2: case SDL_SCANCODE_3:
