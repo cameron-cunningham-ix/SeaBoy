@@ -71,6 +71,9 @@ public:
     // Active save state slot (1–9).
     int m_saveSlot = 1;
 
+    // Active .sav file path (auto-derived from ROM, or user-chosen via Save As / Load).
+    std::string m_currentSavePath;
+
     // Restart flag — signals main loop to reload current ROM.
     bool m_pendingRestart = false;
 
@@ -291,11 +294,36 @@ public:
                         }
                         ImGui::EndMenu();
                     }
+                    if (ImGui::BeginMenu("Clear State", hasROM))
+                    {
+                        for (int i = 1; i <= 9; i++)
+                        {
+                            std::string path = saveStatePath(i);
+                            bool exists = std::filesystem::exists(path);
+                            std::string label = "Slot " + std::to_string(i);
+                            if (!exists) label += " (empty)";
+                            if (ImGui::MenuItem(label.c_str(), nullptr, false, exists))
+                            {
+                                std::filesystem::remove(path);
+                            }
+                        }
+                        ImGui::EndMenu();
+                    }
                     ImGui::Separator();
                     if (ImGui::MenuItem("Save File", nullptr, false, hasBattery))
                     {
-                        std::string savPath = SeaBoy::SaveFile::getSavePath(m_currentROMPath);
-                        m_gameBoy->saveSRAM(savPath);
+                        m_gameBoy->saveSRAM(m_currentSavePath);
+                    }
+                    if (ImGui::MenuItem("Save File As...", nullptr, false, hasBattery))
+                    {
+                        nfdchar_t* path = nullptr;
+                        nfdfilteritem_t filters[1] = { { "Save File", "sav" } };
+                        if (NFD_SaveDialog(&path, filters, 1, nullptr, nullptr) == NFD_OKAY)
+                        {
+                            m_currentSavePath = path;
+                            m_gameBoy->saveSRAM(m_currentSavePath);
+                            NFD_FreePath(path);
+                        }
                     }
                     if (ImGui::MenuItem("Load Save File...", nullptr, false, hasROM))
                     {
@@ -303,8 +331,9 @@ public:
                         nfdfilteritem_t filters[1] = { { "Save File", "sav" } };
                         if (NFD_OpenDialog(&path, filters, 1, nullptr) == NFD_OKAY)
                         {
-                            m_gameBoy->loadSRAM(path);
+                            m_currentSavePath = path;
                             NFD_FreePath(path);
+                            m_pendingRestart = true;
                         }
                     }
                 }

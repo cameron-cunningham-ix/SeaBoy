@@ -59,14 +59,17 @@ int main(int argc, char *argv[])
         if (!platform.m_pendingROMPath.empty())
         {
             // Auto-save SRAM for the current ROM before switching
-            if (!platform.m_currentROMPath.empty() &&
+            if (!platform.m_currentSavePath.empty() &&
                 gameBoy.mmu().cartridge() && gameBoy.mmu().cartridge()->sramSize() > 0)
             {
-                gameBoy.saveSRAM(SeaBoy::SaveFile::getSavePath(platform.m_currentROMPath));
+                gameBoy.saveSRAM(platform.m_currentSavePath);
             }
 
             if (gameBoy.loadROM(platform.m_pendingROMPath))
+            {
                 platform.m_currentROMPath = platform.m_pendingROMPath;
+                platform.m_currentSavePath = SeaBoy::SaveFile::getSavePath(platform.m_currentROMPath);
+            }
             else
                 fprintf(stderr, "Warning: could not load ROM '%s'\n", platform.m_pendingROMPath.c_str());
             platform.m_pendingROMPath.clear();
@@ -76,7 +79,16 @@ int main(int argc, char *argv[])
         if (platform.m_pendingRestart)
         {
             if (!platform.m_currentROMPath.empty())
+            {
                 gameBoy.loadROM(platform.m_currentROMPath);
+                // If user chose a custom .sav via "Load Save File...", load it
+                // (overrides the default .sav that loadROM auto-loaded).
+                std::string defaultSav = SeaBoy::SaveFile::getSavePath(platform.m_currentROMPath);
+                if (platform.m_currentSavePath != defaultSav)
+                    gameBoy.loadSRAM(platform.m_currentSavePath);
+                else
+                    platform.m_currentSavePath = defaultSav;
+            }
             platform.m_pendingRestart = false;
         }
 
@@ -134,10 +146,10 @@ int main(int argc, char *argv[])
     }
 
     // Auto-save SRAM on exit
-    if (!platform.m_currentROMPath.empty() &&
+    if (!platform.m_currentSavePath.empty() &&
         gameBoy.mmu().cartridge() && gameBoy.mmu().cartridge()->sramSize() > 0)
     {
-        gameBoy.saveSRAM(SeaBoy::SaveFile::getSavePath(platform.m_currentROMPath));
+        gameBoy.saveSRAM(platform.m_currentSavePath);
     }
 
     return 0;
