@@ -2,15 +2,15 @@
 
 A Game Boy / Game Boy Color emulator written in C++20.
 
-> **Status:** Early development - UI shell is functional; core emulation (MMU, CPU, PPU, APU) is in progress.
+## Features
 
-## Features (planned)
-
-- Game Boy (DMG) and Game Boy Color (CGB) support
-- Cycle-accurate CPU (SM83 / LR35902)
+- Cycle-accurate SM83 CPU — passes all Blargg `cpu_instrs`, `instr_timing`, `mem_timing`, and `mem_timing-2` tests
 - MBC0–5 cartridge support
+- Timer with T-cycle accuracy
+- PPU with OAM corruption bug emulation
 - SDL3-based display and input
 - Dear ImGui docking UI with integrated debugger
+- Save states (slots 1–9)
 
 ## Prerequisites
 
@@ -21,7 +21,7 @@ A Game Boy / Game Boy Color emulator written in C++20.
 | C++ compiler | MSVC 2022 / GCC 12 / Clang 15 | C++20 required |
 | Git | any | FetchContent clones dependencies |
 
-All library dependencies (SDL3, Dear ImGui, Native File Dialog Extended) are fetched automatically by CMake at configure time - no manual installation needed.
+All library dependencies (SDL3, Dear ImGui, Native File Dialog Extended) are fetched automatically by CMake at configure time — no manual installation needed.
 
 ## Building
 
@@ -61,15 +61,13 @@ cmake --build build --config Release
 ```
 SeaBoy/
 ├── main.cpp              # Entry point
-├── UIPlatform.h          # SDL3 + ImGui window, renderer, input
 ├── CMakeLists.txt
 ├── fonts/
 │   └── Roboto/           # Roboto-Regular font
 ├── src/
 │   ├── core/             # CPU, MMU, PPU, APU, Timer, Joypad, GameBoy
 │   ├── cartridge/        # Header parsing + MBC0–5
-│   ├── ui/               # DebuggerUI, SettingsUI
-│   └── util/             # Bits.h, Logger.h
+│   └── ui/               # UIPlatform, DebuggerUI, SettingsUI
 ├── tests/                # Unit tests
 └── info/                 # Reference docs and Pan Docs snapshots
 ```
@@ -84,7 +82,7 @@ SeaBoy/
 
 ## Reference Material
 
-- [Pan Docs](https://gbdev.io/pandocs/) - primary hardware reference
+- [Pan Docs](https://gbdev.io/pandocs/) — primary hardware reference
 - [GBZ80 instruction set](https://rgbds.gbdev.io/docs/v1.0.1/gbz80.7)
 - [Opcode table](https://www.pastraiser.com/cpu/gameboy/gameboy_opcodes.html)
 - [Blargg test ROMs](https://github.com/retrio/gb-test-roms)
@@ -92,4 +90,4 @@ SeaBoy/
 
 ## License
 
-TBD
+This project is licensed under the GNU General Public License v2.0. See the [LICENSE](LICENSE) file for details.
