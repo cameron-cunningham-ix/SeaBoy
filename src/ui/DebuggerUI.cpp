@@ -787,7 +787,7 @@ void DebuggerUI::renderTilemapViewer()
 
 void DebuggerUI::render()
 {
-    // Global keyboard shortcuts — work regardless of which panels are open
+    // Global keyboard shortcuts work regardless of which panels are open
     if (ImGui::IsKeyPressed(ImGuiKey_F5, false))
         m_paused = !m_paused;
     if (m_paused && ImGui::IsKeyPressed(ImGuiKey_F10, false))

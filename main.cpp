@@ -107,7 +107,8 @@ int main(int argc, char *argv[])
         }
 
         // Emulation tick — respects pause / step / breakpoints
-        if (!debugger.isPaused())
+        bool romLoaded = gameBoy.mmu().cartridge() != nullptr;
+        if (romLoaded && !debugger.isPaused())
         {
             // Run one full frame worth of T-cycles
             // PanDocs.4.8 — 154 lines × 456 T-cycles = 70 224 T-cycles per frame
@@ -123,11 +124,11 @@ int main(int argc, char *argv[])
                 }
             }
         }
-        else if (debugger.consumeStep())
+        else if (romLoaded && debugger.consumeStep())
         {
             gameBoy.tick();
         }
-        else if (debugger.consumeStepFrame())
+        else if (romLoaded && debugger.consumeStepFrame())
         {
             uint32_t frameCycles = 0;
             while (frameCycles < SeaBoy::TCYCLES_PER_FRAME)

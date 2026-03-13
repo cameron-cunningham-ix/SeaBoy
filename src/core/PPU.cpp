@@ -1,6 +1,7 @@
 #include "PPU.hpp"
 #include "MMU.hpp"
 
+#include <algorithm>
 #include <cstring>
 
 namespace SeaBoy
@@ -84,7 +85,7 @@ namespace SeaBoy
 
         std::memset(m_vram,        0, sizeof(m_vram));
         std::memset(m_oam,         0, sizeof(m_oam));
-        std::memset(m_frameBuffer, 0, sizeof(m_frameBuffer));
+        std::fill(std::begin(m_frameBuffer), std::end(m_frameBuffer), 0x000000FFu);
     }
 
     void PPU::startOAMScan()
