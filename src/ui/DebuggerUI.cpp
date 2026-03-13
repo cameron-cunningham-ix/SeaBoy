@@ -180,14 +180,6 @@ void DebuggerUI::renderControlPanel()
             m_stepFramePending = true;
     }
 
-    // Keyboard shortcuts (work even when panel not focused)
-    if (ImGui::IsKeyPressed(ImGuiKey_F5, false))
-        m_paused = !m_paused;
-    if (m_paused && ImGui::IsKeyPressed(ImGuiKey_F10, false))
-        m_stepPending = true;
-    if (m_paused && ImGui::IsKeyPressed(ImGuiKey_F6, false))
-        m_stepFramePending = true;
-
     ImGui::End();
 }
 
@@ -795,6 +787,14 @@ void DebuggerUI::renderTilemapViewer()
 
 void DebuggerUI::render()
 {
+    // Global keyboard shortcuts — work regardless of which panels are open
+    if (ImGui::IsKeyPressed(ImGuiKey_F5, false))
+        m_paused = !m_paused;
+    if (m_paused && ImGui::IsKeyPressed(ImGuiKey_F10, false))
+        m_stepPending = true;
+    if (m_paused && ImGui::IsKeyPressed(ImGuiKey_F6, false))
+        m_stepFramePending = true;
+
     if (m_showControls)      renderControlPanel();
     if (m_showCPURegisters)  renderCPURegisters();
     if (m_showBreakpoints)   renderBreakpoints();
