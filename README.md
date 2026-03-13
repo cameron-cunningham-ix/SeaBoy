@@ -1,3 +1,4 @@
+![SeaBoy Logo](assets/SeaBoyLogo_icon.ico)
 # SeaBoy
 
 A Game Boy / Game Boy Color emulator written in C++20.
