@@ -147,11 +147,14 @@ int main(int argc, char* argv[])
 
     const char* romPath   = argv[1];
     uint64_t    maxCycles = 500'000'000ULL; // ~120 s of Game Boy time
+    uint64_t    traceCount = 0; // 0 = no tracing
 
     for (int i = 2; i < argc; ++i)
     {
         if (std::strcmp(argv[i], "--cycles") == 0 && i + 1 < argc)
             maxCycles = std::stoull(argv[++i]);
+        else if (std::strcmp(argv[i], "--trace") == 0 && i + 1 < argc)
+            traceCount = std::stoull(argv[++i]);
     }
 
     // ---- set up emulator ----
@@ -179,6 +182,7 @@ int main(int argc, char* argv[])
 
     // ---- run loop ----
     uint64_t    totalCycles = 0;
+    uint64_t    instrCount  = 0;
     std::string lastOutput;
 
     // Periodic threshold for alternative output channel checks (every 100 K cycles)
@@ -186,6 +190,22 @@ int main(int argc, char* argv[])
 
     while (totalCycles < maxCycles)
     {
+        // CPU trace: log registers BEFORE each instruction executes
+        if (traceCount > 0 && instrCount < traceCount)
+        {
+            const auto& r = gameBoy.cpu().registers();
+            uint8_t opcode = gameBoy.mmu().peek8(r.PC);
+            std::fprintf(stderr,
+                "[%09llu] PC:%04X OP:%02X SP:%04X AF:%04X BC:%04X DE:%04X HL:%04X "
+                "IF:%02X IE:%02X LCDC:%02X LY:%02X KEY1:%02X\n",
+                static_cast<unsigned long long>(instrCount),
+                r.PC, opcode, r.SP, r.getAF(), r.getBC(), r.getDE(), r.getHL(),
+                gameBoy.mmu().peek8(0xFF0F), gameBoy.mmu().peek8(0xFFFF),
+                gameBoy.mmu().peek8(0xFF40), gameBoy.mmu().peek8(0xFF44),
+                gameBoy.mmu().peek8(0xFF4D));
+        }
+        ++instrCount;
+
         totalCycles += gameBoy.tick();
 
         const std::string& serial = gameBoy.serialOutput();
