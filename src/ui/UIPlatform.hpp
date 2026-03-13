@@ -148,7 +148,7 @@ public:
             std::cerr << "SDL failed to allocate framebuffer\n";
         }
         // this->textureScale = textureScale;
-        SDL_Log("SDL Initialized\n");
+        // SDL_Log("SDL Initialized\n");
 
         // ImGui Initialization
         IMGUI_CHECKVERSION();
