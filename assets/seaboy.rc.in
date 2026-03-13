@@ -1,0 +1,34 @@
+// Application icon — the first icon in the .rc is used by Windows Explorer
+IDI_APPICON ICON "SeaBoyLogo_icon.ico"
+
+// Windows version information resource
+#include <winver.h>
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     @PROJECT_VERSION_MAJOR@,@PROJECT_VERSION_MINOR@,@PROJECT_VERSION_PATCH@,0
+PRODUCTVERSION  @PROJECT_VERSION_MAJOR@,@PROJECT_VERSION_MINOR@,@PROJECT_VERSION_PATCH@,0
+FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+FILEFLAGS       0x0L
+FILEOS          VOS_NT_WINDOWS32
+FILETYPE        VFT_APP
+FILESUBTYPE     VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName",      "SeaBoy Project"
+            VALUE "FileDescription",  "SeaBoy - Game Boy / Game Boy Color Emulator"
+            VALUE "FileVersion",      "@PROJECT_VERSION@"
+            VALUE "InternalName",     "SeaBoy"
+            VALUE "LegalCopyright",   "Copyright (c) 2024-2026 SeaBoy Project"
+            VALUE "OriginalFilename", "SeaBoy.exe"
+            VALUE "ProductName",      "SeaBoy"
+            VALUE "ProductVersion",   "@PROJECT_VERSION@"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0409, 0x04B0
+    END
+END

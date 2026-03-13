@@ -160,7 +160,8 @@ public:
         io.IniFilename = nullptr; // We manage layouts ourselves
 
         ImFontConfig fontConfig;
-        ImFont* roboto = io.Fonts->AddFontFromFileTTF("fonts/Roboto/Roboto-Regular.ttf", 16.0f * mainScale, &fontConfig);
+        std::string fontPath = std::string(SDL_GetBasePath()) + "fonts/Roboto/Roboto-Regular.ttf";
+        ImFont* roboto = io.Fonts->AddFontFromFileTTF(fontPath.c_str(), 16.0f * mainScale, &fontConfig);
 
         // Setup Dear ImGui style
         ImGui::StyleColorsDark();

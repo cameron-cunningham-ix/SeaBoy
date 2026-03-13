@@ -11,6 +11,22 @@ if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
+# -----------------------------
+# Version info and application icon (Windows only)
+# -----------------------------
+if(WIN32)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/assets/seaboy.rc.in
+    ${CMAKE_CURRENT_BINARY_DIR}/seaboy.rc
+    @ONLY
+  )
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/assets/SeaBoyLogo_icon.ico
+    ${CMAKE_CURRENT_BINARY_DIR}/SeaBoyLogo_icon.ico
+    COPYONLY
+  )
+endif()
+
 include(FetchContent)
 
 # -----------------------------
@@ -122,6 +138,7 @@ add_executable(SeaBoy
   src/cartridge/MBC3.cpp
   src/cartridge/MBC5.cpp
   src/ui/DebuggerUI.cpp
+  $<$<PLATFORM_ID:Windows>:${CMAKE_CURRENT_BINARY_DIR}/seaboy.rc>
 )
 
 target_include_directories(SeaBoy PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
@@ -156,11 +173,15 @@ add_custom_command(TARGET SeaBoy POST_BUILD
 )
 
 # -----------------------------
-# Include fonts
+# Copy fonts next to the executable
 # -----------------------------
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fonts/Roboto/Roboto-Regular.ttf
-               ${CMAKE_CURRENT_BINARY_DIR}/fonts/Roboto/Roboto-Regular.ttf
-               COPYONLY)
+add_custom_command(TARGET SeaBoy POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E make_directory
+          "$<TARGET_FILE_DIR:SeaBoy>/fonts/Roboto"
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+          "${CMAKE_CURRENT_SOURCE_DIR}/fonts/Roboto/Roboto-Regular.ttf"
+          "$<TARGET_FILE_DIR:SeaBoy>/fonts/Roboto/Roboto-Regular.ttf"
+)
 
 # -----------------------------
 # sm83_runner – SingleStepTests/sm83 CPU test harness
