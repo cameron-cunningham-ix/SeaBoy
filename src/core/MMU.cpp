@@ -129,25 +129,25 @@ namespace SeaBoy
             val = m_ppu ? m_ppu->read(addr) : 0xFFu;
         // CGB speed switching KEY1 (0xFF4D) - PanDocs.10
         else if (addr == 0xFF4Du)
-            val = m_key1 | 0x7Eu; // only bits 0 and 7 meaningful
+            val = m_cgbMode ? (m_key1 | 0x7Eu) : 0xFFu; // only bits 0 and 7 meaningful
         // CGB VRAM bank select (0xFF4F) - routed to PPU
         else if (addr == 0xFF4Fu)
-            val = m_ppu ? m_ppu->read(addr) : 0xFFu;
+            val = (m_cgbMode && m_ppu) ? m_ppu->read(addr) : 0xFFu;
         // CGB HDMA registers (0xFF51-0xFF55) - routed to PPU
         else if (addr >= 0xFF51u && addr <= 0xFF55u)
-            val = m_ppu ? m_ppu->read(addr) : 0xFFu;
+            val = (m_cgbMode && m_ppu) ? m_ppu->read(addr) : 0xFFu;
         // CGB IR - bits 2-5 always 1; bit 7 (write enable) and bit 0 (LED) are R/W; bit 1 = recieved signal = 0
         else if (addr == 0xFF56u)
             val = m_cgbMode ? ((m_rp & 0xC1u) | 0x3Eu) : 0xFFu;
         // CGB palette registers - routed to PPU (PanDocs.4.7)
         else if (addr >= 0xFF68u && addr <= 0xFF6Bu)
-            val = m_ppu ? m_ppu->read(addr) : 0xFFu;
+            val = (m_cgbMode && m_ppu) ? m_ppu->read(addr) : 0xFFu;
         // CGB object priority mode
         else if (addr == 0xFF6Cu)
             val = m_cgbMode ? ((m_opri & 0x01u) | 0xFEu) : 0xFFu;
         // CGB WRAM bank select (0xFF70) - PanDocs.2 SVBK
         else if (addr == 0xFF70u)
-            val = m_svbk | 0xF8u;
+            val = m_cgbMode ? (m_svbk | 0xF8u) : 0xFFu;
         else if (addr >= ADDR_HRAM_BASE && addr <= ADDR_HRAM_END)
             val = m_hram[addr - ADDR_HRAM_BASE];
         else if (addr == ADDR_IE)

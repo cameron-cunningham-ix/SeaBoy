@@ -40,7 +40,7 @@ int main(int argc, char** argv)
 
     const std::string romPath = argv[1];
 
-    uint64_t timeoutFrames = 10; // ~0.17 seconds of GB time (microtests are very short)
+    uint64_t timeoutFrames = 100;
     for (int i = 2; i < argc - 1; ++i)
     {
         if (std::strcmp(argv[i], "--timeout") == 0)

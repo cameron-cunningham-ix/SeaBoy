@@ -1,0 +1,39 @@
+# Mealybug Tearoom Test Results
+
+| Test Name | Pass/Fail (✅/❌) |
+|-----------|------|
+| dma/hdma_during_halt-C | ❌ |
+| dma/hdma_timing-C | ❌ |
+| mbc/mbc3_rtc | ❌ |
+| ppu/m2_win_en_toggle | ❌ |
+| ppu/m3_bgp_change | ❌ |
+| ppu/m3_bgp_change_sprites | ❌ |
+| ppu/m3_lcdc_bg_en_change | ❌ |
+| ppu/m3_lcdc_bg_en_change2 | ❌ |
+| ppu/m3_lcdc_bg_map_change | ❌ |
+| ppu/m3_lcdc_bg_map_change2 | ❌ |
+| ppu/m3_lcdc_obj_en_change | ❌ |
+| ppu/m3_lcdc_obj_en_change_variant | ❌ |
+| ppu/m3_lcdc_obj_size_change | ❌ |
+| ppu/m3_lcdc_obj_size_change_scx | ❌ |
+| ppu/m3_lcdc_tile_sel_change | ❌ |
+| ppu/m3_lcdc_tile_sel_change2 | ❌ |
+| ppu/m3_lcdc_tile_sel_win_change | ❌ |
+| ppu/m3_lcdc_tile_sel_win_change2 | ❌ |
+| ppu/m3_lcdc_win_en_change_multiple | ❌ |
+| ppu/m3_lcdc_win_en_change_multiple_wx | ❌ |
+| ppu/m3_lcdc_win_map_change | ❌ |
+| ppu/m3_lcdc_win_map_change2 | ❌ |
+| ppu/m3_obp0_change | ❌ |
+| ppu/m3_scx_high_5_bits | ❌ |
+| ppu/m3_scx_high_5_bits_change2 | ❌ |
+| ppu/m3_scx_low_3_bits | ❌ |
+| ppu/m3_scy_change | ❌ |
+| ppu/m3_scy_change2 | ❌ |
+| ppu/m3_window_timing | ❌ |
+| ppu/m3_window_timing_wx_0 | ❌ |
+| ppu/m3_wx_4_change | ❌ |
+| ppu/m3_wx_4_change_sprites | ❌ |
+| ppu/m3_wx_5_change | ❌ |
+| ppu/m3_wx_6_change | ❌ |
+| ppu/win_without_bg | ❌ |
