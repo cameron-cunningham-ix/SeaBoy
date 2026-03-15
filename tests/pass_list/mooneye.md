@@ -1,5 +1,5 @@
 # Mooneye Test Suite Results
-Results: 52 passed, 42 failed, 9 skipped
+Results: 54 passed, 40 failed, 9 skipped
 | Test Name | Pass/Fail (✅/❌) |
 |-----------|------|
 | acceptance/add_sp_e_timing | ❌ |
@@ -94,9 +94,9 @@ Results: 52 passed, 42 failed, 9 skipped
 | emulator-only/mbc2/bits_romb | ✅ |
 | emulator-only/mbc2/bits_unused | ✅ |
 | emulator-only/mbc2/ram | ✅ |
-| emulator-only/mbc2/rom_1Mb | ❌ |
+| emulator-only/mbc2/rom_1Mb | ✅ |
 | emulator-only/mbc2/rom_2Mb | ✅ |
-| emulator-only/mbc2/rom_512kb | ❌ |
+| emulator-only/mbc2/rom_512kb | ✅ |
 | emulator-only/mbc5/rom_16Mb | ✅ |
 | emulator-only/mbc5/rom_1Mb | ✅ |
 | emulator-only/mbc5/rom_2Mb | ✅ |

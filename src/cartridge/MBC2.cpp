@@ -18,10 +18,12 @@ namespace SeaBoy
         if (addr <= 0x3FFFu)
             return addr < m_rom.size() ? m_rom[addr] : 0xFFu;
 
-        // 0x4000–0x7FFF: switchable ROM bank 1–15
+        // 0x4000–0x7FFF: switchable ROM bank 1–15 (masked to actual ROM size)
         if (addr <= 0x7FFFu)
         {
-            uint32_t offset = static_cast<uint32_t>(m_romBank) * 0x4000u
+            uint32_t numBanks = static_cast<uint32_t>(m_rom.size() / 0x4000u);
+            uint8_t bank = (numBanks > 0) ? (m_romBank & static_cast<uint8_t>(numBanks - 1)) : 0;
+            uint32_t offset = static_cast<uint32_t>(bank) * 0x4000u
                             + static_cast<uint32_t>(addr - 0x4000u);
             return offset < m_rom.size() ? m_rom[offset] : 0xFFu;
         }
