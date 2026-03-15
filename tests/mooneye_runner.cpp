@@ -37,7 +37,7 @@ int main(int argc, char** argv)
 
     const std::string romPath = argv[1];
 
-    uint64_t timeoutFrames = 120; // default: 2 seconds of GB time
+    uint64_t timeoutFrames = 5000;
     for (int i = 2; i < argc - 1; ++i)
     {
         if (std::strcmp(argv[i], "--timeout") == 0)
@@ -70,7 +70,9 @@ int main(int argc, char** argv)
         elapsed += gb.tick();
     }
 
-    const std::string romName = std::filesystem::path(romPath).filename().string();
+    const std::filesystem::path romFsPath(romPath);
+    const std::string romName = romFsPath.parent_path().filename().string()
+                               + "/" + romFsPath.filename().string();
     const uint64_t    frames  = elapsed / SeaBoy::TCYCLES_PER_FRAME;
 
     if (!breakpointHit)

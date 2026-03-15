@@ -7,9 +7,9 @@
 # Defaults to build/Release. Pass an alternate build dir as the first argument,
 # e.g.:  bash tests/run_mooneye.sh build/Debug
 #
-# Runs acceptance/ and emulator-only/ tests only.
-# Skips tests targeting non-DMG hardware (cgb/sgb/mgb/agb/ags in filename).
-# Skips manual-only/, misc/ (CGB), and madness/ directories.
+# Runs acceptance/, emulator-only/, and misc/cgb/ tests.
+# Skips tests targeting non-CGB, non-DMG hardware (sgb/mgb/agb/ags in filename).
+# Skips manual-only/, misc/(non-CGB), and madness/ directories.
 #
 # Requires:
 #   - mooneye_runner binary (build it first: cmake --build build --target mooneye_runner)
@@ -46,8 +46,8 @@ echo "Runner:  $RUNNER"
 echo "ROMs:    $ROMS_DIR"
 echo "---"
 
-# Only run acceptance/ and emulator-only/ - skip misc/ (CGB), manual-only/, madness/
-for dir in acceptance emulator-only; do
+# Run acceptance/, emulator-only/, and misc/cgb/ - skip manual-only/, misc/(other), and madness/
+for dir in acceptance emulator-only misc/cgb; do
     subdir="$ROMS_DIR/$dir"
     [ -d "$subdir" ] || continue
 
@@ -55,14 +55,14 @@ for dir in acceptance emulator-only; do
     while IFS= read -r -d '' rom; do
         name=$(basename "$rom")
 
-        # Skip tests targeting non-DMG hardware based on filename patterns
-        if echo "$name" | grep -qiE 'cgb|sgb|mgb|agb|ags'; then
-            echo "SKIP  $name  (non-DMG hardware)"
+        # Skip tests targeting non-DMG, non-CGB hardware based on filename patterns
+        if echo "$name" | grep -qiE 'sgb|mgb|agb|ags'; then
+            echo "SKIP  $name  (non-DMG/CGB hardware)"
             ((skip++)) || true
             continue
         fi
 
-        if "$RUNNER" "$rom" 2>/dev/null; then
+        if "$RUNNER" "$rom"; then
             ((pass++)) || true
         else
             ((fail++)) || true

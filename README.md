@@ -86,6 +86,7 @@ SeaBoy/
 - [Pan Docs](https://gbdev.io/pandocs/) — primary hardware reference
 - [GBZ80 instruction set](https://rgbds.gbdev.io/docs/v1.0.1/gbz80.7)
 - [Opcode table](https://www.pastraiser.com/cpu/gameboy/gameboy_opcodes.html)
+- [Another opcode table](https://izik1.github.io/gbops/index.html)
 - [Blargg test ROMs](https://github.com/retrio/gb-test-roms)
 - [mooneye-gb tests](https://github.com/Gekkio/mooneye-test-suite/)
 
