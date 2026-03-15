@@ -108,6 +108,9 @@ namespace SeaBoy
         // Timer link - set by GameBoy after constructing both MMU and Timer.
         // MMU routes 0xFF04–0xFF07 to the Timer; null until wired.
         void setTimer(Timer* t) { m_timer = t; }
+        
+        // Reset timer DIV (internal counter) - called by STOP, no cycle side effects.
+        void resetTimerDIV();
 
         // Joypad link - set by GameBoy after constructing both MMU and Joypad.
         // MMU routes 0xFF00 to the Joypad; null until wired.
@@ -120,6 +123,7 @@ namespace SeaBoy
         // CGB mode - enables WRAM banking via SVBK (0xFF70).
         // Called by GameBoy::loadROM() after detecting CGB flag.
         void setCGBMode(bool cgb) { m_cgbMode = cgb; }
+        bool isCGBMode() const { return m_cgbMode; }
 
         // CGB speed switching - PanDocs.10 CGB Double Speed Mode
         // KEY1 (0xFF4D): bit 7 = current speed (0=normal, 1=double), bit 0 = prepare toggle
@@ -168,6 +172,8 @@ namespace SeaBoy
         uint8_t m_hram[0x7F]{};    // 127 bytes HRAM (0xFF80–0xFFFE)
         uint8_t m_ifReg = 0xE1;    // IF - power-on value per PanDocs.22 Power Up Sequence
         uint8_t m_ie    = 0x00;    // IE
+        uint8_t m_opri = 0x00;     // 0xFF6C - Object Priority Mode - PanDocs.10
+        uint8_t m_rp = 0x00;       // 0xFF56 Infrared Communication port
 
         // CGB WRAM banking - PanDocs.2 SVBK (0xFF70)
         uint8_t m_svbk    = 0;     // SVBK register (bits 0-2)

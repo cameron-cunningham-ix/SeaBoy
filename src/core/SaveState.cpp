@@ -432,6 +432,7 @@ namespace SeaBoy
         w.write16(m_ch3.periodTimer);
         w.write8(m_ch3.sampleIndex);
         w.write8(m_ch3.sampleBuffer);
+        w.write16(m_ch3.ticksUntilNextFetch);
 
         // CH4
         w.write8(m_ch4.nrx1); w.write8(m_ch4.nrx2);
@@ -491,6 +492,7 @@ namespace SeaBoy
         m_ch3.periodTimer  = r.read16();
         m_ch3.sampleIndex  = r.read8();
         m_ch3.sampleBuffer = r.read8();
+        m_ch3.ticksUntilNextFetch = r.read16();
 
         m_ch4.nrx1         = r.read8(); m_ch4.nrx2 = r.read8();
         m_ch4.nr43         = r.read8(); m_ch4.nrx4 = r.read8();

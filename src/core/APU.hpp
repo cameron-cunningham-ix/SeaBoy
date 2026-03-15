@@ -149,13 +149,14 @@ namespace SeaBoy
             uint8_t  nrx3 = 0x00; // period low (write-only)
             uint8_t  nrx4 = 0x00; // period high + control
 
-            bool     active       = false;
-            uint16_t lengthTimer  = 0;     // 0..256 (wider than pulse)
-            bool     lengthEnable = false;
-            uint16_t period       = 0;     // 11-bit
-            uint16_t periodTimer  = 0;     // up-counter clocked at 2 MHz
-            uint8_t  sampleIndex  = 0;     // 0-31
-            uint8_t  sampleBuffer = 0;     // last nibble read
+            bool     active             = false;
+            uint16_t lengthTimer        = 0;     // 0..256 (wider than pulse)
+            bool     lengthEnable       = false;
+            uint16_t period             = 0;     // 11-bit
+            uint16_t periodTimer        = 0;     // up-counter clocked at 2 MHz
+            uint8_t  sampleIndex        = 0;     // 0-31
+            uint8_t  sampleBuffer       = 0;     // last nibble read
+            uint16_t ticksUntilNextFetch = 0;   // T-cycles until next sample fetch (DMG corruption tracking)
 
             bool dacEnabled() const { return (nr30 >> 7) & 1; }
 
@@ -220,11 +221,11 @@ namespace SeaBoy
                 // PanDocs Audio Details - Noise channel (CH4)
                 uint8_t bit0     = (lfsr >> 0) & 1u;
                 uint8_t bit1     = (lfsr >> 1) & 1u;
-                uint8_t feedback = (bit0 == bit1) ? 1u : 0u; // XNOR
+                uint8_t feedback = bit0 ^ bit1; // XOR - PanDocs Audio Registers NR43
 
                 lfsr |= static_cast<uint16_t>(feedback << 15);
-                if ((nr43 >> 3) & 1u) // 7-bit mode
-                    lfsr = static_cast<uint16_t>((lfsr & ~(1u << 7)) | (feedback << 7));
+                if ((nr43 >> 3) & 1u) // 7-bit mode: mirror feedback to bit 6
+                    lfsr = static_cast<uint16_t>((lfsr & ~(1u << 6)) | (feedback << 6));
 
                 lfsr >>= 1;
             }

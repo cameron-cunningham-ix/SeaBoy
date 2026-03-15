@@ -125,4 +125,16 @@ namespace SeaBoy
         }
     }
 
+    void Timer::resetDIV()
+    {
+        const bool enable = (m_tac & 0x04u) != 0u;
+        const bool wasSet = enable && ((m_counter >> selectedBit()) & 1u) != 0u;
+        m_counter = 0u;
+        if (wasSet)
+        {
+            if (++m_tima == 0u)
+                m_overflowDelay = 4;
+        }
+    }
+
 }

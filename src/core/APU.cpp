@@ -1,6 +1,8 @@
 #include "APU.hpp"
 #include "MMU.hpp"
 
+#include <algorithm>
+
 namespace SeaBoy
 {
     // -- Read masks for APU registers ------------------------------------
@@ -103,12 +105,18 @@ namespace SeaBoy
             }
 
             // Wave channel - every 2 T-cycles
+            // Decrement fetch timer every T-cycle for corruption detection
+            if (m_ch3.active && m_ch3.ticksUntilNextFetch > 0)
+                --m_ch3.ticksUntilNextFetch;
+
             if ((t & 1) == 1 && m_ch3.active)
             {
                 ++m_ch3.periodTimer;
                 if (m_ch3.periodTimer > 0x7FFu)
                 {
                     m_ch3.periodTimer = m_ch3.period;
+                    // Reset fetch timer for next sample: (0x800 - period) * 2 T-cycles
+                    m_ch3.ticksUntilNextFetch = static_cast<uint16_t>((0x800u - m_ch3.period) << 1);
                     m_ch3.sampleIndex = (m_ch3.sampleIndex + 1) & 31;
                     uint8_t byteIdx = m_ch3.sampleIndex >> 1;
                     uint8_t byte    = m_waveRam[byteIdx];
@@ -228,6 +236,9 @@ namespace SeaBoy
         m_ch1.volume      = (m_ch1.nrx2 >> 4) & 0x0Fu;
         m_ch1.envTimer    = m_ch1.nrx2 & 0x07u;
         if (m_ch1.envTimer == 0) m_ch1.envTimer = 8;
+        // PanDocs Audio Details - Obscure Behavior: if next frame-sequencer step will clock
+        // the envelope (step 7), reload envTimer with one greater than it would have been.
+        if (m_frameSeqStep == 7) ++m_ch1.envTimer;
 
         // Sweep trigger - PanDocs Audio Details - Pulse channel with sweep
         uint8_t pace = (m_nr10 >> 4) & 0x07u;
@@ -265,6 +276,7 @@ namespace SeaBoy
         m_ch2.volume      = (m_ch2.nrx2 >> 4) & 0x0Fu;
         m_ch2.envTimer    = m_ch2.nrx2 & 0x07u;
         if (m_ch2.envTimer == 0) m_ch2.envTimer = 8;
+        if (m_frameSeqStep == 7) ++m_ch2.envTimer; // PanDocs Audio Details - Obscure Behavior
 
         if (!m_ch2.dacEnabled())
             m_ch2.active = false;
@@ -273,16 +285,42 @@ namespace SeaBoy
     void APU::triggerCh3()
     {
         // PanDocs Audio Registers - NR34 trigger
-        if (!m_ch3.dacEnabled()) return;
 
-        m_ch3.active = true;
+        // Wave RAM corruption quirk (DMG-only): triggering while already active and reading
+        // a sample causes the wave table to be corrupted. The corruption copies bytes from
+        // the current position to position 0.
+        // See: Azayaka channel3.cpp trigger() and blargg dmg_sound test 09
+        if (m_ch3.active && m_ch3.ticksUntilNextFetch <= 2)
+        {
+            uint8_t pos = m_ch3.sampleIndex >> 1; // which byte in wave table
+            if (pos < 4)
+            {
+                // Copy single byte to position 0
+                m_waveRam[0] = m_waveRam[pos];
+            }
+            else
+            {
+                // Copy 4-byte-aligned block to position 0
+                pos &= ~0x03u; // align to 4-byte boundary
+                std::copy(&m_waveRam[pos], &m_waveRam[pos + 4], &m_waveRam[0]);
+            }
+        }
+
+        if (m_ch3.dacEnabled())
+            m_ch3.active = true;
 
         if (m_ch3.lengthTimer >= 256)
             m_ch3.lengthTimer = 0;
 
-        m_ch3.periodTimer = m_ch3.period;
+        // PanDocs Audio Details - Obscure: wave channel has a ~6 T-cycle startup delay
+        // after trigger before the first sample advance (matches hardware behavior).
+        // Azayaka reference: timer=6 in down-counter model ≡ 0x7FD in up-counter model.
+        m_ch3.periodTimer = 0x7FDu; // fires after 3 × 2T = 6 T-cycles
+        m_ch3.ticksUntilNextFetch = (0x800u - 0x7FDu) << 1; // 6 T-cycles
         m_ch3.sampleIndex = 0;
         // sampleBuffer NOT cleared - PanDocs Audio Details
+        if (!m_ch3.dacEnabled())
+            m_ch3.active = false;
     }
 
     void APU::triggerCh4()
@@ -294,11 +332,12 @@ namespace SeaBoy
         if (m_ch4.lengthTimer >= 64)
             m_ch4.lengthTimer = 0;
 
-        m_ch4.lfsr      = 0x0000;
+        m_ch4.lfsr      = 0x7FFF;
         m_ch4.freqTimer = m_ch4.calcPeriod();
         m_ch4.volume    = (m_ch4.nrx2 >> 4) & 0x0Fu;
         m_ch4.envTimer  = m_ch4.nrx2 & 0x07u;
         if (m_ch4.envTimer == 0) m_ch4.envTimer = 8;
+        if (m_frameSeqStep == 7) ++m_ch4.envTimer; // PanDocs Audio Details - Obscure Behavior
 
         if (!m_ch4.dacEnabled())
             m_ch4.active = false;
@@ -348,41 +387,63 @@ namespace SeaBoy
 
     void APU::generateSample()
     {
-        // PanDocs Audio Details - Mixer
-        int ch1Out = m_ch1.output();
-        int ch2Out = m_ch2.output();
-        int ch3Out = m_ch3.output();
-        int ch4Out = m_ch4.output();
+        // PanDocs Audio Details - DACs
+        // Each channel's digital output (0-15) is converted by its DAC to an analog value.
+        // The slope is negative: digital 0 -> analog +1.0, digital 15 -> analog -1.0.
+        // Formula: analog = (15 - digital) / 7.5 - 1.0
+        // If the DAC is disabled the channel contributes no signal (analog 0).
+        auto dacConvert = [](int digital) -> double {
+            return (15 - digital) / 7.5 - 1.0;
+        };
+
+        bool anyDacOn = m_ch1.dacEnabled() || m_ch2.dacEnabled()
+                     || m_ch3.dacEnabled() || m_ch4.dacEnabled();
+
+        double ch1Dac = m_ch1.dacEnabled() ? dacConvert(m_ch1.output()) : 0.0;
+        double ch2Dac = m_ch2.dacEnabled() ? dacConvert(m_ch2.output()) : 0.0;
+        double ch3Dac = m_ch3.dacEnabled() ? dacConvert(m_ch3.output()) : 0.0;
+        double ch4Dac = m_ch4.dacEnabled() ? dacConvert(m_ch4.output()) : 0.0;
 
         // Mix per NR51 panning - PanDocs Audio Registers - NR51
-        int leftMix  = 0;
-        int rightMix = 0;
-        if (m_nr51 & 0x10u) leftMix  += ch1Out;
-        if (m_nr51 & 0x20u) leftMix  += ch2Out;
-        if (m_nr51 & 0x40u) leftMix  += ch3Out;
-        if (m_nr51 & 0x80u) leftMix  += ch4Out;
-        if (m_nr51 & 0x01u) rightMix += ch1Out;
-        if (m_nr51 & 0x02u) rightMix += ch2Out;
-        if (m_nr51 & 0x04u) rightMix += ch3Out;
-        if (m_nr51 & 0x08u) rightMix += ch4Out;
+        double leftMix  = 0.0;
+        double rightMix = 0.0;
+        if (m_nr51 & 0x10u) leftMix  += ch1Dac;
+        if (m_nr51 & 0x20u) leftMix  += ch2Dac;
+        if (m_nr51 & 0x40u) leftMix  += ch3Dac;
+        if (m_nr51 & 0x80u) leftMix  += ch4Dac;
+        if (m_nr51 & 0x01u) rightMix += ch1Dac;
+        if (m_nr51 & 0x02u) rightMix += ch2Dac;
+        if (m_nr51 & 0x04u) rightMix += ch3Dac;
+        if (m_nr51 & 0x08u) rightMix += ch4Dac;
 
         // Master volume - PanDocs Audio Registers - NR50
+        // Each analog output is in [-4, +4]; after volume (1-8) it's [-32, +32].
         int leftVol  = ((m_nr50 >> 4) & 0x07u) + 1;
         int rightVol = (m_nr50 & 0x07u) + 1;
         leftMix  *= leftVol;
         rightMix *= rightVol;
 
-        // Normalize to [-1, 1]: max = 4 channels * 15 * 8 = 480
-        float left  = static_cast<float>(leftMix)  / 480.0f;
-        float right = static_cast<float>(rightMix) / 480.0f;
+        // Normalize to [-1, 1]: max = 4 channels * 1.0 * 8 = 32
+        float left  = static_cast<float>(leftMix  / 32.0);
+        float right = static_cast<float>(rightMix / 32.0);
 
         // High-pass filter - PanDocs Audio Details - Mixer
+        // When all DACs are off, output is 0 and capacitors are held (not updated).
         // Charge factor adjusted for 48 kHz sample rate: 0.999958^(4194304/48000) ≈ 0.9963
         constexpr double kChargeFactor = 0.9963;
-        float outL = static_cast<float>(left  - m_hpfCapLeft);
-        m_hpfCapLeft  = left  - outL * kChargeFactor;
-        float outR = static_cast<float>(right - m_hpfCapRight);
-        m_hpfCapRight = right - outR * kChargeFactor;
+        float outL, outR;
+        if (anyDacOn)
+        {
+            outL = static_cast<float>(left  - m_hpfCapLeft);
+            m_hpfCapLeft  = left  - outL * kChargeFactor;
+            outR = static_cast<float>(right - m_hpfCapRight);
+            m_hpfCapRight = right - outR * kChargeFactor;
+        }
+        else
+        {
+            outL = 0.0f;
+            outR = 0.0f;
+        }
 
         // Push to ring buffer
         uint32_t nextWrite = (m_sampleWritePos + 2) % (SAMPLE_BUFFER_SIZE * 2);
@@ -414,7 +475,14 @@ namespace SeaBoy
         // Wave RAM - always accessible
         if (addr >= 0xFF30u && addr <= 0xFF3Fu)
         {
-            if (m_ch3.active) return 0xFFu; // conservative: reads 0xFF while CH3 playing
+            // DMG behavior: While CH3 is active, only the byte currently being read by CH3 is accessible. Other addresses return 0xFF while CH3 is active.
+            // TODO CGB behavior: All bytes are redirected to the current read byte.
+            if (m_ch3.active)
+            {
+                uint8_t currentByteAddr = 0xFF30u + (m_ch3.sampleIndex >> 1);
+                if (addr != currentByteAddr) return 0xFFu;
+                return m_waveRam[m_ch3.sampleIndex >> 1];
+            }
             return m_waveRam[addr - 0xFF30u];
         }
 
@@ -430,8 +498,12 @@ namespace SeaBoy
             return val;
         }
 
-        // All other registers return 0xFF when APU is off
-        if (!m_powered) return 0xFFu;
+        // When APU is off, registers are cleared to 0 but still readable as (0 | mask)
+        if (!m_powered)
+        {
+            if (addr < 0xFF10u || addr > 0xFF25u) return 0xFFu;
+            return kReadMask[addr - 0xFF10u];
+        }
 
         if (addr < 0xFF10u || addr > 0xFF25u) return 0xFFu;
 
@@ -483,8 +555,17 @@ namespace SeaBoy
         // Wave RAM - always writable
         if (addr >= 0xFF30u && addr <= 0xFF3Fu)
         {
-            if (m_ch3.active) return; // conservative: writes ignored while CH3 playing
-            m_waveRam[addr - 0xFF30u] = val;
+            // DMG behavior: While CH3 is active, writes to bytes other than the one being read are ignored.
+            // TODO CGB behavior: All writes go to the current read byte.
+            if (m_ch3.active)
+            {
+                uint8_t currentByteAddr = 0xFF30u + (m_ch3.sampleIndex >> 1);
+                if (addr == currentByteAddr)
+                    m_waveRam[m_ch3.sampleIndex >> 1] = val;
+                // else: write to other addresses is ignored (DMG behavior)
+            }
+            else
+                m_waveRam[addr - 0xFF30u] = val;
             return;
         }
 
@@ -499,8 +580,19 @@ namespace SeaBoy
             return;
         }
 
-        // All other writes silently ignored when APU is off
-        if (!m_powered) return;
+        if (!m_powered) {
+            // DMG: NRx1 registers (length timers) are writable while APU is off
+            if (addr == 0xFF11u) {      // NR11 - CH1 length timer
+                m_ch1.lengthTimer = 64 - (val & 0x3Fu);
+            } else if (addr == 0xFF15u) { // NR21 - CH2 length timer
+                m_ch2.lengthTimer = 64 - (val & 0x3Fu);
+            } else if (addr == 0xFF1Au) { // NR31 - CH3 length timer
+                m_ch3.lengthTimer = 256 - val;
+            } else if (addr == 0xFF20u) { // NR41 - CH4 length timer
+                m_ch4.lengthTimer = 64 - (val & 0x3Fu);
+            }
+            return;
+        }
 
         switch (addr)
         {
@@ -510,7 +602,7 @@ namespace SeaBoy
                 uint8_t oldDir = (m_nr10 >> 3) & 1u;
                 m_nr10 = val;
                 uint8_t newDir = (val >> 3) & 1u;
-                // Switching sub→add after neg was used disables CH1 - PanDocs Audio Details
+                // Switching sub->add after neg was used disables CH1 - PanDocs Audio Details
                 if (oldDir == 1 && newDir == 0 && m_sweep.negUsed)
                     m_ch1.active = false;
                 break;
@@ -546,7 +638,22 @@ namespace SeaBoy
                     }
                 }
 
-                if ((val >> 7) & 1u) triggerCh1();
+                if ((val >> 7) & 1u)
+                {
+                    bool wasFrozen = (m_ch1.lengthTimer >= 64);
+                    triggerCh1();
+                    // If trigger reloaded a frozen length counter and length is enabled
+                    // in the first half of the length period, clock the reloaded value once.
+                    // PanDocs Audio Details - Obscure Behavior
+                    if (wasFrozen && m_ch1.lengthEnable && (m_frameSeqStep & 1))
+                    {
+                        if (m_ch1.lengthTimer < 64)
+                        {
+                            ++m_ch1.lengthTimer;
+                            if (m_ch1.lengthTimer >= 64) m_ch1.active = false;
+                        }
+                    }
+                }
                 break;
             }
 
@@ -582,7 +689,19 @@ namespace SeaBoy
                     }
                 }
 
-                if ((val >> 7) & 1u) triggerCh2();
+                if ((val >> 7) & 1u)
+                {
+                    bool wasFrozen = (m_ch2.lengthTimer >= 64);
+                    triggerCh2();
+                    if (wasFrozen && m_ch2.lengthEnable && (m_frameSeqStep & 1))
+                    {
+                        if (m_ch2.lengthTimer < 64)
+                        {
+                            ++m_ch2.lengthTimer;
+                            if (m_ch2.lengthTimer >= 64) m_ch2.active = false;
+                        }
+                    }
+                }
                 break;
             }
 
@@ -619,7 +738,19 @@ namespace SeaBoy
                     }
                 }
 
-                if ((val >> 7) & 1u) triggerCh3();
+                if ((val >> 7) & 1u)
+                {
+                    bool wasFrozen = (m_ch3.lengthTimer >= 256);
+                    triggerCh3();
+                    if (wasFrozen && m_ch3.lengthEnable && (m_frameSeqStep & 1))
+                    {
+                        if (m_ch3.lengthTimer < 256)
+                        {
+                            ++m_ch3.lengthTimer;
+                            if (m_ch3.lengthTimer >= 256) m_ch3.active = false;
+                        }
+                    }
+                }
                 break;
             }
 
@@ -653,7 +784,19 @@ namespace SeaBoy
                     }
                 }
 
-                if ((val >> 7) & 1u) triggerCh4();
+                if ((val >> 7) & 1u)
+                {
+                    bool wasFrozen = (m_ch4.lengthTimer >= 64);
+                    triggerCh4();
+                    if (wasFrozen && m_ch4.lengthEnable && (m_frameSeqStep & 1))
+                    {
+                        if (m_ch4.lengthTimer < 64)
+                        {
+                            ++m_ch4.lengthTimer;
+                            if (m_ch4.lengthTimer >= 64) m_ch4.active = false;
+                        }
+                    }
+                }
                 break;
             }
 
@@ -663,4 +806,4 @@ namespace SeaBoy
         }
     }
 
-} // namespace SeaBoy
+}

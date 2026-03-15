@@ -268,11 +268,20 @@ uint32_t op_0F(CPU& cpu) {
 // PanDocs.10 CGB Double Speed Mode: if KEY1 bit 0 is armed, toggle speed.
 uint32_t op_10(CPU& cpu)
 {
+    cpu.fetch8();
     MMU& mmu = cpu.mmu();
     uint8_t key1 = mmu.peek8(0xFF4Du);
-    if (key1 & 0x01u)
+    if (mmu.isCGBMode() && (key1 & 0x01u)) {
         mmu.toggleSpeed();
-    return 4;
+        mmu.resetTimerDIV();    // PanDocs.10: STOP resets DIV
+        // 2050 M-cycle CPU stall during speed switch - PanDocs.10
+        // Speed is now double; PPU/APU get half-rate cycles via onBusCycle
+        for (uint32_t i = 0; i < 2050; i++) {
+            cpu.internalCycle();
+        }
+        return 8 + 2050 * 4; // fetch(8) + stall (2050*4)
+    }
+    return 8;
 }
 
 // 0x11 LD DE,n16 - 12T

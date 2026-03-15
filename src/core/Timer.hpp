@@ -53,6 +53,10 @@ namespace SeaBoy
         void serialize(BinaryWriter& w) const;
         void deserialize(BinaryReader& r);
 
+        // Reset the internal counter (DIV) without firing a cycle callback.
+        // Called by STOP instruction on CGB speed switch. PanDocs.10
+        void resetDIV();
+
     private:
         // Returns the internal counter bit index selected by TAC[1:0]
         // PanDocs.8 Timer and Divider Registers (clock select table)

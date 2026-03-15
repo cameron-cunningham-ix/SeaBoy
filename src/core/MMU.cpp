@@ -30,6 +30,8 @@ namespace SeaBoy
         m_svbk    = 0;
         m_cgbMode = false;
         m_key1    = 0;
+        m_opri = 0x00;
+        m_rp = 0x00;
 
         m_sb = 0;
         m_sc = 0;
@@ -134,9 +136,15 @@ namespace SeaBoy
         // CGB HDMA registers (0xFF51-0xFF55) - routed to PPU
         else if (addr >= 0xFF51u && addr <= 0xFF55u)
             val = m_ppu ? m_ppu->read(addr) : 0xFFu;
+        // CGB IR - bits 2-5 always 1; bit 7 (write enable) and bit 0 (LED) are R/W; bit 1 = recieved signal = 0
+        else if (addr == 0xFF56u)
+            val = m_cgbMode ? ((m_rp & 0xC1u) | 0x3Eu) : 0xFFu;
         // CGB palette registers - routed to PPU (PanDocs.4.7)
         else if (addr >= 0xFF68u && addr <= 0xFF6Bu)
             val = m_ppu ? m_ppu->read(addr) : 0xFFu;
+        // CGB object priority mode
+        else if (addr == 0xFF6Cu)
+            val = m_cgbMode ? ((m_opri & 0x01u) | 0xFEu) : 0xFFu;
         // CGB WRAM bank select (0xFF70) - PanDocs.2 SVBK
         else if (addr == 0xFF70u)
             val = m_svbk | 0xF8u;
@@ -206,9 +214,15 @@ namespace SeaBoy
         // CGB HDMA registers (0xFF51-0xFF55) - routed to PPU
         else if (addr >= 0xFF51u && addr <= 0xFF55u)
             { if (m_ppu) m_ppu->write(addr, val); }
+        // CGB IR
+        else if (addr == 0xFF56u)
+            { if (m_cgbMode) m_rp = val & 0xC1u; }  // only bits 7 and 0 writable
         // CGB palette registers - routed to PPU (PanDocs.4.7)
         else if (addr >= 0xFF68u && addr <= 0xFF6Bu)
             { if (m_ppu) m_ppu->write(addr, val); }
+        // CGB object priority mode
+        else if (addr == 0xFF6Cu)
+            { if (m_cgbMode) m_opri = val & 0x01u; }
         // CGB WRAM bank select (0xFF70) - PanDocs.2 SVBK
         else if (addr == 0xFF70u)
             { if (m_cgbMode) m_svbk = val & 0x07u; }
@@ -322,8 +336,13 @@ namespace SeaBoy
             return m_ppu ? m_ppu->read(addr) : 0xFFu;
         if (addr >= 0xFF51u && addr <= 0xFF55u)
             return m_ppu ? m_ppu->read(addr) : 0xFFu;
+        if (addr == 0xFF56u)
+            return m_cgbMode ? ((m_rp & 0xC1u) | 0x3Eu) : 0xFFu;
         if (addr >= 0xFF68u && addr <= 0xFF6Bu)
             return m_ppu ? m_ppu->read(addr) : 0xFFu;
+        // CGB object priority mode
+        if (addr == 0xFF6Cu)
+            return m_cgbMode ? ((m_opri & 0x01u) | 0xFEu) : 0xFFu;
         if (addr == 0xFF70u)
             return m_svbk | 0xF8u;
         if (addr >= ADDR_HRAM_BASE && addr <= ADDR_HRAM_END)
@@ -338,6 +357,11 @@ namespace SeaBoy
         // PanDocs.25 OAM Corruption Bug - only fires when addr is in the OAM region
         if (m_ppu && addr >= 0xFE00u && addr <= 0xFEFFu)
             m_ppu->triggerOAMCorrupt(type);
+    }
+
+    void MMU::resetTimerDIV()
+    {
+        if (m_timer) m_timer->resetDIV();
     }
 
 }
