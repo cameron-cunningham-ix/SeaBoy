@@ -19,30 +19,36 @@ namespace SeaBoy
     // PanDocs.17.2 MBC1 read routing
     uint8_t MBC1::read(uint16_t addr) const
     {
-        // 0x0000–0x3FFF: ROM bank 0 (always fixed)
-        // In mode 1 the upper 2 bits can remap this window too, but only for >512 KB ROMs.
-        // Blargg cpu_instrs is 64 KB, so mode 1 bank-0 remapping is not needed yet.
+        // GB-CTR 12: MODE=0 -> bank 0 fixed; MODE=1 -> BANK2<<5, masked to ROM size.
         if (addr <= 0x3FFFu)
         {
-            return addr < m_rom.size() ? m_rom[addr] : 0xFFu;
-        }
-
-        // 0x4000–0x7FFF: switchable ROM bank
-        if (addr <= 0x7FFFu)
-        {
-            // Full bank index: upper 2 bits from m_ramBank (mode 0 only), lower 5 from m_romBank.
-            uint8_t  bank   = static_cast<uint8_t>((m_ramBank << 5u) | (m_romBank & 0x1Fu));
-            uint32_t offset = static_cast<uint32_t>(bank) * 0x4000u
-                            + static_cast<uint32_t>(addr - 0x4000u);
+            uint32_t numBanks = static_cast<uint32_t>(m_rom.size() / 0x4000u);
+            uint8_t  bank     = m_mode ? static_cast<uint8_t>(m_ramBank << 5u) : 0u;
+            if (numBanks > 0) bank &= static_cast<uint8_t>(numBanks - 1u);
+            uint32_t offset   = static_cast<uint32_t>(bank) * 0x4000u
+                              + static_cast<uint32_t>(addr);
             return offset < m_rom.size() ? m_rom[offset] : 0xFFu;
         }
 
-        // 0xA000–0xBFFF: external RAM
+        // GB-CTR 12: 0x4000–0x7FFF always uses BANK2:BANK1, masked to ROM size.
+        if (addr <= 0x7FFFu)
+        {
+            uint32_t numBanks = static_cast<uint32_t>(m_rom.size() / 0x4000u);
+            uint8_t  bank     = static_cast<uint8_t>((m_ramBank << 5u) | (m_romBank & 0x1Fu));
+            if (numBanks > 0) bank &= static_cast<uint8_t>(numBanks - 1u);
+            uint32_t offset   = static_cast<uint32_t>(bank) * 0x4000u
+                              + static_cast<uint32_t>(addr - 0x4000u);
+            return offset < m_rom.size() ? m_rom[offset] : 0xFFu;
+        }
+
+        // 0xA000–0xBFFF: external RAM (bank masked to actual RAM size)
         if (addr >= 0xA000u && addr <= 0xBFFFu && m_ramEnable && !m_ram.empty())
         {
-            uint8_t  bank   = m_mode ? m_ramBank : 0;
-            uint32_t offset = static_cast<uint32_t>(bank) * 0x2000u
-                            + static_cast<uint32_t>(addr - 0xA000u);
+            uint32_t numRamBanks = static_cast<uint32_t>(m_ram.size() / 0x2000u);
+            uint8_t  bank        = m_mode ? m_ramBank : 0u;
+            if (numRamBanks > 0) bank &= static_cast<uint8_t>(numRamBanks - 1u);
+            uint32_t offset      = static_cast<uint32_t>(bank) * 0x2000u
+                                 + static_cast<uint32_t>(addr - 0xA000u);
             return offset < m_ram.size() ? m_ram[offset] : 0xFFu;
         }
         return 0xFFu;
@@ -72,12 +78,14 @@ namespace SeaBoy
             // Banking mode select
             m_mode = (val & 0x01u) != 0u;
         }
-        // 0xA000–0xBFFF: external RAM writes
+        // 0xA000–0xBFFF: external RAM writes (bank masked to actual RAM size)
         if (addr >= 0xA000u && addr <= 0xBFFFu && m_ramEnable && !m_ram.empty())
         {
-            uint8_t  bank   = m_mode ? m_ramBank : 0;
-            uint32_t offset = static_cast<uint32_t>(bank) * 0x2000u
-                            + static_cast<uint32_t>(addr - 0xA000u);
+            uint32_t numRamBanks = static_cast<uint32_t>(m_ram.size() / 0x2000u);
+            uint8_t  bank        = m_mode ? m_ramBank : 0u;
+            if (numRamBanks > 0) bank &= static_cast<uint8_t>(numRamBanks - 1u);
+            uint32_t offset      = static_cast<uint32_t>(bank) * 0x2000u
+                                 + static_cast<uint32_t>(addr - 0xA000u);
             if (offset < m_ram.size())
                 m_ram[offset] = val;
         }

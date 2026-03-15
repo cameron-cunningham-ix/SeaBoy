@@ -1,5 +1,5 @@
 # Mooneye Test Suite Results
-Results: 54 passed, 40 failed, 9 skipped
+Results: 64 passed, 30 failed, 9 skipped
 | Test Name | Pass/Fail (✅/❌) |
 |-----------|------|
 | acceptance/add_sp_e_timing | ❌ |
@@ -78,18 +78,18 @@ Results: 54 passed, 40 failed, 9 skipped
 | acceptance/timer/tima_write_reloading | ❌ |
 | acceptance/timer/tma_write_reloading | ❌ |
 | emulator-only/mbc1/bits_bank1 | ✅ |
-| emulator-only/mbc1/bits_bank2 | ❌ |
-| emulator-only/mbc1/bits_mode | ❌ |
+| emulator-only/mbc1/bits_bank2 | ✅ |
+| emulator-only/mbc1/bits_mode | ✅ |
 | emulator-only/mbc1/bits_ramg | ✅ |
 | emulator-only/mbc1/multicart_rom_8Mb | ❌ |
-| emulator-only/mbc1/ram_256kb | ❌ |
-| emulator-only/mbc1/ram_64kb | ❌ |
-| emulator-only/mbc1/rom_16Mb | ❌ |
-| emulator-only/mbc1/rom_1Mb | ❌ |
-| emulator-only/mbc1/rom_2Mb | ❌ |
-| emulator-only/mbc1/rom_4Mb | ❌ |
-| emulator-only/mbc1/rom_512kb | ❌ |
-| emulator-only/mbc1/rom_8Mb | ❌ |
+| emulator-only/mbc1/ram_256kb | ✅ |
+| emulator-only/mbc1/ram_64kb | ✅ |
+| emulator-only/mbc1/rom_16Mb | ✅ |
+| emulator-only/mbc1/rom_1Mb | ✅ |
+| emulator-only/mbc1/rom_2Mb | ✅ |
+| emulator-only/mbc1/rom_4Mb | ✅ |
+| emulator-only/mbc1/rom_512kb | ✅ |
+| emulator-only/mbc1/rom_8Mb | ✅ |
 | emulator-only/mbc2/bits_ramg | ✅ |
 | emulator-only/mbc2/bits_romb | ✅ |
 | emulator-only/mbc2/bits_unused | ✅ |
