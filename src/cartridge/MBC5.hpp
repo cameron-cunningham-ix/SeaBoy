@@ -4,8 +4,8 @@
 
 namespace SeaBoy
 {
-    // MBC5 - ROM banking up to 8 MB (9-bit bank), RAM up to 128 KB (16 banks).
-    // PanDocs.17.5 MBC5
+    // MBC5 - ROM banking up to 64 MBit (9-bit bank), RAM up to 1 Mbit (16 banks).
+    // PanDocs.17.5 MBC5, GameBoy Complete Technical Reference MBC5 mapper chip
     //
     // Key difference from MBC1: bank 0 IS valid (no 0->1 remap). 9-bit ROM bank.
     //
@@ -30,7 +30,6 @@ namespace SeaBoy
         void loadSRAM(const uint8_t* data, size_t size) override;
 
     private:
-        // PanDocs.17.5 - up to 16 banks × 8 KB = 128 KB external RAM
         std::vector<uint8_t> m_ram;
 
         uint16_t m_romBank   = 1;     // 9-bit ROM bank (0–511); bank 0 is valid

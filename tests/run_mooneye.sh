@@ -56,7 +56,7 @@ for dir in acceptance emulator-only misc/cgb; do
         name=$(basename "$rom")
 
         # Skip tests targeting non-DMG, non-CGB hardware based on filename patterns
-        if echo "$name" | grep -qiE 'sgb|mgb|agb|ags'; then
+        if echo "$name" | grep -qiE 'sgb|mgb|agb|ags|-[SA]\.gb$'; then
             echo "SKIP  $name  (non-DMG/CGB hardware)"
             ((skip++)) || true
             continue

@@ -1,16 +1,16 @@
 # Mooneye Test Suite Results
-
+Results: 52 passed, 42 failed, 9 skipped
 | Test Name | Pass/Fail (✅/❌) |
 |-----------|------|
 | acceptance/add_sp_e_timing | ❌ |
 | acceptance/bits/mem_oam | ✅ |
 | acceptance/bits/reg_f | ✅ |
 | acceptance/bits/unused_hwio-GS | ✅ |
-| acceptance/boot_div-S | ❌ |
+| acceptance/boot_div-S | skip |
 | acceptance/boot_div-dmg0 | ❌ |
 | acceptance/boot_div-dmgABCmgb | skip |
-| acceptance/boot_div2-S | ❌ |
-| acceptance/boot_hwio-S | ❌ |
+| acceptance/boot_div2-S | skip |
+| acceptance/boot_hwio-S | skip |
 | acceptance/boot_hwio-dmg0 | ❌ |
 | acceptance/boot_hwio-dmgABCmgb | skip |
 | acceptance/boot_regs-dmg0 | ❌ |
@@ -97,14 +97,14 @@
 | emulator-only/mbc2/rom_1Mb | ❌ |
 | emulator-only/mbc2/rom_2Mb | ✅ |
 | emulator-only/mbc2/rom_512kb | ❌ |
-| emulator-only/mbc5/rom_16Mb | ❌ |
-| emulator-only/mbc5/rom_1Mb | ❌ |
-| emulator-only/mbc5/rom_2Mb | ❌ |
+| emulator-only/mbc5/rom_16Mb | ✅ |
+| emulator-only/mbc5/rom_1Mb | ✅ |
+| emulator-only/mbc5/rom_2Mb | ✅ |
 | emulator-only/mbc5/rom_32Mb | ✅ |
-| emulator-only/mbc5/rom_4Mb | ❌ |
-| emulator-only/mbc5/rom_512kb | ❌ |
+| emulator-only/mbc5/rom_4Mb | ✅ |
+| emulator-only/mbc5/rom_512kb | ✅ |
 | emulator-only/mbc5/rom_64Mb | ✅ |
-| emulator-only/mbc5/rom_8Mb | ❌ |
+| emulator-only/mbc5/rom_8Mb | ✅ |
 | madness/mgb_oam_dma_halt_sprites | ❌ |
 | manual-only/sprite_priority | ❌ |
 | misc/bits/unused_hwio-C | ❌ |
