@@ -308,4 +308,4 @@ namespace SeaBoy
         double m_hpfCapRight = 0.0;
     };
 
-} // namespace SeaBoy
+}

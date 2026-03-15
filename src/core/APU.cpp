@@ -381,6 +381,13 @@ namespace SeaBoy
         m_frameSeqStep = 0;
         m_ch3.sampleBuffer = 0; // sample buffer cleared on APU power-on
         m_powered = true;
+        // CGB: length counters reset to max
+        if (m_mmu.isCGBMode()) {
+            m_ch1.lengthTimer = 64;
+            m_ch2.lengthTimer = 64;
+            m_ch3.lengthTimer = 256;
+            m_ch4.lengthTimer = 64;
+        }
     }
 
     // -- Sample generation -----------------------------------------------
@@ -581,6 +588,7 @@ namespace SeaBoy
         }
 
         if (!m_powered) {
+            if (m_mmu.isCGBMode()) return;  // CGB: 
             // DMG: NRx1 registers (length timers) are writable while APU is off
             if (addr == 0xFF11u) {      // NR11 - CH1 length timer
                 m_ch1.lengthTimer = 64 - (val & 0x3Fu);
