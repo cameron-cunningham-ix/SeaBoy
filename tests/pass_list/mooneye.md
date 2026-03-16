@@ -1,5 +1,5 @@
 # Mooneye Test Suite Results
-Results: 78 passed, 16 failed, 9 skipped
+Results: 80 passed, 14 failed, 9 skipped
 | Test Name | Pass/Fail (✅/❌) |
 |-----------|------|
 | acceptance/add_sp_e_timing | ✅ |
@@ -75,8 +75,8 @@ Results: 78 passed, 16 failed, 9 skipped
 | acceptance/timer/tim11 | ✅ |
 | acceptance/timer/tim11_div_trigger | ✅ |
 | acceptance/timer/tima_reload | ✅ |
-| acceptance/timer/tima_write_reloading | ❌ |
-| acceptance/timer/tma_write_reloading | ❌ |
+| acceptance/timer/tima_write_reloading | ✅ |
+| acceptance/timer/tma_write_reloading | ✅ |
 | emulator-only/mbc1/bits_bank1 | ✅ |
 | emulator-only/mbc1/bits_bank2 | ✅ |
 | emulator-only/mbc1/bits_mode | ✅ |

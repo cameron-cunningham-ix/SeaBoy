@@ -60,6 +60,7 @@ namespace SeaBoy
         w.write8(m_tma);
         w.write8(m_tac);
         w.writeInt(m_overflowDelay);
+        w.writeBool(m_timaLocked);
     }
 
     void Timer::deserialize(BinaryReader& r)
@@ -69,6 +70,7 @@ namespace SeaBoy
         m_tma           = r.read8();
         m_tac           = r.read8();
         m_overflowDelay = r.readInt();
+        m_timaLocked    = r.readBool();
     }
 
     // ---- Joypad serialize/deserialize ----

@@ -16,6 +16,7 @@ namespace SeaBoy
         m_tma           = 0;
         m_tac           = 0;
         m_overflowDelay = 0;
+        m_timaLocked    = false;
     }
 
     // PanDocs.8.1 Timer obscure behaviour - bit tap table
@@ -29,6 +30,7 @@ namespace SeaBoy
     // PanDocs.8 Timer and Divider Registers & 8.1 Timer obscure behaviour
     void Timer::tick(uint32_t tCycles)
     {
+        m_timaLocked = false; // clear lock from previous M-cycle's reload
         const bool enable = (m_tac & 0x04u) != 0u;
         const uint8_t bit = selectedBit();
 
@@ -40,6 +42,7 @@ namespace SeaBoy
                 if (--m_overflowDelay == 0)
                 {
                     m_tima = m_tma;
+                    m_timaLocked = true; // lock for 1 M-cycle (PanDocs.8.1 Timer obscure)
                     // Set Timer interrupt (IF bit 2) - PanDocs.9.1 INT $50 Timer interrupt
                     m_mmu.writeIF(m_mmu.readIF() | 0x04u);
                 }
@@ -92,12 +95,14 @@ namespace SeaBoy
             }
 
             case 0xFF05u: // TIMA: write during overflow delay cancels scheduled reload
+                if (m_timaLocked) break; // write ignored during 1-M-cycle lock after reload
                 m_overflowDelay = 0;
                 m_tima = val;
                 break;
 
             case 0xFF06u: // TMA
                 m_tma = val;
+                if (m_timaLocked) m_tima = val; // TIMA mirrors TMA during lock window
                 break;
 
             case 0xFF07u: // TAC

@@ -24,6 +24,9 @@
 //   When TIMA overflows it stays at 0x00 for exactly 4 T-cycles.
 //   After the delay: TIMA ← TMA and IF bit 2 is set.
 //   Writing to TIMA during those 4 T-cycles cancels the scheduled reload.
+//   For 1 M-cycle after the reload fires, TIMA is locked to TMA:
+//     - TIMA writes are ignored.
+//     - TMA writes also update TIMA (mirror behaviour).
 
 namespace SeaBoy
 {
@@ -68,6 +71,7 @@ namespace SeaBoy
         uint8_t  m_tma           = 0; // 0xFF06
         uint8_t  m_tac           = 0; // 0xFF07 (timer stopped, clock select = 0)
         int      m_overflowDelay = 0; // counts down 4->0; at 0 triggers TMA reload + interrupt
+        bool     m_timaLocked    = false; // true for 1 M-cycle after TMA reload fires
     };
 
 }
