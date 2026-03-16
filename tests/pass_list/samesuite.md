@@ -1,5 +1,5 @@
-# SameSuite Test Results
-
+# SameSuite Results
+Results: 3 passed, 73 failed, 2 skipped
 | Test Name | Pass/Fail (✅/❌) |
 |-----------|------|
 | apu/channel_1/channel_1_align | ❌ |
@@ -78,5 +78,5 @@
 | dma/hdma_mode0 | ❌ |
 | interrupt/ei_delay_halt | ✅ |
 | ppu/blocking_bgpi_increase | ❌ |
-| sgb/command_mlt_req | ❌ |
-| sgb/command_mlt_req_1_incrementing | ❌ |
+| sgb/command_mlt_req | skip |
+| sgb/command_mlt_req_1_incrementing | skip |

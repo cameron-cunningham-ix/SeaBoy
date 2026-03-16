@@ -51,39 +51,20 @@ echo "---"
 
 while IFS= read -r -d '' rom; do
     # Get path relative to ROMS_DIR for display
-    relpath="${rom#$ROMS_DIR/}"
+    relpath="${rom#$ROMS_DIR/}"; relpath="${relpath%.gb}"
 
-    # Skip CGB revision-specific tests (filename contains "cgb")
-    if echo "$relpath" | grep -qi 'cgb'; then
-        echo "SKIP  $relpath  (CGB-specific)"
-        ((skip++)) || true
-        continue
-    fi
-
-    # Skip dma/ directory (all GBC-only: HDMA, GDMA)
-    if echo "$relpath" | grep -q '^dma/'; then
-        echo "SKIP  $relpath  (GBC DMA)"
-        ((skip++)) || true
-        continue
-    fi
-
-    # Skip sgb/ directory (SGB-only)
+    # Skip sgb/ directory
     if echo "$relpath" | grep -q '^sgb/'; then
         echo "SKIP  $relpath  (SGB-only)"
         ((skip++)) || true
         continue
     fi
 
-    # Skip CGB-only PPU test
-    if echo "$relpath" | grep -q '^ppu/blocking_bgpi_increase'; then
-        echo "SKIP  $relpath  (CGB palette)"
-        ((skip++)) || true
-        continue
-    fi
-
-    if "$RUNNER" "$rom" --timeout 120 2>/dev/null; then
+    if "$RUNNER" "$rom" --timeout 120 >/dev/null 2>&1; then
+        echo "PASS  $relpath"
         ((pass++)) || true
     else
+        echo "FAIL  $relpath"
         ((fail++)) || true
     fi
 done < <(find "$ROMS_DIR" -name '*.gb' -print0 | sort -z)
