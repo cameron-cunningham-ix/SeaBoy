@@ -400,6 +400,8 @@ public:
                 ImGui::MenuItem("OAM",            nullptr, &m_debugger->m_showOAM);
                 ImGui::MenuItem("Tile Viewer",    nullptr, &m_debugger->m_showTileViewer);
                 ImGui::MenuItem("Tilemap Viewer", nullptr, &m_debugger->m_showTilemapViewer);
+                ImGui::Separator();
+                ImGui::MenuItem("ROM Info",       nullptr, &m_debugger->m_showROMInfo);
 
                 ImGui::Separator();
 
@@ -698,6 +700,7 @@ private:
             out << "showOAM=" << m_debugger->m_showOAM << "\n";
             out << "showTileViewer=" << m_debugger->m_showTileViewer << "\n";
             out << "showTilemapViewer=" << m_debugger->m_showTilemapViewer << "\n";
+            out << "showROMInfo=" << m_debugger->m_showROMInfo << "\n";
         }
 
         m_currentLayoutName = name;
@@ -747,6 +750,7 @@ private:
                 else if (key == "showOAM")           m_debugger->m_showOAM = val;
                 else if (key == "showTileViewer")    m_debugger->m_showTileViewer = val;
                 else if (key == "showTilemapViewer") m_debugger->m_showTilemapViewer = val;
+                else if (key == "showROMInfo")       m_debugger->m_showROMInfo = val;
             }
         }
 

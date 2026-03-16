@@ -6,6 +6,7 @@
 #include "imgui.h"
 #include "SDL3/SDL.h"
 #include "src/core/GameBoy.hpp"
+#include "src/cartridge/Cartridge.hpp"
 
 // ---------------------------------------------------------------------------
 // SM83 Disassembler — table-driven opcode decoding
@@ -805,4 +806,88 @@ void DebuggerUI::render()
     if (m_showOAM)           renderOAMViewer();
     if (m_showTileViewer)    renderTileViewer();
     if (m_showTilemapViewer) renderTilemapViewer();
+    if (m_showROMInfo)       renderROMInfo();
+}
+
+// ---------------------------------------------------------------------------
+// ROM Info panel
+// ---------------------------------------------------------------------------
+
+void DebuggerUI::renderROMInfo()
+{
+    if (!ImGui::Begin("ROM Info", &m_showROMInfo)) { ImGui::End(); return; }
+
+    const SeaBoy::Cartridge* cart = m_gb.mmu().cartridge();
+    if (!cart)
+    {
+        ImGui::TextDisabled("No ROM loaded.");
+        ImGui::End();
+        return;
+    }
+
+    const uint8_t* rom = cart->romData();
+    const size_t   romSz = cart->romSize();
+
+    // Title - 15 bytes at 0x0134 (older ROMs may use all 15; CGB ROMs use 11)
+    char title[16]{};
+    if (romSz > 0x0143u)
+        std::memcpy(title, rom + 0x0134, 15);
+    else if (romSz > 0x0134u)
+        std::memcpy(title, rom + 0x0134, romSz - 0x0134u);
+    for (int i = 0; i < 15 && title[i]; ++i)
+        if (title[i] < 0x20 || title[i] > 0x7E) title[i] = '?';
+
+    // CGB flag
+    const char* cgbStr = "DMG Only";
+    const uint8_t cgb = cart->cgbFlag();
+    if      (cgb == 0xC0) cgbStr = "CGB Only";
+    else if (cgb == 0x80) cgbStr = "CGB Compatible";
+
+    // ROM size
+    char romSzBuf[24];
+    if (romSz >= 1024u * 1024u)
+        std::snprintf(romSzBuf, sizeof(romSzBuf), "%zu MB", romSz / (1024u * 1024u));
+    else
+        std::snprintf(romSzBuf, sizeof(romSzBuf), "%zu KB", romSz / 1024u);
+
+    // RAM size
+    const size_t ramSz = cart->sramSize();
+    char ramSzBuf[24];
+    if      (ramSz == 0)              std::snprintf(ramSzBuf, sizeof(ramSzBuf), "None");
+    else if (ramSz >= 1024u * 1024u)  std::snprintf(ramSzBuf, sizeof(ramSzBuf), "%zu MB", ramSz / (1024u * 1024u));
+    else                              std::snprintf(ramSzBuf, sizeof(ramSzBuf), "%zu KB", ramSz / 1024u);
+
+    // New licensee code - 2 ASCII bytes at 0x0144-0x0145
+    char licensee[3]{};
+    if (romSz > 0x0145u)
+    {
+        licensee[0] = (rom[0x0144] >= 0x20 && rom[0x0144] <= 0x7E) ? static_cast<char>(rom[0x0144]) : '?';
+        licensee[1] = (rom[0x0145] >= 0x20 && rom[0x0145] <= 0x7E) ? static_cast<char>(rom[0x0145]) : '?';
+    }
+
+    const uint8_t type = cart->typeCode();
+
+    if (ImGui::BeginTable("##rominfo", 2, ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingFixedFit))
+    {
+        ImGui::TableSetupColumn("Field", ImGuiTableColumnFlags_WidthFixed, 90.0f);
+        ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
+
+        auto row = [](const char* label, const char* value) {
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0); ImGui::TextUnformatted(label);
+            ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted(value);
+        };
+
+        row("Title",    title[0] ? title : "(none)");
+        row("MBC Type", SeaBoy::Cartridge::typeString(type));
+        row("CGB Mode", cgbStr);
+        row("ROM Size", romSzBuf);
+        row("RAM Size", ramSzBuf);
+        row("Battery",  SeaBoy::Cartridge::hasBattery(type) ? "Yes" : "No");
+        row("Licensee", licensee[0] ? licensee : "(none)");
+
+        ImGui::EndTable();
+    }
+
+    ImGui::End();
 }

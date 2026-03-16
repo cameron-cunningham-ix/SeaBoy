@@ -51,6 +51,12 @@ namespace SeaBoy
         virtual size_t sramSize() const { return 0; }
         virtual void loadSRAM(const uint8_t* data, size_t size) { (void)data; (void)size; }
 
+        // Human-readable name for a cartridge type byte (0x0147). PanDocs.16
+        static const char* typeString(uint8_t code);
+
+        // Returns true if the type code includes battery-backed SRAM. PanDocs.16
+        static bool hasBattery(uint8_t code);
+
         // Factory: parse header byte 0x0147, return the correct MBC subclass.
         // Takes ownership of the ROM data vector.
         static std::unique_ptr<Cartridge> create(std::vector<uint8_t> rom);

@@ -47,6 +47,7 @@ public:
     bool m_showOAM           = false;
     bool m_showTileViewer    = false;
     bool m_showTilemapViewer = false;
+    bool m_showROMInfo       = false;
 
 private:
     SeaBoy::GameBoy& m_gb;
@@ -83,6 +84,7 @@ private:
     void renderOAMViewer();
     void renderTileViewer();
     void renderTilemapViewer();
+    void renderROMInfo();
 
     // Disassembler — decode one instruction at addr, return byte length
     uint8_t disassemble(uint16_t addr, char* outBuf, int bufSize) const;

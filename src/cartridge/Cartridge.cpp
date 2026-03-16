@@ -9,6 +9,57 @@
 
 namespace SeaBoy
 {
+    // PanDocs.16 - Cartridge type byte 0x0147 name mapping.
+    const char* Cartridge::typeString(uint8_t code)
+    {
+        switch (code)
+        {
+            case 0x00: return "ROM ONLY";
+            case 0x01: return "MBC1";
+            case 0x02: return "MBC1+RAM";
+            case 0x03: return "MBC1+RAM+BATTERY";
+            case 0x05: return "MBC2";
+            case 0x06: return "MBC2+BATTERY";
+            case 0x08: return "ROM+RAM";
+            case 0x09: return "ROM+RAM+BATTERY";
+            case 0x0B: return "MMM01";
+            case 0x0C: return "MMM01+RAM";
+            case 0x0D: return "MMM01+RAM+BATTERY";
+            case 0x0F: return "MBC3+TIMER+BATTERY";
+            case 0x10: return "MBC3+TIMER+RAM+BATTERY";
+            case 0x11: return "MBC3";
+            case 0x12: return "MBC3+RAM";
+            case 0x13: return "MBC3+RAM+BATTERY";
+            case 0x19: return "MBC5";
+            case 0x1A: return "MBC5+RAM";
+            case 0x1B: return "MBC5+RAM+BATTERY";
+            case 0x1C: return "MBC5+RUMBLE";
+            case 0x1D: return "MBC5+RUMBLE+RAM";
+            case 0x1E: return "MBC5+RUMBLE+RAM+BATTERY";
+            case 0x20: return "MBC6";
+            case 0x22: return "MBC7+SENSOR+RUMBLE+RAM+BATTERY";
+            case 0xFC: return "POCKET CAMERA";
+            case 0xFD: return "BANDAI TAMA5";
+            case 0xFE: return "HuC3";
+            case 0xFF: return "HuC1+RAM+BATTERY";
+            default:   return "UNKNOWN";
+        }
+    }
+
+    // PanDocs.16 - Battery-backed type codes.
+    bool Cartridge::hasBattery(uint8_t code)
+    {
+        switch (code)
+        {
+            case 0x03: case 0x06: case 0x09: case 0x0D:
+            case 0x0F: case 0x10: case 0x13:
+            case 0x1B: case 0x1E: case 0x22: case 0xFF:
+                return true;
+            default:
+                return false;
+        }
+    }
+
     // PanDocs.16 - Cartridge type byte at 0x0147 selects the MBC.
     std::unique_ptr<Cartridge> Cartridge::create(std::vector<uint8_t> rom)
     {
