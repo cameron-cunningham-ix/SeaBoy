@@ -41,7 +41,6 @@ private:
     int windowWidth;
     int windowHeight;
     float mainScale;
-    float frameRate = 59.7f; // GB native ~59.7 Hz
     int textureWidth;
     int textureHeight;
 

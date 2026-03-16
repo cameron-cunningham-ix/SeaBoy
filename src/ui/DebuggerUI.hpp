@@ -58,6 +58,11 @@ private:
     bool m_stepPending  = false;
     bool m_stepFramePending = false;
 
+    // FPS tracking - average over 1-second windows
+    uint32_t m_fpsFrameCount = 0;
+    float    m_fpsAccum      = 0.0f; // accumulated seconds since last update
+    float    m_fpsDisplay    = 0.0f; // last computed 1-second average
+
     // Breakpoints
     std::vector<uint16_t> m_breakpoints;
     char m_bpInputBuf[8]{};

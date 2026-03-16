@@ -181,6 +181,17 @@ void DebuggerUI::renderControlPanel()
             m_stepFramePending = true;
     }
 
+    // Calculate average framerate
+    m_fpsFrameCount++;
+    m_fpsAccum += ImGui::GetIO().DeltaTime;
+    if (m_fpsAccum >= 1.0f)
+    {
+        m_fpsDisplay    = static_cast<float>(m_fpsFrameCount) / m_fpsAccum;
+        m_fpsFrameCount = 0;
+        m_fpsAccum      = 0.0f;
+    }
+    ImGui::Text("FPS: %.1f", m_fpsDisplay);
+
     ImGui::End();
 }
 
