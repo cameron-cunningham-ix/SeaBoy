@@ -8,7 +8,7 @@ namespace SeaBoy
     MBC3::MBC3(std::vector<uint8_t> rom)
         : Cartridge(std::move(rom))
     {
-        // PanDocs §17.4 - RAM size from header byte 0x0149
+        // PanDocs 17.4 - RAM size from header byte 0x0149
         static constexpr uint32_t kRamSizes[] = {0, 0, 0x2000, 0x8000, 0x20000, 0x10000};
         uint8_t ramCode = m_rom.size() > 0x0149u ? m_rom[0x0149] : 0;
         uint32_t ramSize = (ramCode < 6) ? kRamSizes[ramCode] : 0x2000u;
@@ -19,7 +19,7 @@ namespace SeaBoy
         m_hasRTC = (type == 0x0F || type == 0x10);
     }
 
-    // PanDocs §17.4 MBC3 read routing
+    // PanDocs 17.4 MBC3 read routing
     uint8_t MBC3::read(uint16_t addr) const
     {
         // 0x0000–0x3FFF: ROM bank 0 (fixed)
@@ -69,7 +69,7 @@ namespace SeaBoy
         return 0xFFu;
     }
 
-    // PanDocs §17.4 MBC3 write routing
+    // PanDocs 17.4 MBC3 write routing
     void MBC3::write(uint16_t addr, uint8_t val)
     {
         // 0x0000–0x1FFF: RAM/RTC enable

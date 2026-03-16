@@ -42,12 +42,12 @@ namespace SeaBoy
         bool ime()          const { return m_ime; }
         bool halted()       const { return m_halted; }
         bool haltBug()      const { return m_haltBug; }
-        bool imeScheduled() const { return m_imeScheduled; }
+        uint8_t imeDelay() const { return m_imeDelay; }
 
-        void setIME(bool v)          { m_ime          = v; }
-        void setHalted(bool v)       { m_halted       = v; }
-        void setHaltBug(bool v)      { m_haltBug      = v; }
-        void setIMEScheduled(bool v) { m_imeScheduled = v; }
+        void setIME(bool v)         { m_ime      = v; }
+        void setHalted(bool v)      { m_halted   = v; }
+        void setHaltBug(bool v)     { m_haltBug  = v; }
+        void setImeDelay(uint8_t v) { m_imeDelay = v; }
 
         // Save state serialization
         void serialize(BinaryWriter& w) const;
@@ -71,7 +71,7 @@ namespace SeaBoy
         bool m_ime          = false; // Interrupt Master Enable
         bool m_halted       = false; // HALT state - PanDocs.9.2
         bool m_haltBug      = false; // HALT bug pending - PanDocs.9.2
-        bool m_imeScheduled = false; // EI delay - PanDocs.9
+        uint8_t m_imeDelay = 0; // EI 2-step delay counter: 2→1→0 (IME set when hits 0) - PanDocs Interrupts
 
         // Check and service pending interrupts.
         // Returns 20 T-cycles if an interrupt was dispatched, 0 otherwise.

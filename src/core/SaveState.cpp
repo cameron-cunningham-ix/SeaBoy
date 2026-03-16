@@ -34,7 +34,7 @@ namespace SeaBoy
         w.writeBool(m_ime);
         w.writeBool(m_halted);
         w.writeBool(m_haltBug);
-        w.writeBool(m_imeScheduled);
+        w.write8(m_imeDelay);
     }
 
     void CPU::deserialize(BinaryReader& r)
@@ -48,7 +48,7 @@ namespace SeaBoy
         m_ime          = r.readBool();
         m_halted       = r.readBool();
         m_haltBug      = r.readBool();
-        m_imeScheduled = r.readBool();
+        m_imeDelay = r.read8();
     }
 
     // ---- Timer serialize/deserialize ----

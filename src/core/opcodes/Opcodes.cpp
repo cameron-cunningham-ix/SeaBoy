@@ -28,7 +28,7 @@ static void stackPush(CPU& cpu, uint16_t val) {
 
 // Helper: pop a 16-bit value from the stack
 // PanDocs.25 OAM Corruption Bug: POP triggers 3 corruption events when SP is in
-// 0xFE00–0xFEFF — one read, one glitched write from the SP++ IDU, and a second
+// 0xFE00–0xFEFF - one read, one glitched write from the SP++ IDU, and a second
 // read without a second glitched write.
 static uint16_t stackPop(CPU& cpu) {
     uint16_t sp0 = cpu.regs().SP;
@@ -264,11 +264,11 @@ uint32_t op_0F(CPU& cpu) {
 // 0x10 - 0x1F
 // ---------------------------------------------------------------------------
 
-// 0x10 STOP - 4T (1-byte opcode; second byte 0x00 is part of opcode encoding but not fetched here)
+// 0x10 STOP - 4T (1-byte opcode; PC advances past opcode only, no second-byte fetch)
+// PanDocs STOP: second 0x00 byte is part of the encoding but PC does not advance past it.
 // PanDocs.10 CGB Double Speed Mode: if KEY1 bit 0 is armed, toggle speed.
 uint32_t op_10(CPU& cpu)
 {
-    cpu.fetch8();
     MMU& mmu = cpu.mmu();
     uint8_t key1 = mmu.peek8(0xFF4Du);
     if (mmu.isCGBMode() && (key1 & 0x01u)) {
@@ -279,9 +279,9 @@ uint32_t op_10(CPU& cpu)
         for (uint32_t i = 0; i < 2050; i++) {
             cpu.internalCycle();
         }
-        return 8 + 2050 * 4; // fetch(8) + stall (2050*4)
+        return 4 + 2050 * 4; // opcode(4) + stall (2050*4)
     }
-    return 8;
+    return 4;
 }
 
 // 0x11 LD DE,n16 - 12T
@@ -778,12 +778,25 @@ uint32_t op_75(CPU& cpu) { return ld_r8_r8(cpu, 6, 5); }
 
 // 0x76 HALT - 4T
 uint32_t op_76(CPU& cpu) {
-    // GDZ80 - HALT bug occurs when IME=false and interrupts pending
     uint8_t pending = cpu.mmu().readIF() & cpu.mmu().readIE() & 0x1F;
-    if (!cpu.ime() && pending)
-        cpu.setHaltBug(true); // Bug: next fetch will not increment PC
-    else
+
+    if (cpu.imeDelay() > 0 && pending) {
+        // EI+HALT with buffered interrupt: PanDocs HALT / EI
+        // EI's one-instruction delay has not yet fired (IME still 0), but an interrupt
+        // is pending. Apply the EI latch NOW and back up PC to the HALT address so the
+        // interrupt dispatch in the next step pushes the HALT address as the return PC.
+        // This causes RETI in the ISR to re-enter HALT ("does not exit halt").
+        cpu.regs().PC--;        // undo the fetch increment - PC = address of HALT
+        cpu.setImeDelay(0);
+        cpu.setIME(true);
+        // Don't enter halt state; interrupt will fire at start of next step.
+    } else if (!cpu.ime() && pending) {
+        // HALT bug: IME=0 but interrupt pending - CPU wakes immediately.
+        // Next fetch will re-read the same PC (double-read bug). PanDocs HALT
+        cpu.setHaltBug(true);
+    } else {
         cpu.setHalted(true);
+    }
     return 4;
 }
 
@@ -1131,10 +1144,11 @@ uint32_t op_D8(CPU& cpu) {
     return 8;
 }
 
-// 0xD9 RETI - 16T (RET + enable interrupts)
+// 0xD9 RETI - 16T (RET + enable interrupts immediately, no delay)
 uint32_t op_D9(CPU& cpu) {
     cpu.regs().PC = stackPop(cpu);
     cpu.setIME(true);
+    cpu.setImeDelay(0);
     cpu.internalCycle(); // set PC
     return 16;
 }
@@ -1300,10 +1314,10 @@ uint32_t op_F2(CPU& cpu) {
 }
 
 // 0xF3 DI - 4T  (disable interrupts)
-uint32_t op_F3(CPU& cpu) { 
-    cpu.setIME(false); 
-    cpu.setIMEScheduled(false); 
-    return 4; 
+uint32_t op_F3(CPU& cpu) {
+    cpu.setIME(false);
+    cpu.setImeDelay(0);  // cancel any pending EI
+    return 4;
 }
 
 // 0xF4 - illegal opcode
@@ -1360,10 +1374,13 @@ uint32_t op_FA(CPU& cpu) {
 }
 
 // 0xFB EI - 4T  (enable interrupts with one-instruction delay)
-// GBZ80 - IME is set after the NEXT instruction
-uint32_t op_FB(CPU& cpu) { 
-    cpu.setIMEScheduled(true); 
-    return 4; 
+// GBZ80 - IME takes effect after the following instruction (2-step counter).
+// Only starts the counter if not already counting, so chained EIs don't extend
+// the delay window. PanDocs Interrupts
+uint32_t op_FB(CPU& cpu) {
+    if (cpu.imeDelay() == 0)
+        cpu.setImeDelay(2);
+    return 4;
 }
 
 // 0xFC - illegal opcode

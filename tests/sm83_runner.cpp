@@ -150,7 +150,7 @@ static TestResult runTest(const json& tc)
 
     cpu.setIME(initial.ime);
     if (initial.has_ei)
-        cpu.setIMEScheduled(initial.ei);
+        cpu.setImeDelay(initial.ei ? 1 : 0); // ei=1 → delay=1 (fires at end of this step)
 
     // ---- run one step ----
     cpu.step();
@@ -175,8 +175,8 @@ static TestResult runTest(const json& tc)
                     " want " + (expected.ime ? "1" : "0"));
 
     // EI-scheduled flag (only checked if "ei" present in final state)
-    if (expected.has_ei && cpu.imeScheduled() != expected.ei)
-        result.fail(std::string("EI=") + (cpu.imeScheduled() ? "1" : "0") +
+    if (expected.has_ei && (cpu.imeDelay() > 0) != expected.ei)
+        result.fail(std::string("EI=") + (cpu.imeDelay() > 0 ? "1" : "0") +
                     " want " + (expected.ei ? "1" : "0"));
 
     // ---- compare RAM ----

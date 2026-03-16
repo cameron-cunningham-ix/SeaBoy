@@ -5,7 +5,7 @@
 namespace SeaBoy
 {
     // MBC3 - ROM banking up to 2 MB, optional RAM up to 32 KB, optional RTC.
-    // PanDocs §17.4 MBC3
+    // PanDocs 17.4 MBC3
     //
     // Register map (write-only, decoded from ROM address bus):
     //   0x0000–0x1FFF  RAM/RTC enable  (lower nibble 0x0A = enable)
@@ -32,7 +32,7 @@ namespace SeaBoy
         void loadSRAM(const uint8_t* data, size_t size) override;
 
     private:
-        // PanDocs §17.4 - up to 4 banks × 8 KB = 32 KB external RAM
+        // PanDocs 17.4 - up to 4 banks × 8 KB = 32 KB external RAM
         std::vector<uint8_t> m_ram;
 
         uint8_t m_romBank   = 1;     // 7-bit ROM bank; 0 remapped to 1

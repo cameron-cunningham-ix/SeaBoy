@@ -308,10 +308,10 @@ namespace SeaBoy
         m_regs.SP = 0xFFFE;
         m_regs.PC = 0x0100;   // Skip boot ROM; start at cartridge entry point
 
-        m_ime          = false;
-        m_halted       = false;
-        m_haltBug      = false;
-        m_imeScheduled = false;
+        m_ime      = false;
+        m_halted   = false;
+        m_haltBug  = false;
+        m_imeDelay = 0;
     }
 
     uint8_t CPU::fetch8()
@@ -378,15 +378,7 @@ namespace SeaBoy
 
     uint32_t CPU::step()
     {
-        // 1. Apply EI delay - IME takes effect the instruction after EI
-        //    PanDocs.9
-        if (m_imeScheduled)
-        {
-            m_ime          = true;
-            m_imeScheduled = false;
-        }
-
-        // 2. Service pending interrupts (exits HALT, returns 20 cycles if dispatched)
+        // 1. Service pending interrupts (exits HALT, returns 20 cycles if dispatched)
         uint8_t pending = m_mmu.readIF() & m_mmu.readIE() & 0x1F;
 
         if (m_halted && pending)
@@ -401,14 +393,14 @@ namespace SeaBoy
                 return intCycles;
         }
 
-        // 3. HALT idle - if still halted, burn 4 T-cycles
+        // 2. HALT idle - if still halted, burn 4 T-cycles
         if (m_halted)
         {
             m_mmu.tickCycle(); // 4T idle cycle
             return 4;
         }
 
-        // 4. Fetch opcode
+        // 3. Fetch opcode
         //    HALT bug: PC not incremented on the bugged fetch - PanDocs.9.2
         uint8_t opcode;
         if (m_haltBug)
@@ -421,8 +413,23 @@ namespace SeaBoy
             opcode = fetch8();
         }
 
-        // 5. Dispatch
-        return kOpcodes[opcode](*this);
+        // 4. Dispatch
+        uint32_t cycles = kOpcodes[opcode](*this);
+
+        // 5. Tick the EI delay counter.
+        //    EI sets m_imeDelay=2 (if not already counting). Each step decrements it.
+        //    When it reaches 0, IME is set. The interrupt is then checked at the START
+        //    of the following step, meaning exactly one instruction executes between EI
+        //    and the interrupt being taken. Chained EIs don't extend the window because
+        //    subsequent EIs find m_imeDelay>0 and leave it alone. PanDocs Interrupts
+        if (m_imeDelay > 0)
+        {
+            --m_imeDelay;
+            if (m_imeDelay == 0)
+                m_ime = true;
+        }
+
+        return cycles;
     }
 
 }

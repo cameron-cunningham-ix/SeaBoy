@@ -1,5 +1,5 @@
 # Mooneye Test Suite Results
-Results: 73 passed, 21 failed, 9 skipped
+Results: 77 passed, 17 failed, 9 skipped
 | Test Name | Pass/Fail (✅/❌) |
 |-----------|------|
 | acceptance/add_sp_e_timing | ✅ |
@@ -24,8 +24,8 @@ Results: 73 passed, 21 failed, 9 skipped
 | acceptance/call_timing2 | ✅ |
 | acceptance/di_timing-GS | ✅ |
 | acceptance/div_timing | ✅ |
-| acceptance/ei_sequence | ❌ |
-| acceptance/ei_timing | ❌ |
+| acceptance/ei_sequence | ✅ |
+| acceptance/ei_timing | ✅ |
 | acceptance/halt_ime0_ei | ✅ |
 | acceptance/halt_ime0_nointr_timing | ✅ |
 | acceptance/halt_ime1_timing | ✅ |
@@ -57,10 +57,10 @@ Results: 73 passed, 21 failed, 9 skipped
 | acceptance/ppu/stat_lyc_onoff | ❌ |
 | acceptance/ppu/vblank_stat_intr-GS | ❌ |
 | acceptance/push_timing | ✅ |
-| acceptance/rapid_di_ei | ❌ |
+| acceptance/rapid_di_ei | ✅ |
 | acceptance/ret_cc_timing | ✅ |
 | acceptance/ret_timing | ✅ |
-| acceptance/reti_intr_timing | ❌ |
+| acceptance/reti_intr_timing | ✅ |
 | acceptance/reti_timing | ✅ |
 | acceptance/rst_timing | ✅ |
 | acceptance/serial/boot_sclk_align-dmgABCmgb | skip |
