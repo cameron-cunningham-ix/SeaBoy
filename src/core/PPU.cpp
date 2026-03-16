@@ -276,10 +276,10 @@ namespace SeaBoy
         // owns the OAM bus, overriding normal PPU mode-based locking.
         if (m_dmaActive)
         {
-            // During startup delay: DMA hasn't started writing yet, OAM readable
-            if (m_dmaStartDelay > 0)
+            // Fresh DMA startup: OAM accessible for 1 M-cycle (mooneye oam_dma_start M=1)
+            // Restart DMA startup: old DMA held the bus, OAM stays locked throughout
+            if (m_dmaStartDelay > 0 && !m_dmaWasRestart)
                 return m_oam[addr - 0xFE00u];
-            // During active transfer: DMA writing to OAM, CPU reads return 0xFF
             return 0xFF;
         }
         // OAM locked during Mode 2 (OAMScan) and Mode 3 (Drawing)
@@ -294,9 +294,10 @@ namespace SeaBoy
         // PanDocs.4.3.1 OAM DMA Transfer — DMA owns the OAM bus
         if (m_dmaActive)
         {
-            if (m_dmaStartDelay > 0)
-                m_oam[addr - 0xFE00u] = val; // startup delay: OAM still writable
-            return; // during transfer: writes ignored
+            // Fresh startup: OAM still writable; restart startup: locked (old DMA held bus)
+            if (m_dmaStartDelay > 0 && !m_dmaWasRestart)
+                m_oam[addr - 0xFE00u] = val;
+            return;
         }
         if ((m_lcdc & LCDC::LCDEnable) &&
             (m_mode == PPUMode::OAMScan || m_mode == PPUMode::Drawing))
@@ -393,14 +394,28 @@ namespace SeaBoy
         case ADDR_DMA:
             // PanDocs.4.3.1 OAM DMA Transfer - initiates a 160-byte copy from
             // (val << 8) into OAM, 1 byte per M-cycle (640 T-cycles total).
-            // Transfer starts after a startup delay. Set to 8 T-cycles (2 ticks)
-            // because the first tick is consumed in the same bus callback as the
-            // triggering write; the CPU needs OAM access for 1 more M-cycle.
-            m_dma           = val;
-            m_dmaActive     = true;
-            m_dmaStartDelay = 8;
-            m_dmaSource     = static_cast<uint16_t>(val << 8);
-            m_dmaByte       = 0;
+            //
+            // Fresh start: 2 M-cycle startup delay (8 T-cycles). The triggering
+            // write's own bus tick consumes 4T, leaving 4T = 1 M-cycle where OAM
+            // is still accessible (mooneye oam_dma_start: M=1 OAM readable, M=2 locked).
+            //
+            // Restart while DMA already active: the old DMA keeps OAM locked through
+            // M=1 of the new write, so the new DMA must start at M=2 with only
+            // 1 M-cycle of startup delay (4 T-cycles). This way the write's own bus tick
+            // consumes the full delay, and readOAM at M=1 sees dmaStartDelay=0 -> locked.
+            // Two behaviours verified by mooneye oam_dma_start + oam_dma_restart:
+            //   Fresh start:   2 M-cycle startup (8T). The write's own bus tick consumes 4T,
+            //                  leaving 1 M-cycle where OAM is still accessible (oam_dma_start M=1).
+            //   Restart:       Same 2 M-cycle startup (8T), but OAM must stay locked during it
+            //                  because the old DMA was still holding the bus. m_dmaWasRestart
+            //                  signals readOAM/writeOAM to return $FF / ignore writes even while
+            //                  dmaStartDelay > 0 (oam_dma_start round2: B=0, oam_dma_restart timing).
+            m_dma            = val;
+            m_dmaWasRestart  = m_dmaActive;
+            m_dmaStartDelay  = 8;
+            m_dmaActive      = true;
+            m_dmaSource      = static_cast<uint16_t>(val << 8);
+            m_dmaByte        = 0;
             break;
         case ADDR_BGP:  m_palettes.writeBGP(val); break;
         case ADDR_OBP0: m_palettes.writeOBP0(val); break;

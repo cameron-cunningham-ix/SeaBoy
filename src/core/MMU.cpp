@@ -72,14 +72,23 @@ namespace SeaBoy
         if (m_testRam)
             return m_testRam[addr];
 
-        // PanDocs OAM DMA: during an active DMA transfer the CPU loses access
-        // to ROM/WRAM/ERAM/VRAM (the bus the DMA controller is using).
-        // I/O registers (0xFF00–0xFF7F) and OAM/prohibited (0xFE00–0xFEFF)
-        // are on separate buses and remain accessible.
+        // PanDocs OAM DMA: the CPU loses access only to the bus the DMA controller
+        // is using. On CGB, cartridge/SRAM and WRAM are on separate buses, so only
+        // the bus matching the DMA source is locked. VRAM-sourced DMA locks the VRAM
+        // bus ($8000–$9FFF); ROM/WRAM/ERAM-sourced DMA locks the external bus.
+        // PanDocs says DMG is "HRAM only" but mooneye add_sp_e_timing needs WRAM
+        // to be readable on DMG too. OAM ($FE00–$FE9F) is always locked during DMA
+        // (handled in PPU::readOAM).
         if (isDMAActive() && addr < 0xFE00u)
         {
-            if (m_cycleFn) m_cycleFn(m_cycleCtx, 4);
-            return 0xFFu;
+            const uint16_t src       = m_ppu ? m_ppu->dmaSource() : 0u;
+            const bool srcIsVRAM     = (src  >= 0x8000u && src  <= 0x9FFFu);
+            const bool addrIsVRAM    = (addr >= 0x8000u && addr <= 0x9FFFu);
+            if (srcIsVRAM == addrIsVRAM) // same bus -> conflict
+            {
+                if (m_cycleFn) m_cycleFn(m_cycleCtx, 4);
+                return 0xFFu;
+            }
         }
 
         uint8_t val = 0xFFu; // Open bus default

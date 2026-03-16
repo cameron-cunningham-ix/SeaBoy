@@ -57,14 +57,18 @@ for dir in acceptance emulator-only misc/cgb; do
 
         # Skip tests targeting non-DMG, non-CGB hardware based on filename patterns
         if echo "$name" | grep -qiE 'sgb|mgb|agb|ags|-[SA]\.gb$'; then
-            echo "SKIP  $name  (non-DMG/CGB hardware)"
+            rel="${rom#$ROMS_DIR/}"; rel="${rel%.gb}"
+            echo "SKIP  $rel"
             ((skip++)) || true
             continue
         fi
 
-        if "$RUNNER" "$rom"; then
+        rel="${rom#$ROMS_DIR/}"; rel="${rel%.gb}"
+        if "$RUNNER" "$rom" > /dev/null 2>&1; then
+            echo "PASS  $rel"
             ((pass++)) || true
         else
+            echo "FAIL  $rel"
             ((fail++)) || true
         fi
     done < <(find "$subdir" -name '*.gb' -print0 | sort -z)

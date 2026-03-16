@@ -1,8 +1,8 @@
 # Mooneye Test Suite Results
-Results: 64 passed, 30 failed, 9 skipped
+Results: 73 passed, 21 failed, 9 skipped
 | Test Name | Pass/Fail (✅/❌) |
 |-----------|------|
-| acceptance/add_sp_e_timing | ❌ |
+| acceptance/add_sp_e_timing | ✅ |
 | acceptance/bits/mem_oam | ✅ |
 | acceptance/bits/reg_f | ✅ |
 | acceptance/bits/unused_hwio-GS | ✅ |
@@ -18,9 +18,9 @@ Results: 64 passed, 30 failed, 9 skipped
 | acceptance/boot_regs-mgb | skip |
 | acceptance/boot_regs-sgb | skip |
 | acceptance/boot_regs-sgb2 | skip |
-| acceptance/call_cc_timing | ❌ |
+| acceptance/call_cc_timing | ✅ |
 | acceptance/call_cc_timing2 | ✅ |
-| acceptance/call_timing | ❌ |
+| acceptance/call_timing | ✅ |
 | acceptance/call_timing2 | ✅ |
 | acceptance/di_timing-GS | ✅ |
 | acceptance/div_timing | ✅ |
@@ -34,9 +34,9 @@ Results: 64 passed, 30 failed, 9 skipped
 | acceptance/instr/daa | ✅ |
 | acceptance/interrupts/ie_push | ❌ |
 | acceptance/intr_timing | ✅ |
-| acceptance/jp_cc_timing | ❌ |
-| acceptance/jp_timing | ❌ |
-| acceptance/ld_hl_sp_e_timing | ❌ |
+| acceptance/jp_cc_timing | ✅ |
+| acceptance/jp_timing | ✅ |
+| acceptance/ld_hl_sp_e_timing | ✅ |
 | acceptance/oam_dma/basic | ✅ |
 | acceptance/oam_dma/reg_read | ✅ |
 | acceptance/oam_dma/sources-GS | ❌ |
@@ -58,10 +58,10 @@ Results: 64 passed, 30 failed, 9 skipped
 | acceptance/ppu/vblank_stat_intr-GS | ❌ |
 | acceptance/push_timing | ✅ |
 | acceptance/rapid_di_ei | ❌ |
-| acceptance/ret_cc_timing | ❌ |
-| acceptance/ret_timing | ❌ |
+| acceptance/ret_cc_timing | ✅ |
+| acceptance/ret_timing | ✅ |
 | acceptance/reti_intr_timing | ❌ |
-| acceptance/reti_timing | ❌ |
+| acceptance/reti_timing | ✅ |
 | acceptance/rst_timing | ✅ |
 | acceptance/serial/boot_sclk_align-dmgABCmgb | skip |
 | acceptance/timer/div_write | ✅ |
@@ -105,11 +105,3 @@ Results: 64 passed, 30 failed, 9 skipped
 | emulator-only/mbc5/rom_512kb | ✅ |
 | emulator-only/mbc5/rom_64Mb | ✅ |
 | emulator-only/mbc5/rom_8Mb | ✅ |
-| madness/mgb_oam_dma_halt_sprites | ❌ |
-| manual-only/sprite_priority | ❌ |
-| misc/bits/unused_hwio-C | ❌ |
-| misc/boot_div-cgb0 | ❌ |
-| misc/boot_div-cgbABCDE | ❌ |
-| misc/boot_hwio-C | ❌ |
-| misc/boot_regs-cgb | ❌ |
-| misc/ppu/vblank_stat_intr-C | ❌ |
