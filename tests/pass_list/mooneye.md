@@ -1,5 +1,5 @@
 # Mooneye Test Suite Results
-Results: 77 passed, 17 failed, 9 skipped
+Results: 78 passed, 16 failed, 9 skipped
 | Test Name | Pass/Fail (✅/❌) |
 |-----------|------|
 | acceptance/add_sp_e_timing | ✅ |
@@ -32,7 +32,7 @@ Results: 77 passed, 17 failed, 9 skipped
 | acceptance/halt_ime1_timing2-GS | ✅ |
 | acceptance/if_ie_registers | ✅ |
 | acceptance/instr/daa | ✅ |
-| acceptance/interrupts/ie_push | ❌ |
+| acceptance/interrupts/ie_push | ✅ |
 | acceptance/intr_timing | ✅ |
 | acceptance/jp_cc_timing | ✅ |
 | acceptance/jp_timing | ✅ |

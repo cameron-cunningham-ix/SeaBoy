@@ -348,7 +348,7 @@ namespace SeaBoy
             return 0;
         }
 
-        // Disable further interrupts and clear the serviced bit
+        // Disable further interrupts (IME cleared before M1)
         m_ime = false;
 
         uint16_t vector = 0;
@@ -360,18 +360,52 @@ namespace SeaBoy
         else if (pending & INT_SERIAL)  { bit = INT_SERIAL;   vector = IV_SERIAL;  }
         else if (pending & INT_JOYPAD)  { bit = INT_JOYPAD;   vector = IV_JOYPAD;  }
 
-        m_mmu.writeIF(m_mmu.readIF() & ~bit);
-
         // ISR dispatch = 5 M-cycles (20 T-cycles):
         //   M1-M2: two internal wait cycles
-        //   M3-M4: push PC (high byte then low byte) via write8
-        //   M5: set PC to vector (internal)
+        //   M3:    push PCH to --SP  (may write to $FFFF=IE, mutating it mid-dispatch)
+        //   CHECK: re-read IF & IE after M3:
+        //          - originally selected bit still set -> normal dispatch (M4, clear IF, jump)
+        //          - originally selected bit gone, but another bit pending -> re-pick and dispatch that
+        //          - originally selected bit gone, no bits remain -> full cancel (PC=$0000, IF untouched)
+        //   M4:    push PCL to --SP  (always executes; SP decrements by 2 in all paths)
+        //   M5:    set PC to vector / $0000 (internal)
+        // PanDocs Interrupts - ie_push cancellation behaviour
         m_mmu.tickCycle(); // M1: internal wait
         m_mmu.tickCycle(); // M2: internal wait
-        m_regs.SP -= 2;
-        m_mmu.write16(m_regs.SP, m_regs.PC); // M3-M4: push PC (2 bus writes, ticked via callback)
-        m_regs.PC = vector;
-        m_mmu.tickCycle(); // M5: set PC to vector
+
+        // M3: push high byte of PC
+        m_mmu.write8(--m_regs.SP, static_cast<uint8_t>(m_regs.PC >> 8));
+
+        // After M3, re-evaluate IF & IE (write may have mutated IE at $FFFF)
+        uint8_t postM3 = m_mmu.readIF() & m_mmu.readIE() & 0x1F;
+        if (!(postM3 & bit))
+        {
+            // Originally selected interrupt is gone - re-pick or fully cancel
+            bit    = 0;
+            vector = 0;
+            if      (postM3 & INT_VBLANK) { bit = INT_VBLANK; vector = IV_VBLANK; }
+            else if (postM3 & INT_STAT)   { bit = INT_STAT;   vector = IV_STAT;   }
+            else if (postM3 & INT_TIMER)  { bit = INT_TIMER;  vector = IV_TIMER;  }
+            else if (postM3 & INT_SERIAL) { bit = INT_SERIAL; vector = IV_SERIAL; }
+            else if (postM3 & INT_JOYPAD) { bit = INT_JOYPAD; vector = IV_JOYPAD; }
+            // If bit==0 here: full cancellation -> vector stays 0 -> PC=$0000, IF not cleared
+        }
+
+        // M4: push low byte of PC (always, even on full cancellation)
+        m_mmu.write8(--m_regs.SP, static_cast<uint8_t>(m_regs.PC & 0xFF));
+
+        if (bit != 0)
+        {
+            m_regs.PC = vector;
+            m_mmu.writeIF(m_mmu.readIF() & ~bit);
+        }
+        else
+        {
+            // Full cancellation: PC=$0000, IF not cleared, IME stays 0
+            m_regs.PC = 0x0000;
+        }
+
+        m_mmu.tickCycle(); // M5: set PC (internal)
 
         return 20;
     }
