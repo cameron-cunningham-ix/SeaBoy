@@ -1,517 +1,472 @@
 # gbmicrotest Results
-
-| Test Name | Pass/Fail (✅/❌) |
-|-----------|------|
-| 000-oam_lock | skip |
-| 000-write_to_x8000 | skip |
-| 001-vram_unlocked | skip |
-| 002-vram_locked | skip |
-| 004-tima_boot_phase | skip |
-| 004-tima_cycle_timer | skip |
-| 007-lcd_on_stat | skip |
-| 400-dma | skip |
-| 500-scx-timing | skip |
-| 800-ppu-latch-scx | skip |
-| 801-ppu-latch-scy | skip |
-| 802-ppu-latch-tileselect | skip |
-| 803-ppu-latch-bgdisplay | skip |
-| audio_testbench | skip |
-| cpu_bus_1 | skip |
-| div_inc_timing_a | ✅ |
-| div_inc_timing_b | ✅ |
-| dma_0x1000 | ✅ |
-| dma_0x9000 | ✅ |
-| dma_0xA000 | ✅ |
-| dma_0xC000 | ✅ |
-| dma_0xE000 | ✅ |
-| dma_basic | skip |
-| dma_timing_a | ✅ |
-| flood_vram | skip |
-| halt_bug | ✅ |
-| halt_op_dupe | ✅ |
-| halt_op_dupe_delay | ❌ |
-| hblank_int_di_timing_a | skip |
-| hblank_int_di_timing_b | skip |
-| hblank_int_if_a | ✅ |
-| hblank_int_if_b | ❌ |
-| hblank_int_l0 | ❌ |
-| hblank_int_l1 | ❌ |
-| hblank_int_l2 | ❌ |
-| hblank_int_scx0 | ❌ |
-| hblank_int_scx0_if_a | ❌ |
-| hblank_int_scx0_if_b | ❌ |
-| hblank_int_scx0_if_c | ❌ |
-| hblank_int_scx0_if_d | ✅ |
-| hblank_int_scx1 | ❌ |
-| hblank_int_scx1_if_a | ❌ |
-| hblank_int_scx1_if_b | ❌ |
-| hblank_int_scx1_if_c | ❌ |
-| hblank_int_scx1_if_d | ✅ |
-| hblank_int_scx1_nops_a | ✅ |
-| hblank_int_scx1_nops_b | ❌ |
-| hblank_int_scx2 | ❌ |
-| hblank_int_scx2_if_a | ❌ |
-| hblank_int_scx2_if_b | ❌ |
-| hblank_int_scx2_if_c | ❌ |
-| hblank_int_scx2_if_d | ✅ |
-| hblank_int_scx2_nops_a | ✅ |
-| hblank_int_scx2_nops_b | ❌ |
-| hblank_int_scx3 | skip |
-| hblank_int_scx3_if_a | ❌ |
-| hblank_int_scx3_if_b | ❌ |
-| hblank_int_scx3_if_c | ❌ |
-| hblank_int_scx3_if_d | ✅ |
-| hblank_int_scx3_nops_a | ✅ |
-| hblank_int_scx3_nops_b | ❌ |
-| hblank_int_scx4 | ❌ |
-| hblank_int_scx4_if_a | ❌ |
-| hblank_int_scx4_if_b | ❌ |
-| hblank_int_scx4_if_c | ❌ |
-| hblank_int_scx4_if_d | ✅ |
-| hblank_int_scx4_nops_a | ✅ |
-| hblank_int_scx4_nops_b | ❌ |
-| hblank_int_scx5 | ❌ |
-| hblank_int_scx5_if_a | ❌ |
-| hblank_int_scx5_if_b | ❌ |
-| hblank_int_scx5_if_c | ❌ |
-| hblank_int_scx5_if_d | ✅ |
-| hblank_int_scx5_nops_a | ✅ |
-| hblank_int_scx5_nops_b | ❌ |
-| hblank_int_scx6 | ❌ |
-| hblank_int_scx6_if_a | ❌ |
-| hblank_int_scx6_if_b | ❌ |
-| hblank_int_scx6_if_c | ❌ |
-| hblank_int_scx6_if_d | ✅ |
-| hblank_int_scx6_nops_a | ✅ |
-| hblank_int_scx6_nops_b | ❌ |
-| hblank_int_scx7 | ❌ |
-| hblank_int_scx7_if_a | ❌ |
-| hblank_int_scx7_if_b | ❌ |
-| hblank_int_scx7_if_c | ❌ |
-| hblank_int_scx7_if_d | ✅ |
-| hblank_int_scx7_nops_a | ✅ |
-| hblank_int_scx7_nops_b | ❌ |
-| hblank_scx2_if_a | ❌ |
-| hblank_scx3_if_a | skip |
-| hblank_scx3_if_b | ❌ |
-| hblank_scx3_if_c | ❌ |
-| hblank_scx3_if_d | ❌ |
-| hblank_scx3_int_a | skip |
-| hblank_scx3_int_b | skip |
-| int_hblank_halt_bug_a | ✅ |
-| int_hblank_halt_bug_b | ✅ |
-| int_hblank_halt_scx0 | ❌ |
-| int_hblank_halt_scx1 | ❌ |
-| int_hblank_halt_scx2 | ❌ |
-| int_hblank_halt_scx3 | ❌ |
-| int_hblank_halt_scx4 | ❌ |
-| int_hblank_halt_scx5 | ❌ |
-| int_hblank_halt_scx6 | ❌ |
-| int_hblank_halt_scx7 | ❌ |
-| int_hblank_incs_scx0 | ❌ |
-| int_hblank_incs_scx1 | ❌ |
-| int_hblank_incs_scx2 | ❌ |
-| int_hblank_incs_scx3 | ❌ |
-| int_hblank_incs_scx4 | ❌ |
-| int_hblank_incs_scx5 | ❌ |
-| int_hblank_incs_scx6 | ❌ |
-| int_hblank_incs_scx7 | ❌ |
-| int_hblank_nops_scx0 | ❌ |
-| int_hblank_nops_scx1 | ❌ |
-| int_hblank_nops_scx2 | ❌ |
-| int_hblank_nops_scx3 | ❌ |
-| int_hblank_nops_scx4 | ❌ |
-| int_hblank_nops_scx5 | ❌ |
-| int_hblank_nops_scx6 | ❌ |
-| int_hblank_nops_scx7 | ❌ |
-| int_lyc_halt | ❌ |
-| int_lyc_incs | ❌ |
-| int_lyc_nops | ❌ |
-| int_oam_halt | ❌ |
-| int_oam_incs | ❌ |
-| int_oam_nops | ❌ |
-| int_timer_halt | ❌ |
-| int_timer_halt_div_a | ✅ |
-| int_timer_halt_div_b | ❌ |
-| int_timer_incs | ✅ |
-| int_timer_nops | ✅ |
-| int_timer_nops_div_a | ✅ |
-| int_timer_nops_div_b | ✅ |
-| int_vblank1_halt | ✅ |
-| int_vblank1_incs | ✅ |
-| int_vblank1_nops | ✅ |
-| int_vblank2_halt | ✅ |
-| int_vblank2_incs | ✅ |
-| int_vblank2_nops | ✅ |
-| is_if_set_during_ime0 | ✅ |
-| lcdon_halt_to_vblank_int_a | ✅ |
-| lcdon_halt_to_vblank_int_b | ✅ |
-| lcdon_nops_to_vblank_int_a | ✅ |
-| lcdon_nops_to_vblank_int_b | ✅ |
-| lcdon_to_if_oam_a | ❌ |
-| lcdon_to_if_oam_b | ✅ |
-| lcdon_to_ly1_a | ✅ |
-| lcdon_to_ly1_b | ❌ |
-| lcdon_to_ly2_a | ✅ |
-| lcdon_to_ly2_b | ❌ |
-| lcdon_to_ly3_a | ✅ |
-| lcdon_to_ly3_b | ❌ |
-| lcdon_to_lyc1_int | ❌ |
-| lcdon_to_lyc2_int | ❌ |
-| lcdon_to_lyc3_int | ❌ |
-| lcdon_to_oam_int_l0 | ❌ |
-| lcdon_to_oam_int_l1 | ❌ |
-| lcdon_to_oam_int_l2 | ❌ |
-| lcdon_to_oam_unlock_a | ❌ |
-| lcdon_to_oam_unlock_b | ✅ |
-| lcdon_to_oam_unlock_c | ✅ |
-| lcdon_to_oam_unlock_d | ❌ |
-| lcdon_to_stat0_a | ✅ |
-| lcdon_to_stat0_b | ❌ |
-| lcdon_to_stat0_c | ✅ |
-| lcdon_to_stat0_d | ❌ |
-| lcdon_to_stat1_a | ✅ |
-| lcdon_to_stat1_b | ✅ |
-| lcdon_to_stat1_c | ❌ |
-| lcdon_to_stat1_d | ❌ |
-| lcdon_to_stat1_e | ✅ |
-| lcdon_to_stat2_a | ❌ |
-| lcdon_to_stat2_b | ✅ |
-| lcdon_to_stat2_c | ✅ |
-| lcdon_to_stat2_d | ✅ |
-| lcdon_to_stat3_a | ❌ |
-| lcdon_to_stat3_b | ✅ |
-| lcdon_to_stat3_c | ✅ |
-| lcdon_to_stat3_d | ✅ |
-| lcdon_write_timing | skip |
-| line_144_oam_int_a | ✅ |
-| line_144_oam_int_b | ❌ |
-| line_144_oam_int_c | ❌ |
-| line_144_oam_int_d | ❌ |
-| line_153_ly_a | ✅ |
-| line_153_ly_b | ❌ |
-| line_153_ly_c | ❌ |
-| line_153_ly_d | ❌ |
-| line_153_ly_e | ✅ |
-| line_153_ly_f | ❌ |
-| line_153_lyc0_int_inc_sled | ❌ |
-| line_153_lyc0_stat_timing_a | ✅ |
-| line_153_lyc0_stat_timing_b | ✅ |
-| line_153_lyc0_stat_timing_c | ✅ |
-| line_153_lyc0_stat_timing_d | ❌ |
-| line_153_lyc0_stat_timing_e | ❌ |
-| line_153_lyc0_stat_timing_f | ❌ |
-| line_153_lyc0_stat_timing_g | ✅ |
-| line_153_lyc0_stat_timing_h | ✅ |
-| line_153_lyc0_stat_timing_i | ✅ |
-| line_153_lyc0_stat_timing_j | ✅ |
-| line_153_lyc0_stat_timing_k | ❌ |
-| line_153_lyc0_stat_timing_l | ✅ |
-| line_153_lyc0_stat_timing_m | ❌ |
-| line_153_lyc0_stat_timing_n | ✅ |
-| line_153_lyc153_stat_timing_a | ✅ |
-| line_153_lyc153_stat_timing_b | ✅ |
-| line_153_lyc153_stat_timing_c | ❌ |
-| line_153_lyc153_stat_timing_d | ❌ |
-| line_153_lyc153_stat_timing_e | ❌ |
-| line_153_lyc153_stat_timing_f | ✅ |
-| line_153_lyc_a | ✅ |
-| line_153_lyc_b | ❌ |
-| line_153_lyc_c | ✅ |
-| line_153_lyc_int_a | skip |
-| line_153_lyc_int_b | skip |
-| line_65_ly | ❌ |
-| ly_while_lcd_off | skip |
-| lyc1_int_halt_a | ❌ |
-| lyc1_int_halt_b | ✅ |
-| lyc1_int_if_edge_a | ✅ |
-| lyc1_int_if_edge_b | ❌ |
-| lyc1_int_if_edge_c | ✅ |
-| lyc1_int_if_edge_d | ❌ |
-| lyc1_int_nops_a | ❌ |
-| lyc1_int_nops_b | ✅ |
-| lyc1_write_timing_a | skip |
-| lyc1_write_timing_b | skip |
-| lyc1_write_timing_c | skip |
-| lyc1_write_timing_d | skip |
-| lyc2_int_halt_a | ❌ |
-| lyc2_int_halt_b | ✅ |
-| lyc_int_halt_a | ❌ |
-| lyc_int_halt_b | ✅ |
-| mbc1_ram_banks | skip |
-| mbc1_rom_banks | skip |
-| minimal | skip |
-| mode2_stat_int_to_oam_unlock | skip |
-| oam_int_halt_a | ❌ |
-| oam_int_halt_b | ❌ |
-| oam_int_if_edge_a | ✅ |
-| oam_int_if_edge_b | ❌ |
-| oam_int_if_edge_c | ✅ |
-| oam_int_if_edge_d | ❌ |
-| oam_int_if_level_c | ✅ |
-| oam_int_if_level_d | ❌ |
-| oam_int_inc_sled | ❌ |
-| oam_int_nops_a | ❌ |
-| oam_int_nops_b | ❌ |
-| oam_read_l0_a | ❌ |
-| oam_read_l0_b | ✅ |
-| oam_read_l0_c | ✅ |
-| oam_read_l0_d | ❌ |
-| oam_read_l1_a | ❌ |
-| oam_read_l1_b | ✅ |
-| oam_read_l1_c | ✅ |
-| oam_read_l1_d | ❌ |
-| oam_read_l1_e | ✅ |
-| oam_read_l1_f | ❌ |
-| oam_sprite_trashing | skip |
-| oam_write_l0_a | ❌ |
-| oam_write_l0_b | ✅ |
-| oam_write_l0_c | ✅ |
-| oam_write_l0_d | ❌ |
-| oam_write_l0_e | ✅ |
-| oam_write_l1_a | ✅ |
-| oam_write_l1_b | ✅ |
-| oam_write_l1_c | ❌ |
-| oam_write_l1_d | ✅ |
-| oam_write_l1_e | ✅ |
-| oam_write_l1_f | ❌ |
-| poweron | skip |
-| poweron_bgp_000 | ✅ |
-| poweron_div_000 | ✅ |
-| poweron_div_004 | ✅ |
-| poweron_div_005 | ✅ |
-| poweron_dma_000 | ✅ |
-| poweron_if_000 | ✅ |
-| poweron_joy_000 | ❌ |
-| poweron_lcdc_000 | ✅ |
-| poweron_ly_000 | ✅ |
-| poweron_ly_119 | ❌ |
-| poweron_ly_120 | ✅ |
-| poweron_ly_233 | ❌ |
-| poweron_ly_234 | ✅ |
-| poweron_lyc_000 | ✅ |
-| poweron_oam_000 | ❌ |
-| poweron_oam_005 | ❌ |
-| poweron_oam_006 | ✅ |
-| poweron_oam_069 | ❌ |
-| poweron_oam_070 | ✅ |
-| poweron_oam_119 | ❌ |
-| poweron_oam_120 | ✅ |
-| poweron_oam_121 | ✅ |
-| poweron_oam_183 | ❌ |
-| poweron_oam_184 | ✅ |
-| poweron_oam_233 | ❌ |
-| poweron_oam_234 | ✅ |
-| poweron_oam_235 | ✅ |
-| poweron_obp0_000 | ❌ |
-| poweron_obp1_000 | ❌ |
-| poweron_sb_000 | ✅ |
-| poweron_sc_000 | ✅ |
-| poweron_scx_000 | ✅ |
-| poweron_scy_000 | ✅ |
-| poweron_stat_000 | ❌ |
-| poweron_stat_005 | ❌ |
-| poweron_stat_006 | ❌ |
-| poweron_stat_007 | ✅ |
-| poweron_stat_026 | ❌ |
-| poweron_stat_027 | ✅ |
-| poweron_stat_069 | ❌ |
-| poweron_stat_070 | ✅ |
-| poweron_stat_119 | ❌ |
-| poweron_stat_120 | ❌ |
-| poweron_stat_121 | ✅ |
-| poweron_stat_140 | ❌ |
-| poweron_stat_141 | ✅ |
-| poweron_stat_183 | ❌ |
-| poweron_stat_184 | ✅ |
-| poweron_stat_234 | ❌ |
-| poweron_stat_235 | ✅ |
-| poweron_tac_000 | ✅ |
-| poweron_tima_000 | ✅ |
-| poweron_tma_000 | ✅ |
-| poweron_vram_000 | ✅ |
-| poweron_vram_025 | ❌ |
-| poweron_vram_026 | ✅ |
-| poweron_vram_069 | ❌ |
-| poweron_vram_070 | ✅ |
-| poweron_vram_139 | ❌ |
-| poweron_vram_140 | ✅ |
-| poweron_vram_183 | ❌ |
-| poweron_vram_184 | ✅ |
-| poweron_wx_000 | ✅ |
-| poweron_wy_000 | ✅ |
-| ppu_scx_vs_bgp | skip |
-| ppu_sprite0_scx0_a | ✅ |
-| ppu_sprite0_scx0_b | ❌ |
-| ppu_sprite0_scx1_a | ✅ |
-| ppu_sprite0_scx1_b | ❌ |
-| ppu_sprite0_scx2_a | ✅ |
-| ppu_sprite0_scx2_b | ❌ |
-| ppu_sprite0_scx3_a | ✅ |
-| ppu_sprite0_scx3_b | ❌ |
-| ppu_sprite0_scx4_a | ✅ |
-| ppu_sprite0_scx4_b | ❌ |
-| ppu_sprite0_scx5_a | ✅ |
-| ppu_sprite0_scx5_b | ❌ |
-| ppu_sprite0_scx6_a | ✅ |
-| ppu_sprite0_scx6_b | ❌ |
-| ppu_sprite0_scx7_a | ✅ |
-| ppu_sprite0_scx7_b | ❌ |
-| ppu_sprite_testbench | skip |
-| ppu_spritex_vs_scx | skip |
-| ppu_win_vs_wx | skip |
-| ppu_wx_early | skip |
-| sprite4_0_a | ❌ |
-| sprite4_0_b | ✅ |
-| sprite4_1_a | ✅ |
-| sprite4_1_b | ✅ |
-| sprite4_2_a | ✅ |
-| sprite4_2_b | ❌ |
-| sprite4_3_a | ✅ |
-| sprite4_3_b | ❌ |
-| sprite4_4_a | ✅ |
-| sprite4_4_b | ❌ |
-| sprite4_5_a | ✅ |
-| sprite4_5_b | ❌ |
-| sprite4_6_a | ✅ |
-| sprite4_6_b | ❌ |
-| sprite4_7_a | ✅ |
-| sprite4_7_b | ❌ |
-| sprite_0_a | ✅ |
-| sprite_0_b | ❌ |
-| sprite_1_a | ✅ |
-| sprite_1_b | ❌ |
-| stat_write_glitch_l0_a | ❌ |
-| stat_write_glitch_l0_b | ❌ |
-| stat_write_glitch_l0_c | ✅ |
-| stat_write_glitch_l143_a | ✅ |
-| stat_write_glitch_l143_b | ❌ |
-| stat_write_glitch_l143_c | ❌ |
-| stat_write_glitch_l143_d | ❌ |
-| stat_write_glitch_l154_a | ❌ |
-| stat_write_glitch_l154_b | ❌ |
-| stat_write_glitch_l154_c | ✅ |
-| stat_write_glitch_l154_d | ❌ |
-| stat_write_glitch_l1_a | ✅ |
-| stat_write_glitch_l1_b | ❌ |
-| stat_write_glitch_l1_c | ❌ |
-| stat_write_glitch_l1_d | ✅ |
-| temp | skip |
-| timer_div_phase_c | ✅ |
-| timer_div_phase_d | ✅ |
-| timer_tima_inc_256k_a | ✅ |
-| timer_tima_inc_256k_b | ✅ |
-| timer_tima_inc_256k_c | ✅ |
-| timer_tima_inc_256k_d | ✅ |
-| timer_tima_inc_256k_e | ✅ |
-| timer_tima_inc_256k_f | ✅ |
-| timer_tima_inc_256k_g | ✅ |
-| timer_tima_inc_256k_h | ✅ |
-| timer_tima_inc_256k_i | ✅ |
-| timer_tima_inc_256k_j | ✅ |
-| timer_tima_inc_256k_k | ✅ |
-| timer_tima_inc_64k_a | ✅ |
-| timer_tima_inc_64k_b | ✅ |
-| timer_tima_inc_64k_c | ✅ |
-| timer_tima_inc_64k_d | ✅ |
-| timer_tima_phase_a | ✅ |
-| timer_tima_phase_b | ✅ |
-| timer_tima_phase_c | ✅ |
-| timer_tima_phase_d | ✅ |
-| timer_tima_phase_e | ✅ |
-| timer_tima_phase_f | ✅ |
-| timer_tima_phase_g | ✅ |
-| timer_tima_phase_h | ✅ |
-| timer_tima_phase_i | ✅ |
-| timer_tima_phase_j | ✅ |
-| timer_tima_reload_256k_a | ✅ |
-| timer_tima_reload_256k_b | ✅ |
-| timer_tima_reload_256k_c | ✅ |
-| timer_tima_reload_256k_d | ✅ |
-| timer_tima_reload_256k_e | ✅ |
-| timer_tima_reload_256k_f | ✅ |
-| timer_tima_reload_256k_g | ✅ |
-| timer_tima_reload_256k_h | ✅ |
-| timer_tima_reload_256k_i | ✅ |
-| timer_tima_reload_256k_j | ✅ |
-| timer_tima_reload_256k_k | ✅ |
-| timer_tima_write_a | ✅ |
-| timer_tima_write_b | ✅ |
-| timer_tima_write_c | ✅ |
-| timer_tima_write_d | ✅ |
-| timer_tima_write_e | ❌ |
-| timer_tima_write_f | ✅ |
-| timer_tma_write_a | ❌ |
-| timer_tma_write_b | ✅ |
-| toggle_lcdc | skip |
-| vblank2_int_halt_a | ✅ |
-| vblank2_int_halt_b | ✅ |
-| vblank2_int_if_a | ✅ |
-| vblank2_int_if_b | ✅ |
-| vblank2_int_if_c | ✅ |
-| vblank2_int_if_d | ✅ |
-| vblank2_int_inc_sled | ✅ |
-| vblank2_int_nops_a | ✅ |
-| vblank2_int_nops_b | ✅ |
-| vblank_int_halt_a | ✅ |
-| vblank_int_halt_b | ✅ |
-| vblank_int_if_a | ✅ |
-| vblank_int_if_b | ✅ |
-| vblank_int_if_c | ✅ |
-| vblank_int_if_d | ✅ |
-| vblank_int_inc_sled | ✅ |
-| vblank_int_nops_a | ✅ |
-| vblank_int_nops_b | ✅ |
-| vram_read_l0_a | ✅ |
-| vram_read_l0_b | ✅ |
-| vram_read_l0_c | ✅ |
-| vram_read_l0_d | ❌ |
-| vram_read_l1_a | ✅ |
-| vram_read_l1_b | ❌ |
-| vram_read_l1_c | ✅ |
-| vram_read_l1_d | ❌ |
-| vram_write_l0_a | ✅ |
-| vram_write_l0_b | ✅ |
-| vram_write_l0_c | ✅ |
-| vram_write_l0_d | ❌ |
-| vram_write_l1_a | ✅ |
-| vram_write_l1_b | ✅ |
-| vram_write_l1_c | ✅ |
-| vram_write_l1_d | ❌ |
-| wave_write_to_0xC003 | skip |
-| win0_a | ✅ |
-| win0_b | ❌ |
-| win0_scx3_a | ✅ |
-| win0_scx3_b | ❌ |
-| win10_a | ✅ |
-| win10_b | ❌ |
-| win10_scx3_a | ✅ |
-| win10_scx3_b | ❌ |
-| win11_a | ✅ |
-| win11_b | ❌ |
-| win12_a | ✅ |
-| win12_b | ❌ |
-| win13_a | ✅ |
-| win13_b | ❌ |
-| win14_a | ✅ |
-| win14_b | ❌ |
-| win15_a | ✅ |
-| win15_b | ❌ |
-| win1_a | ✅ |
-| win1_b | ❌ |
-| win2_a | ✅ |
-| win2_b | ❌ |
-| win3_a | ✅ |
-| win3_b | ❌ |
-| win4_a | ✅ |
-| win4_b | ❌ |
-| win5_a | ✅ |
-| win5_b | ❌ |
-| win6_a | ✅ |
-| win6_b | ❌ |
-| win7_a | ✅ |
-| win7_b | ❌ |
-| win8_a | ✅ |
-| win8_b | ❌ |
-| win9_a | ✅ |
-| win9_b | ❌ |
+Results: 255 passed, 213 failed, 0 timeout, 0 skipped
+| Test Name | Pass/Fail (✅/❌) | Details |
+|-----------|------|---------|
+| div_inc_timing_a.gb | ✅ |  |
+| div_inc_timing_b.gb | ✅ |  |
+| dma_0x1000.gb | ✅ |  |
+| dma_0x9000.gb | ✅ |  |
+| dma_0xA000.gb | ✅ |  |
+| dma_0xC000.gb | ✅ |  |
+| dma_0xE000.gb | ✅ |  |
+| dma_timing_a.gb | ✅ |  |
+| halt_bug.gb | ✅ |  |
+| halt_op_dupe.gb | ✅ |  |
+| halt_op_dupe_delay.gb | ❌ | [actual=0x1 expected=0x55] |
+| hblank_int_if_a.gb | ✅ |  |
+| hblank_int_if_b.gb | ❌ | [actual=0xe0 expected=0xe2] |
+| hblank_int_l0.gb | ❌ | [actual=0x41 expected=0x3d] |
+| hblank_int_l1.gb | ❌ | [actual=0x36 expected=0x32] |
+| hblank_int_l2.gb | ❌ | [actual=0x36 expected=0x32] |
+| hblank_int_scx0.gb | ❌ | [actual=0x31 expected=0x2d] |
+| hblank_int_scx0_if_a.gb | ❌ | [actual=0x0 expected=0xff] |
+| hblank_int_scx0_if_b.gb | ❌ | [actual=0x0 expected=0xe0] |
+| hblank_int_scx0_if_c.gb | ❌ | [actual=0x0 expected=0xe2] |
+| hblank_int_scx0_if_d.gb | ✅ |  |
+| hblank_int_scx1.gb | ❌ | [actual=0x31 expected=0x2d] |
+| hblank_int_scx1_if_a.gb | ❌ | [actual=0x0 expected=0xff] |
+| hblank_int_scx1_if_b.gb | ❌ | [actual=0x0 expected=0xe0] |
+| hblank_int_scx1_if_c.gb | ❌ | [actual=0x0 expected=0xe2] |
+| hblank_int_scx1_if_d.gb | ✅ |  |
+| hblank_int_scx1_nops_a.gb | ✅ |  |
+| hblank_int_scx1_nops_b.gb | ❌ | [actual=0x0 expected=0x1] |
+| hblank_int_scx2.gb | ❌ | [actual=0x32 expected=0x2d] |
+| hblank_int_scx2_if_a.gb | ❌ | [actual=0x0 expected=0xff] |
+| hblank_int_scx2_if_b.gb | ❌ | [actual=0x0 expected=0xe0] |
+| hblank_int_scx2_if_c.gb | ❌ | [actual=0x0 expected=0xe2] |
+| hblank_int_scx2_if_d.gb | ✅ |  |
+| hblank_int_scx2_nops_a.gb | ✅ |  |
+| hblank_int_scx2_nops_b.gb | ❌ | [actual=0x0 expected=0x1] |
+| hblank_int_scx3_if_a.gb | ❌ | [actual=0x0 expected=0xff] |
+| hblank_int_scx3_if_b.gb | ❌ | [actual=0x0 expected=0xe0] |
+| hblank_int_scx3_if_c.gb | ❌ | [actual=0x0 expected=0xe2] |
+| hblank_int_scx3_if_d.gb | ✅ |  |
+| hblank_int_scx3_nops_a.gb | ✅ |  |
+| hblank_int_scx3_nops_b.gb | ❌ | [actual=0x0 expected=0x1] |
+| hblank_int_scx4.gb | ❌ | [actual=0x32 expected=0x2e] |
+| hblank_int_scx4_if_a.gb | ❌ | [actual=0x0 expected=0xff] |
+| hblank_int_scx4_if_b.gb | ❌ | [actual=0x0 expected=0xe0] |
+| hblank_int_scx4_if_c.gb | ❌ | [actual=0x0 expected=0xe2] |
+| hblank_int_scx4_if_d.gb | ✅ |  |
+| hblank_int_scx4_nops_a.gb | ✅ |  |
+| hblank_int_scx4_nops_b.gb | ❌ | [actual=0x0 expected=0x1] |
+| hblank_int_scx5.gb | ❌ | [actual=0x32 expected=0x2e] |
+| hblank_int_scx5_if_a.gb | ❌ | [actual=0x0 expected=0xff] |
+| hblank_int_scx5_if_b.gb | ❌ | [actual=0x0 expected=0xe0] |
+| hblank_int_scx5_if_c.gb | ❌ | [actual=0x0 expected=0xe2] |
+| hblank_int_scx5_if_d.gb | ✅ |  |
+| hblank_int_scx5_nops_a.gb | ✅ |  |
+| hblank_int_scx5_nops_b.gb | ❌ | [actual=0x0 expected=0x1] |
+| hblank_int_scx6.gb | ❌ | [actual=0x33 expected=0x2e] |
+| hblank_int_scx6_if_a.gb | ❌ | [actual=0x0 expected=0xff] |
+| hblank_int_scx6_if_b.gb | ❌ | [actual=0x0 expected=0xe0] |
+| hblank_int_scx6_if_c.gb | ❌ | [actual=0x0 expected=0xe2] |
+| hblank_int_scx6_if_d.gb | ✅ |  |
+| hblank_int_scx6_nops_a.gb | ✅ |  |
+| hblank_int_scx6_nops_b.gb | ❌ | [actual=0x0 expected=0x1] |
+| hblank_int_scx7.gb | ❌ | [actual=0x33 expected=0x2f] |
+| hblank_int_scx7_if_a.gb | ❌ | [actual=0x0 expected=0xff] |
+| hblank_int_scx7_if_b.gb | ❌ | [actual=0x0 expected=0xe0] |
+| hblank_int_scx7_if_c.gb | ❌ | [actual=0x0 expected=0xe2] |
+| hblank_int_scx7_if_d.gb | ✅ |  |
+| hblank_int_scx7_nops_a.gb | ✅ |  |
+| hblank_int_scx7_nops_b.gb | ❌ | [actual=0x0 expected=0x1] |
+| hblank_scx2_if_a.gb | ❌ | [actual=0xe0 expected=0xe2] |
+| hblank_scx3_if_b.gb | ❌ | [actual=0xe0 expected=0xff] |
+| hblank_scx3_if_c.gb | ❌ | [actual=0xe0 expected=0xff] |
+| hblank_scx3_if_d.gb | ❌ | [actual=0xe0 expected=0xff] |
+| int_hblank_halt_bug_a.gb | ✅ |  |
+| int_hblank_halt_bug_b.gb | ✅ |  |
+| int_hblank_halt_scx0.gb | ❌ | [actual=0x65 expected=0x62] |
+| int_hblank_halt_scx1.gb | ❌ | [actual=0x65 expected=0x62] |
+| int_hblank_halt_scx2.gb | ❌ | [actual=0x66 expected=0x62] |
+| int_hblank_halt_scx3.gb | ❌ | [actual=0x66 expected=0x63] |
+| int_hblank_halt_scx4.gb | ❌ | [actual=0x66 expected=0x63] |
+| int_hblank_halt_scx5.gb | ❌ | [actual=0x66 expected=0x63] |
+| int_hblank_halt_scx6.gb | ❌ | [actual=0x67 expected=0x63] |
+| int_hblank_halt_scx7.gb | ❌ | [actual=0x67 expected=0x64] |
+| int_hblank_incs_scx0.gb | ❌ | [actual=0x41 expected=0x3d] |
+| int_hblank_incs_scx1.gb | ❌ | [actual=0x41 expected=0x3e] |
+| int_hblank_incs_scx2.gb | ❌ | [actual=0x42 expected=0x3e] |
+| int_hblank_incs_scx3.gb | ❌ | [actual=0x42 expected=0x3e] |
+| int_hblank_incs_scx4.gb | ❌ | [actual=0x42 expected=0x3e] |
+| int_hblank_incs_scx5.gb | ❌ | [actual=0x42 expected=0x3f] |
+| int_hblank_incs_scx6.gb | ❌ | [actual=0x43 expected=0x3f] |
+| int_hblank_incs_scx7.gb | ❌ | [actual=0x43 expected=0x3f] |
+| int_hblank_nops_scx0.gb | ❌ | [actual=0x0 expected=0xff] |
+| int_hblank_nops_scx1.gb | ❌ | [actual=0x0 expected=0xff] |
+| int_hblank_nops_scx2.gb | ❌ | [actual=0x0 expected=0xff] |
+| int_hblank_nops_scx3.gb | ❌ | [actual=0x0 expected=0xff] |
+| int_hblank_nops_scx4.gb | ❌ | [actual=0x0 expected=0xff] |
+| int_hblank_nops_scx5.gb | ❌ | [actual=0x0 expected=0xff] |
+| int_hblank_nops_scx6.gb | ❌ | [actual=0x0 expected=0xff] |
+| int_hblank_nops_scx7.gb | ❌ | [actual=0x0 expected=0xff] |
+| int_lyc_halt.gb | ❌ | [actual=0x9a expected=0x99] |
+| int_lyc_incs.gb | ❌ | [actual=0x71 expected=0x70] |
+| int_lyc_nops.gb | ❌ | [actual=0x9a expected=0x99] |
+| int_oam_halt.gb | ❌ | [actual=0x23 expected=0x94] |
+| int_oam_incs.gb | ❌ | [actual=0x91 expected=0x6f] |
+| int_oam_nops.gb | ❌ | [actual=0x23 expected=0x93] |
+| int_timer_halt.gb | ❌ | [actual=0xe expected=0xf] |
+| int_timer_halt_div_a.gb | ✅ |  |
+| int_timer_halt_div_b.gb | ❌ | [actual=0x2 expected=0x3] |
+| int_timer_incs.gb | ✅ |  |
+| int_timer_nops.gb | ✅ |  |
+| int_timer_nops_div_a.gb | ✅ |  |
+| int_timer_nops_div_b.gb | ✅ |  |
+| int_vblank1_halt.gb | ✅ |  |
+| int_vblank1_incs.gb | ✅ |  |
+| int_vblank1_nops.gb | ✅ |  |
+| int_vblank2_halt.gb | ✅ |  |
+| int_vblank2_incs.gb | ✅ |  |
+| int_vblank2_nops.gb | ✅ |  |
+| is_if_set_during_ime0.gb | ✅ |  |
+| lcdon_halt_to_vblank_int_a.gb | ✅ |  |
+| lcdon_halt_to_vblank_int_b.gb | ✅ |  |
+| lcdon_nops_to_vblank_int_a.gb | ✅ |  |
+| lcdon_nops_to_vblank_int_b.gb | ✅ |  |
+| lcdon_to_if_oam_a.gb | ❌ | [actual=0xe2 expected=0xe0] |
+| lcdon_to_if_oam_b.gb | ✅ |  |
+| lcdon_to_ly1_a.gb | ✅ |  |
+| lcdon_to_ly1_b.gb | ❌ | [actual=0x0 expected=0x1] |
+| lcdon_to_ly2_a.gb | ✅ |  |
+| lcdon_to_ly2_b.gb | ❌ | [actual=0x1 expected=0x2] |
+| lcdon_to_ly3_a.gb | ✅ |  |
+| lcdon_to_ly3_b.gb | ❌ | [actual=0x2 expected=0x3] |
+| lcdon_to_lyc1_int.gb | ❌ | [actual=0x71 expected=0x70] |
+| lcdon_to_lyc2_int.gb | ❌ | [actual=0xe3 expected=0xe2] |
+| lcdon_to_lyc3_int.gb | ❌ | [actual=0x55 expected=0x54] |
+| lcdon_to_oam_int_l0.gb | ❌ | [actual=0x91 expected=0x6f] |
+| lcdon_to_oam_int_l1.gb | ❌ | [actual=0x0 expected=0x64] |
+| lcdon_to_oam_int_l2.gb | ❌ | [actual=0x0 expected=0x64] |
+| lcdon_to_oam_unlock_a.gb | ❌ | [actual=0xff expected=0x27] |
+| lcdon_to_oam_unlock_b.gb | ✅ |  |
+| lcdon_to_oam_unlock_c.gb | ✅ |  |
+| lcdon_to_oam_unlock_d.gb | ❌ | [actual=0xff expected=0x27] |
+| lcdon_to_stat0_a.gb | ✅ |  |
+| lcdon_to_stat0_b.gb | ❌ | [actual=0x87 expected=0x84] |
+| lcdon_to_stat0_c.gb | ✅ |  |
+| lcdon_to_stat0_d.gb | ❌ | [actual=0x83 expected=0x80] |
+| lcdon_to_stat1_a.gb | ✅ |  |
+| lcdon_to_stat1_b.gb | ✅ |  |
+| lcdon_to_stat1_c.gb | ❌ | [actual=0x81 expected=0x85] |
+| lcdon_to_stat1_d.gb | ❌ | [actual=0x81 expected=0x84] |
+| lcdon_to_stat1_e.gb | ✅ |  |
+| lcdon_to_stat2_a.gb | ❌ | [actual=0x84 expected=0x80] |
+| lcdon_to_stat2_b.gb | ✅ |  |
+| lcdon_to_stat2_c.gb | ✅ |  |
+| lcdon_to_stat2_d.gb | ✅ |  |
+| lcdon_to_stat3_a.gb | ❌ | [actual=0x86 expected=0x84] |
+| lcdon_to_stat3_b.gb | ✅ |  |
+| lcdon_to_stat3_c.gb | ✅ |  |
+| lcdon_to_stat3_d.gb | ✅ |  |
+| line_144_oam_int_a.gb | ✅ |  |
+| line_144_oam_int_b.gb | ❌ | [actual=0xe0 expected=0xff] |
+| line_144_oam_int_c.gb | ❌ | [actual=0xe0 expected=0xff] |
+| line_144_oam_int_d.gb | ❌ | [actual=0xe1 expected=0xff] |
+| line_153_ly_a.gb | ✅ |  |
+| line_153_ly_b.gb | ❌ | [actual=0x98 expected=0x99] |
+| line_153_ly_c.gb | ❌ | [actual=0x99 expected=0x0] |
+| line_153_ly_d.gb | ❌ | [actual=0x99 expected=0x0] |
+| line_153_ly_e.gb | ✅ |  |
+| line_153_ly_f.gb | ❌ | [actual=0x0 expected=0x1] |
+| line_153_lyc0_int_inc_sled.gb | ❌ | [actual=0x62 expected=0xff] |
+| line_153_lyc0_stat_timing_a.gb | ✅ |  |
+| line_153_lyc0_stat_timing_b.gb | ✅ |  |
+| line_153_lyc0_stat_timing_c.gb | ✅ |  |
+| line_153_lyc0_stat_timing_d.gb | ❌ | [actual=0xc1 expected=0xc5] |
+| line_153_lyc0_stat_timing_e.gb | ❌ | [actual=0xc1 expected=0xc5] |
+| line_153_lyc0_stat_timing_f.gb | ❌ | [actual=0xc1 expected=0xc4] |
+| line_153_lyc0_stat_timing_g.gb | ✅ |  |
+| line_153_lyc0_stat_timing_h.gb | ✅ |  |
+| line_153_lyc0_stat_timing_i.gb | ✅ |  |
+| line_153_lyc0_stat_timing_j.gb | ✅ |  |
+| line_153_lyc0_stat_timing_k.gb | ❌ | [actual=0xc7 expected=0xc4] |
+| line_153_lyc0_stat_timing_l.gb | ✅ |  |
+| line_153_lyc0_stat_timing_m.gb | ❌ | [actual=0xc4 expected=0xc0] |
+| line_153_lyc0_stat_timing_n.gb | ✅ |  |
+| line_153_lyc153_stat_timing_a.gb | ✅ |  |
+| line_153_lyc153_stat_timing_b.gb | ✅ |  |
+| line_153_lyc153_stat_timing_c.gb | ❌ | [actual=0xc5 expected=0xc1] |
+| line_153_lyc153_stat_timing_d.gb | ❌ | [actual=0xc5 expected=0xc1] |
+| line_153_lyc153_stat_timing_e.gb | ❌ | [actual=0xc5 expected=0xc0] |
+| line_153_lyc153_stat_timing_f.gb | ✅ |  |
+| line_153_lyc_a.gb | ✅ |  |
+| line_153_lyc_b.gb | ❌ | [actual=0x81 expected=0x85] |
+| line_153_lyc_c.gb | ✅ |  |
+| line_65_ly.gb | ❌ | [actual=0x41 expected=0x40] |
+| lyc1_int_halt_a.gb | ❌ | [actual=0x2 expected=0x1] |
+| lyc1_int_halt_b.gb | ✅ |  |
+| lyc1_int_if_edge_a.gb | ✅ |  |
+| lyc1_int_if_edge_b.gb | ❌ | [actual=0xe0 expected=0xe2] |
+| lyc1_int_if_edge_c.gb | ✅ |  |
+| lyc1_int_if_edge_d.gb | ❌ | [actual=0xe2 expected=0xe0] |
+| lyc1_int_nops_a.gb | ❌ | [actual=0x2 expected=0x1] |
+| lyc1_int_nops_b.gb | ✅ |  |
+| lyc2_int_halt_a.gb | ❌ | [actual=0x2 expected=0x1] |
+| lyc2_int_halt_b.gb | ✅ |  |
+| lyc_int_halt_a.gb | ❌ | [actual=0x5 expected=0x4] |
+| lyc_int_halt_b.gb | ✅ |  |
+| oam_int_halt_a.gb | ❌ | [actual=0x0 expected=0x1] |
+| oam_int_halt_b.gb | ❌ | [actual=0x0 expected=0x2] |
+| oam_int_if_edge_a.gb | ✅ |  |
+| oam_int_if_edge_b.gb | ❌ | [actual=0xe0 expected=0xe2] |
+| oam_int_if_edge_c.gb | ✅ |  |
+| oam_int_if_edge_d.gb | ❌ | [actual=0xe2 expected=0xe0] |
+| oam_int_if_level_c.gb | ✅ |  |
+| oam_int_if_level_d.gb | ❌ | [actual=0xe2 expected=0xe0] |
+| oam_int_inc_sled.gb | ❌ | [actual=0x0 expected=0x64] |
+| oam_int_nops_a.gb | ❌ | [actual=0x0 expected=0x1] |
+| oam_int_nops_b.gb | ❌ | [actual=0x0 expected=0x2] |
+| oam_read_l0_a.gb | ❌ | [actual=0xff expected=0xf0] |
+| oam_read_l0_b.gb | ✅ |  |
+| oam_read_l0_c.gb | ✅ |  |
+| oam_read_l0_d.gb | ❌ | [actual=0xff expected=0xf0] |
+| oam_read_l1_a.gb | ❌ | [actual=0xf0 expected=0xff] |
+| oam_read_l1_b.gb | ✅ |  |
+| oam_read_l1_c.gb | ✅ |  |
+| oam_read_l1_d.gb | ❌ | [actual=0xff expected=0xf0] |
+| oam_read_l1_e.gb | ✅ |  |
+| oam_read_l1_f.gb | ❌ | [actual=0xf0 expected=0xff] |
+| oam_write_l0_a.gb | ❌ | [actual=0xf0 expected=0x91] |
+| oam_write_l0_b.gb | ✅ |  |
+| oam_write_l0_c.gb | ✅ |  |
+| oam_write_l0_d.gb | ❌ | [actual=0xf0 expected=0x91] |
+| oam_write_l0_e.gb | ✅ |  |
+| oam_write_l1_a.gb | ✅ |  |
+| oam_write_l1_b.gb | ✅ |  |
+| oam_write_l1_c.gb | ❌ | [actual=0xf0 expected=0x91] |
+| oam_write_l1_d.gb | ✅ |  |
+| oam_write_l1_e.gb | ✅ |  |
+| oam_write_l1_f.gb | ❌ | [actual=0xf0 expected=0x91] |
+| poweron_bgp_000.gb | ✅ |  |
+| poweron_div_000.gb | ✅ |  |
+| poweron_div_004.gb | ✅ |  |
+| poweron_div_005.gb | ✅ |  |
+| poweron_dma_000.gb | ✅ |  |
+| poweron_if_000.gb | ✅ |  |
+| poweron_joy_000.gb | ❌ | [actual=0xff expected=0xcf] |
+| poweron_lcdc_000.gb | ✅ |  |
+| poweron_ly_000.gb | ✅ |  |
+| poweron_ly_119.gb | ❌ | [actual=0x1 expected=0x0] |
+| poweron_ly_120.gb | ✅ |  |
+| poweron_ly_233.gb | ❌ | [actual=0x2 expected=0x1] |
+| poweron_ly_234.gb | ✅ |  |
+| poweron_lyc_000.gb | ✅ |  |
+| poweron_oam_000.gb | ❌ | [actual=0xff expected=0xff] |
+| poweron_oam_005.gb | ❌ | [actual=0xff expected=0xff] |
+| poweron_oam_006.gb | ✅ |  |
+| poweron_oam_069.gb | ❌ | [actual=0x0 expected=0xff] |
+| poweron_oam_070.gb | ✅ |  |
+| poweron_oam_119.gb | ❌ | [actual=0xff expected=0xff] |
+| poweron_oam_120.gb | ✅ |  |
+| poweron_oam_121.gb | ✅ |  |
+| poweron_oam_183.gb | ❌ | [actual=0x0 expected=0xff] |
+| poweron_oam_184.gb | ✅ |  |
+| poweron_oam_233.gb | ❌ | [actual=0xff expected=0xff] |
+| poweron_oam_234.gb | ✅ |  |
+| poweron_oam_235.gb | ✅ |  |
+| poweron_obp0_000.gb | ❌ | [actual=0x0 expected=0xff] |
+| poweron_obp1_000.gb | ❌ | [actual=0x0 expected=0xff] |
+| poweron_sb_000.gb | ✅ |  |
+| poweron_sc_000.gb | ✅ |  |
+| poweron_scx_000.gb | ✅ |  |
+| poweron_scy_000.gb | ✅ |  |
+| poweron_stat_000.gb | ❌ | [actual=0x86 expected=0x85] |
+| poweron_stat_005.gb | ❌ | [actual=0x86 expected=0x85] |
+| poweron_stat_006.gb | ❌ | [actual=0x86 expected=0x84] |
+| poweron_stat_007.gb | ✅ |  |
+| poweron_stat_026.gb | ❌ | [actual=0x87 expected=0x86] |
+| poweron_stat_027.gb | ✅ |  |
+| poweron_stat_069.gb | ❌ | [actual=0x84 expected=0x87] |
+| poweron_stat_070.gb | ✅ |  |
+| poweron_stat_119.gb | ❌ | [actual=0x82 expected=0x84] |
+| poweron_stat_120.gb | ❌ | [actual=0x82 expected=0x80] |
+| poweron_stat_121.gb | ✅ |  |
+| poweron_stat_140.gb | ❌ | [actual=0x83 expected=0x82] |
+| poweron_stat_141.gb | ✅ |  |
+| poweron_stat_183.gb | ❌ | [actual=0x80 expected=0x83] |
+| poweron_stat_184.gb | ✅ |  |
+| poweron_stat_234.gb | ❌ | [actual=0x82 expected=0x80] |
+| poweron_stat_235.gb | ✅ |  |
+| poweron_tac_000.gb | ✅ |  |
+| poweron_tima_000.gb | ✅ |  |
+| poweron_tma_000.gb | ✅ |  |
+| poweron_vram_000.gb | ✅ |  |
+| poweron_vram_025.gb | ❌ | [actual=0xff expected=0xff] |
+| poweron_vram_026.gb | ✅ |  |
+| poweron_vram_069.gb | ❌ | [actual=0x0 expected=0xff] |
+| poweron_vram_070.gb | ✅ |  |
+| poweron_vram_139.gb | ❌ | [actual=0xff expected=0xff] |
+| poweron_vram_140.gb | ✅ |  |
+| poweron_vram_183.gb | ❌ | [actual=0x0 expected=0xff] |
+| poweron_vram_184.gb | ✅ |  |
+| poweron_wx_000.gb | ✅ |  |
+| poweron_wy_000.gb | ✅ |  |
+| ppu_sprite0_scx0_a.gb | ✅ |  |
+| ppu_sprite0_scx0_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| ppu_sprite0_scx1_a.gb | ✅ |  |
+| ppu_sprite0_scx1_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| ppu_sprite0_scx2_a.gb | ✅ |  |
+| ppu_sprite0_scx2_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| ppu_sprite0_scx3_a.gb | ✅ |  |
+| ppu_sprite0_scx3_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| ppu_sprite0_scx4_a.gb | ✅ |  |
+| ppu_sprite0_scx4_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| ppu_sprite0_scx5_a.gb | ✅ |  |
+| ppu_sprite0_scx5_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| ppu_sprite0_scx6_a.gb | ✅ |  |
+| ppu_sprite0_scx6_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| ppu_sprite0_scx7_a.gb | ✅ |  |
+| ppu_sprite0_scx7_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| sprite4_0_a.gb | ❌ | [actual=0x80 expected=0x83] |
+| sprite4_0_b.gb | ✅ |  |
+| sprite4_1_a.gb | ✅ |  |
+| sprite4_1_b.gb | ✅ |  |
+| sprite4_2_a.gb | ✅ |  |
+| sprite4_2_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| sprite4_3_a.gb | ✅ |  |
+| sprite4_3_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| sprite4_4_a.gb | ✅ |  |
+| sprite4_4_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| sprite4_5_a.gb | ✅ |  |
+| sprite4_5_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| sprite4_6_a.gb | ✅ |  |
+| sprite4_6_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| sprite4_7_a.gb | ✅ |  |
+| sprite4_7_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| sprite_0_a.gb | ✅ |  |
+| sprite_0_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| sprite_1_a.gb | ✅ |  |
+| sprite_1_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| stat_write_glitch_l0_a.gb | ❌ | [actual=0xe0 expected=0xe2] |
+| stat_write_glitch_l0_b.gb | ❌ | [actual=0xe0 expected=0xe2] |
+| stat_write_glitch_l0_c.gb | ✅ |  |
+| stat_write_glitch_l143_a.gb | ✅ |  |
+| stat_write_glitch_l143_b.gb | ❌ | [actual=0xe0 expected=0xe2] |
+| stat_write_glitch_l143_c.gb | ❌ | [actual=0xe0 expected=0xe2] |
+| stat_write_glitch_l143_d.gb | ❌ | [actual=0xe1 expected=0xe3] |
+| stat_write_glitch_l154_a.gb | ❌ | [actual=0xe0 expected=0xe2] |
+| stat_write_glitch_l154_b.gb | ❌ | [actual=0xe0 expected=0xe2] |
+| stat_write_glitch_l154_c.gb | ✅ |  |
+| stat_write_glitch_l154_d.gb | ❌ | [actual=0xe1 expected=0xe0] |
+| stat_write_glitch_l1_a.gb | ✅ |  |
+| stat_write_glitch_l1_b.gb | ❌ | [actual=0xe0 expected=0xe2] |
+| stat_write_glitch_l1_c.gb | ❌ | [actual=0xe0 expected=0xe2] |
+| stat_write_glitch_l1_d.gb | ✅ |  |
+| timer_div_phase_c.gb | ✅ |  |
+| timer_div_phase_d.gb | ✅ |  |
+| timer_tima_inc_256k_a.gb | ✅ |  |
+| timer_tima_inc_256k_b.gb | ✅ |  |
+| timer_tima_inc_256k_c.gb | ✅ |  |
+| timer_tima_inc_256k_d.gb | ✅ |  |
+| timer_tima_inc_256k_e.gb | ✅ |  |
+| timer_tima_inc_256k_f.gb | ✅ |  |
+| timer_tima_inc_256k_g.gb | ✅ |  |
+| timer_tima_inc_256k_h.gb | ✅ |  |
+| timer_tima_inc_256k_i.gb | ✅ |  |
+| timer_tima_inc_256k_j.gb | ✅ |  |
+| timer_tima_inc_256k_k.gb | ✅ |  |
+| timer_tima_inc_64k_a.gb | ✅ |  |
+| timer_tima_inc_64k_b.gb | ✅ |  |
+| timer_tima_inc_64k_c.gb | ✅ |  |
+| timer_tima_inc_64k_d.gb | ✅ |  |
+| timer_tima_phase_a.gb | ✅ |  |
+| timer_tima_phase_b.gb | ✅ |  |
+| timer_tima_phase_c.gb | ✅ |  |
+| timer_tima_phase_d.gb | ✅ |  |
+| timer_tima_phase_e.gb | ✅ |  |
+| timer_tima_phase_f.gb | ✅ |  |
+| timer_tima_phase_g.gb | ✅ |  |
+| timer_tima_phase_h.gb | ✅ |  |
+| timer_tima_phase_i.gb | ✅ |  |
+| timer_tima_phase_j.gb | ✅ |  |
+| timer_tima_reload_256k_a.gb | ✅ |  |
+| timer_tima_reload_256k_b.gb | ✅ |  |
+| timer_tima_reload_256k_c.gb | ✅ |  |
+| timer_tima_reload_256k_d.gb | ✅ |  |
+| timer_tima_reload_256k_e.gb | ✅ |  |
+| timer_tima_reload_256k_f.gb | ✅ |  |
+| timer_tima_reload_256k_g.gb | ✅ |  |
+| timer_tima_reload_256k_h.gb | ✅ |  |
+| timer_tima_reload_256k_i.gb | ✅ |  |
+| timer_tima_reload_256k_j.gb | ✅ |  |
+| timer_tima_reload_256k_k.gb | ✅ |  |
+| timer_tima_write_a.gb | ✅ |  |
+| timer_tima_write_b.gb | ✅ |  |
+| timer_tima_write_c.gb | ✅ |  |
+| timer_tima_write_d.gb | ✅ |  |
+| timer_tima_write_e.gb | ✅ |  |
+| timer_tima_write_f.gb | ✅ |  |
+| timer_tma_write_a.gb | ✅ |  |
+| timer_tma_write_b.gb | ✅ |  |
+| vblank2_int_halt_a.gb | ✅ |  |
+| vblank2_int_halt_b.gb | ✅ |  |
+| vblank2_int_if_a.gb | ✅ |  |
+| vblank2_int_if_b.gb | ✅ |  |
+| vblank2_int_if_c.gb | ✅ |  |
+| vblank2_int_if_d.gb | ✅ |  |
+| vblank2_int_inc_sled.gb | ✅ |  |
+| vblank2_int_nops_a.gb | ✅ |  |
+| vblank2_int_nops_b.gb | ✅ |  |
+| vblank_int_halt_a.gb | ✅ |  |
+| vblank_int_halt_b.gb | ✅ |  |
+| vblank_int_if_a.gb | ✅ |  |
+| vblank_int_if_b.gb | ✅ |  |
+| vblank_int_if_c.gb | ✅ |  |
+| vblank_int_if_d.gb | ✅ |  |
+| vblank_int_inc_sled.gb | ✅ |  |
+| vblank_int_nops_a.gb | ✅ |  |
+| vblank_int_nops_b.gb | ✅ |  |
+| vram_read_l0_a.gb | ✅ |  |
+| vram_read_l0_b.gb | ✅ |  |
+| vram_read_l0_c.gb | ✅ |  |
+| vram_read_l0_d.gb | ❌ | [actual=0xff expected=0xf0] |
+| vram_read_l1_a.gb | ✅ |  |
+| vram_read_l1_b.gb | ❌ | [actual=0xf0 expected=0xff] |
+| vram_read_l1_c.gb | ✅ |  |
+| vram_read_l1_d.gb | ❌ | [actual=0xff expected=0xf0] |
+| vram_write_l0_a.gb | ✅ |  |
+| vram_write_l0_b.gb | ✅ |  |
+| vram_write_l0_c.gb | ✅ |  |
+| vram_write_l0_d.gb | ❌ | [actual=0xf0 expected=0x91] |
+| vram_write_l1_a.gb | ✅ |  |
+| vram_write_l1_b.gb | ✅ |  |
+| vram_write_l1_c.gb | ✅ |  |
+| vram_write_l1_d.gb | ❌ | [actual=0xf0 expected=0x91] |
+| win0_a.gb | ✅ |  |
+| win0_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win0_scx3_a.gb | ✅ |  |
+| win0_scx3_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win10_a.gb | ✅ |  |
+| win10_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win10_scx3_a.gb | ✅ |  |
+| win10_scx3_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win11_a.gb | ✅ |  |
+| win11_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win12_a.gb | ✅ |  |
+| win12_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win13_a.gb | ✅ |  |
+| win13_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win14_a.gb | ✅ |  |
+| win14_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win15_a.gb | ✅ |  |
+| win15_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win1_a.gb | ✅ |  |
+| win1_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win2_a.gb | ✅ |  |
+| win2_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win3_a.gb | ✅ |  |
+| win3_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win4_a.gb | ✅ |  |
+| win4_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win5_a.gb | ✅ |  |
+| win5_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win6_a.gb | ✅ |  |
+| win6_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win7_a.gb | ✅ |  |
+| win7_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win8_a.gb | ✅ |  |
+| win8_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win9_a.gb | ✅ |  |
+| win9_b.gb | ❌ | [actual=0x83 expected=0x80] |
