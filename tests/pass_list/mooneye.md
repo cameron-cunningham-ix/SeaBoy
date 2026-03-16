@@ -1,5 +1,5 @@
 # Mooneye Test Suite Results
-Results: 80 passed, 14 failed, 9 skipped
+Results: 83 passed, 11 failed, 9 skipped
 | Test Name | Pass/Fail (✅/❌) |
 |-----------|------|
 | acceptance/add_sp_e_timing | ✅ |
@@ -46,11 +46,11 @@ Results: 80 passed, 14 failed, 9 skipped
 | acceptance/pop_timing | ✅ |
 | acceptance/ppu/hblank_ly_scx_timing-GS | ❌ |
 | acceptance/ppu/intr_1_2_timing-GS | ✅ |
-| acceptance/ppu/intr_2_0_timing | ❌ |
-| acceptance/ppu/intr_2_mode0_timing | ❌ |
+| acceptance/ppu/intr_2_0_timing | ✅ |
+| acceptance/ppu/intr_2_mode0_timing | ✅ |
 | acceptance/ppu/intr_2_mode0_timing_sprites | ❌ |
 | acceptance/ppu/intr_2_mode3_timing | ✅ |
-| acceptance/ppu/intr_2_oam_ok_timing | ❌ |
+| acceptance/ppu/intr_2_oam_ok_timing | ✅ |
 | acceptance/ppu/lcdon_timing-GS | ❌ |
 | acceptance/ppu/lcdon_write_timing-GS | ❌ |
 | acceptance/ppu/stat_irq_blocking | ✅ |

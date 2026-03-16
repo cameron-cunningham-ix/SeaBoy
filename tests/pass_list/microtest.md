@@ -1,5 +1,5 @@
 # gbmicrotest Results
-Results: 255 passed, 213 failed, 0 timeout, 0 skipped
+Results: 299 passed, 169 failed, 0 timeout, 0 skipped
 | Test Name | Pass/Fail (✅/❌) | Details |
 |-----------|------|---------|
 | div_inc_timing_a.gb | ✅ |  |
@@ -14,23 +14,23 @@ Results: 255 passed, 213 failed, 0 timeout, 0 skipped
 | halt_op_dupe.gb | ✅ |  |
 | halt_op_dupe_delay.gb | ❌ | [actual=0x1 expected=0x55] |
 | hblank_int_if_a.gb | ✅ |  |
-| hblank_int_if_b.gb | ❌ | [actual=0xe0 expected=0xe2] |
-| hblank_int_l0.gb | ❌ | [actual=0x41 expected=0x3d] |
-| hblank_int_l1.gb | ❌ | [actual=0x36 expected=0x32] |
-| hblank_int_l2.gb | ❌ | [actual=0x36 expected=0x32] |
-| hblank_int_scx0.gb | ❌ | [actual=0x31 expected=0x2d] |
+| hblank_int_if_b.gb | ✅ |  |
+| hblank_int_l0.gb | ✅ |  |
+| hblank_int_l1.gb | ✅ |  |
+| hblank_int_l2.gb | ✅ |  |
+| hblank_int_scx0.gb | ✅ |  |
 | hblank_int_scx0_if_a.gb | ❌ | [actual=0x0 expected=0xff] |
 | hblank_int_scx0_if_b.gb | ❌ | [actual=0x0 expected=0xe0] |
 | hblank_int_scx0_if_c.gb | ❌ | [actual=0x0 expected=0xe2] |
 | hblank_int_scx0_if_d.gb | ✅ |  |
-| hblank_int_scx1.gb | ❌ | [actual=0x31 expected=0x2d] |
+| hblank_int_scx1.gb | ✅ |  |
 | hblank_int_scx1_if_a.gb | ❌ | [actual=0x0 expected=0xff] |
 | hblank_int_scx1_if_b.gb | ❌ | [actual=0x0 expected=0xe0] |
 | hblank_int_scx1_if_c.gb | ❌ | [actual=0x0 expected=0xe2] |
 | hblank_int_scx1_if_d.gb | ✅ |  |
 | hblank_int_scx1_nops_a.gb | ✅ |  |
 | hblank_int_scx1_nops_b.gb | ❌ | [actual=0x0 expected=0x1] |
-| hblank_int_scx2.gb | ❌ | [actual=0x32 expected=0x2d] |
+| hblank_int_scx2.gb | ❌ | [actual=0x2e expected=0x2d] |
 | hblank_int_scx2_if_a.gb | ❌ | [actual=0x0 expected=0xff] |
 | hblank_int_scx2_if_b.gb | ❌ | [actual=0x0 expected=0xe0] |
 | hblank_int_scx2_if_c.gb | ❌ | [actual=0x0 expected=0xe2] |
@@ -43,28 +43,28 @@ Results: 255 passed, 213 failed, 0 timeout, 0 skipped
 | hblank_int_scx3_if_d.gb | ✅ |  |
 | hblank_int_scx3_nops_a.gb | ✅ |  |
 | hblank_int_scx3_nops_b.gb | ❌ | [actual=0x0 expected=0x1] |
-| hblank_int_scx4.gb | ❌ | [actual=0x32 expected=0x2e] |
+| hblank_int_scx4.gb | ✅ |  |
 | hblank_int_scx4_if_a.gb | ❌ | [actual=0x0 expected=0xff] |
 | hblank_int_scx4_if_b.gb | ❌ | [actual=0x0 expected=0xe0] |
 | hblank_int_scx4_if_c.gb | ❌ | [actual=0x0 expected=0xe2] |
 | hblank_int_scx4_if_d.gb | ✅ |  |
 | hblank_int_scx4_nops_a.gb | ✅ |  |
 | hblank_int_scx4_nops_b.gb | ❌ | [actual=0x0 expected=0x1] |
-| hblank_int_scx5.gb | ❌ | [actual=0x32 expected=0x2e] |
+| hblank_int_scx5.gb | ✅ |  |
 | hblank_int_scx5_if_a.gb | ❌ | [actual=0x0 expected=0xff] |
 | hblank_int_scx5_if_b.gb | ❌ | [actual=0x0 expected=0xe0] |
 | hblank_int_scx5_if_c.gb | ❌ | [actual=0x0 expected=0xe2] |
 | hblank_int_scx5_if_d.gb | ✅ |  |
 | hblank_int_scx5_nops_a.gb | ✅ |  |
 | hblank_int_scx5_nops_b.gb | ❌ | [actual=0x0 expected=0x1] |
-| hblank_int_scx6.gb | ❌ | [actual=0x33 expected=0x2e] |
+| hblank_int_scx6.gb | ❌ | [actual=0x2f expected=0x2e] |
 | hblank_int_scx6_if_a.gb | ❌ | [actual=0x0 expected=0xff] |
 | hblank_int_scx6_if_b.gb | ❌ | [actual=0x0 expected=0xe0] |
 | hblank_int_scx6_if_c.gb | ❌ | [actual=0x0 expected=0xe2] |
 | hblank_int_scx6_if_d.gb | ✅ |  |
 | hblank_int_scx6_nops_a.gb | ✅ |  |
 | hblank_int_scx6_nops_b.gb | ❌ | [actual=0x0 expected=0x1] |
-| hblank_int_scx7.gb | ❌ | [actual=0x33 expected=0x2f] |
+| hblank_int_scx7.gb | ✅ |  |
 | hblank_int_scx7_if_a.gb | ❌ | [actual=0x0 expected=0xff] |
 | hblank_int_scx7_if_b.gb | ❌ | [actual=0x0 expected=0xe0] |
 | hblank_int_scx7_if_c.gb | ❌ | [actual=0x0 expected=0xe2] |
@@ -72,35 +72,35 @@ Results: 255 passed, 213 failed, 0 timeout, 0 skipped
 | hblank_int_scx7_nops_a.gb | ✅ |  |
 | hblank_int_scx7_nops_b.gb | ❌ | [actual=0x0 expected=0x1] |
 | hblank_scx2_if_a.gb | ❌ | [actual=0xe0 expected=0xe2] |
-| hblank_scx3_if_b.gb | ❌ | [actual=0xe0 expected=0xff] |
-| hblank_scx3_if_c.gb | ❌ | [actual=0xe0 expected=0xff] |
-| hblank_scx3_if_d.gb | ❌ | [actual=0xe0 expected=0xff] |
+| hblank_scx3_if_b.gb | ✅ |  |
+| hblank_scx3_if_c.gb | ✅ |  |
+| hblank_scx3_if_d.gb | ✅ |  |
 | int_hblank_halt_bug_a.gb | ✅ |  |
 | int_hblank_halt_bug_b.gb | ✅ |  |
-| int_hblank_halt_scx0.gb | ❌ | [actual=0x65 expected=0x62] |
-| int_hblank_halt_scx1.gb | ❌ | [actual=0x65 expected=0x62] |
-| int_hblank_halt_scx2.gb | ❌ | [actual=0x66 expected=0x62] |
-| int_hblank_halt_scx3.gb | ❌ | [actual=0x66 expected=0x63] |
-| int_hblank_halt_scx4.gb | ❌ | [actual=0x66 expected=0x63] |
-| int_hblank_halt_scx5.gb | ❌ | [actual=0x66 expected=0x63] |
-| int_hblank_halt_scx6.gb | ❌ | [actual=0x67 expected=0x63] |
-| int_hblank_halt_scx7.gb | ❌ | [actual=0x67 expected=0x64] |
-| int_hblank_incs_scx0.gb | ❌ | [actual=0x41 expected=0x3d] |
-| int_hblank_incs_scx1.gb | ❌ | [actual=0x41 expected=0x3e] |
-| int_hblank_incs_scx2.gb | ❌ | [actual=0x42 expected=0x3e] |
-| int_hblank_incs_scx3.gb | ❌ | [actual=0x42 expected=0x3e] |
-| int_hblank_incs_scx4.gb | ❌ | [actual=0x42 expected=0x3e] |
-| int_hblank_incs_scx5.gb | ❌ | [actual=0x42 expected=0x3f] |
-| int_hblank_incs_scx6.gb | ❌ | [actual=0x43 expected=0x3f] |
-| int_hblank_incs_scx7.gb | ❌ | [actual=0x43 expected=0x3f] |
-| int_hblank_nops_scx0.gb | ❌ | [actual=0x0 expected=0xff] |
-| int_hblank_nops_scx1.gb | ❌ | [actual=0x0 expected=0xff] |
-| int_hblank_nops_scx2.gb | ❌ | [actual=0x0 expected=0xff] |
-| int_hblank_nops_scx3.gb | ❌ | [actual=0x0 expected=0xff] |
-| int_hblank_nops_scx4.gb | ❌ | [actual=0x0 expected=0xff] |
-| int_hblank_nops_scx5.gb | ❌ | [actual=0x0 expected=0xff] |
-| int_hblank_nops_scx6.gb | ❌ | [actual=0x0 expected=0xff] |
-| int_hblank_nops_scx7.gb | ❌ | [actual=0x0 expected=0xff] |
+| int_hblank_halt_scx0.gb | ❌ | [actual=0x61 expected=0x62] |
+| int_hblank_halt_scx1.gb | ❌ | [actual=0x61 expected=0x62] |
+| int_hblank_halt_scx2.gb | ✅ |  |
+| int_hblank_halt_scx3.gb | ❌ | [actual=0x62 expected=0x63] |
+| int_hblank_halt_scx4.gb | ❌ | [actual=0x62 expected=0x63] |
+| int_hblank_halt_scx5.gb | ❌ | [actual=0x62 expected=0x63] |
+| int_hblank_halt_scx6.gb | ✅ |  |
+| int_hblank_halt_scx7.gb | ❌ | [actual=0x63 expected=0x64] |
+| int_hblank_incs_scx0.gb | ✅ |  |
+| int_hblank_incs_scx1.gb | ❌ | [actual=0x3d expected=0x3e] |
+| int_hblank_incs_scx2.gb | ✅ |  |
+| int_hblank_incs_scx3.gb | ✅ |  |
+| int_hblank_incs_scx4.gb | ✅ |  |
+| int_hblank_incs_scx5.gb | ❌ | [actual=0x3e expected=0x3f] |
+| int_hblank_incs_scx6.gb | ✅ |  |
+| int_hblank_incs_scx7.gb | ✅ |  |
+| int_hblank_nops_scx0.gb | ✅ |  |
+| int_hblank_nops_scx1.gb | ❌ | [actual=0x61 expected=0x62] |
+| int_hblank_nops_scx2.gb | ✅ |  |
+| int_hblank_nops_scx3.gb | ✅ |  |
+| int_hblank_nops_scx4.gb | ✅ |  |
+| int_hblank_nops_scx5.gb | ❌ | [actual=0x62 expected=0x63] |
+| int_hblank_nops_scx6.gb | ✅ |  |
+| int_hblank_nops_scx7.gb | ✅ |  |
 | int_lyc_halt.gb | ❌ | [actual=0x9a expected=0x99] |
 | int_lyc_incs.gb | ❌ | [actual=0x71 expected=0x70] |
 | int_lyc_nops.gb | ❌ | [actual=0x9a expected=0x99] |
@@ -142,11 +142,11 @@ Results: 255 passed, 213 failed, 0 timeout, 0 skipped
 | lcdon_to_oam_unlock_a.gb | ❌ | [actual=0xff expected=0x27] |
 | lcdon_to_oam_unlock_b.gb | ✅ |  |
 | lcdon_to_oam_unlock_c.gb | ✅ |  |
-| lcdon_to_oam_unlock_d.gb | ❌ | [actual=0xff expected=0x27] |
+| lcdon_to_oam_unlock_d.gb | ✅ |  |
 | lcdon_to_stat0_a.gb | ✅ |  |
-| lcdon_to_stat0_b.gb | ❌ | [actual=0x87 expected=0x84] |
+| lcdon_to_stat0_b.gb | ✅ |  |
 | lcdon_to_stat0_c.gb | ✅ |  |
-| lcdon_to_stat0_d.gb | ❌ | [actual=0x83 expected=0x80] |
+| lcdon_to_stat0_d.gb | ✅ |  |
 | lcdon_to_stat1_a.gb | ✅ |  |
 | lcdon_to_stat1_b.gb | ✅ |  |
 | lcdon_to_stat1_c.gb | ❌ | [actual=0x81 expected=0x85] |
@@ -181,7 +181,7 @@ Results: 255 passed, 213 failed, 0 timeout, 0 skipped
 | line_153_lyc0_stat_timing_h.gb | ✅ |  |
 | line_153_lyc0_stat_timing_i.gb | ✅ |  |
 | line_153_lyc0_stat_timing_j.gb | ✅ |  |
-| line_153_lyc0_stat_timing_k.gb | ❌ | [actual=0xc7 expected=0xc4] |
+| line_153_lyc0_stat_timing_k.gb | ✅ |  |
 | line_153_lyc0_stat_timing_l.gb | ✅ |  |
 | line_153_lyc0_stat_timing_m.gb | ❌ | [actual=0xc4 expected=0xc0] |
 | line_153_lyc0_stat_timing_n.gb | ✅ |  |
@@ -221,24 +221,24 @@ Results: 255 passed, 213 failed, 0 timeout, 0 skipped
 | oam_read_l0_a.gb | ❌ | [actual=0xff expected=0xf0] |
 | oam_read_l0_b.gb | ✅ |  |
 | oam_read_l0_c.gb | ✅ |  |
-| oam_read_l0_d.gb | ❌ | [actual=0xff expected=0xf0] |
+| oam_read_l0_d.gb | ✅ |  |
 | oam_read_l1_a.gb | ❌ | [actual=0xf0 expected=0xff] |
 | oam_read_l1_b.gb | ✅ |  |
 | oam_read_l1_c.gb | ✅ |  |
-| oam_read_l1_d.gb | ❌ | [actual=0xff expected=0xf0] |
+| oam_read_l1_d.gb | ✅ |  |
 | oam_read_l1_e.gb | ✅ |  |
 | oam_read_l1_f.gb | ❌ | [actual=0xf0 expected=0xff] |
 | oam_write_l0_a.gb | ❌ | [actual=0xf0 expected=0x91] |
 | oam_write_l0_b.gb | ✅ |  |
 | oam_write_l0_c.gb | ✅ |  |
-| oam_write_l0_d.gb | ❌ | [actual=0xf0 expected=0x91] |
+| oam_write_l0_d.gb | ✅ |  |
 | oam_write_l0_e.gb | ✅ |  |
 | oam_write_l1_a.gb | ✅ |  |
 | oam_write_l1_b.gb | ✅ |  |
 | oam_write_l1_c.gb | ❌ | [actual=0xf0 expected=0x91] |
 | oam_write_l1_d.gb | ✅ |  |
 | oam_write_l1_e.gb | ✅ |  |
-| oam_write_l1_f.gb | ❌ | [actual=0xf0 expected=0x91] |
+| oam_write_l1_f.gb | ✅ |  |
 | poweron_bgp_000.gb | ✅ |  |
 | poweron_div_000.gb | ✅ |  |
 | poweron_div_004.gb | ✅ |  |
@@ -304,31 +304,31 @@ Results: 255 passed, 213 failed, 0 timeout, 0 skipped
 | poweron_wx_000.gb | ✅ |  |
 | poweron_wy_000.gb | ✅ |  |
 | ppu_sprite0_scx0_a.gb | ✅ |  |
-| ppu_sprite0_scx0_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| ppu_sprite0_scx0_b.gb | ✅ |  |
 | ppu_sprite0_scx1_a.gb | ✅ |  |
-| ppu_sprite0_scx1_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| ppu_sprite0_scx1_b.gb | ✅ |  |
 | ppu_sprite0_scx2_a.gb | ✅ |  |
 | ppu_sprite0_scx2_b.gb | ❌ | [actual=0x83 expected=0x80] |
 | ppu_sprite0_scx3_a.gb | ✅ |  |
 | ppu_sprite0_scx3_b.gb | ❌ | [actual=0x83 expected=0x80] |
 | ppu_sprite0_scx4_a.gb | ✅ |  |
-| ppu_sprite0_scx4_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| ppu_sprite0_scx4_b.gb | ✅ |  |
 | ppu_sprite0_scx5_a.gb | ✅ |  |
-| ppu_sprite0_scx5_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| ppu_sprite0_scx5_b.gb | ✅ |  |
 | ppu_sprite0_scx6_a.gb | ✅ |  |
 | ppu_sprite0_scx6_b.gb | ❌ | [actual=0x83 expected=0x80] |
 | ppu_sprite0_scx7_a.gb | ✅ |  |
 | ppu_sprite0_scx7_b.gb | ❌ | [actual=0x83 expected=0x80] |
 | sprite4_0_a.gb | ❌ | [actual=0x80 expected=0x83] |
 | sprite4_0_b.gb | ✅ |  |
-| sprite4_1_a.gb | ✅ |  |
+| sprite4_1_a.gb | ❌ | [actual=0x80 expected=0x83] |
 | sprite4_1_b.gb | ✅ |  |
-| sprite4_2_a.gb | ✅ |  |
-| sprite4_2_b.gb | ❌ | [actual=0x83 expected=0x80] |
-| sprite4_3_a.gb | ✅ |  |
-| sprite4_3_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| sprite4_2_a.gb | ❌ | [actual=0x80 expected=0x83] |
+| sprite4_2_b.gb | ✅ |  |
+| sprite4_3_a.gb | ❌ | [actual=0x80 expected=0x83] |
+| sprite4_3_b.gb | ✅ |  |
 | sprite4_4_a.gb | ✅ |  |
-| sprite4_4_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| sprite4_4_b.gb | ✅ |  |
 | sprite4_5_a.gb | ✅ |  |
 | sprite4_5_b.gb | ❌ | [actual=0x83 expected=0x80] |
 | sprite4_6_a.gb | ✅ |  |
@@ -336,9 +336,9 @@ Results: 255 passed, 213 failed, 0 timeout, 0 skipped
 | sprite4_7_a.gb | ✅ |  |
 | sprite4_7_b.gb | ❌ | [actual=0x83 expected=0x80] |
 | sprite_0_a.gb | ✅ |  |
-| sprite_0_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| sprite_0_b.gb | ✅ |  |
 | sprite_1_a.gb | ✅ |  |
-| sprite_1_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| sprite_1_b.gb | ✅ |  |
 | stat_write_glitch_l0_a.gb | ❌ | [actual=0xe0 expected=0xe2] |
 | stat_write_glitch_l0_b.gb | ❌ | [actual=0xe0 expected=0xe2] |
 | stat_write_glitch_l0_c.gb | ✅ |  |
@@ -421,19 +421,19 @@ Results: 255 passed, 213 failed, 0 timeout, 0 skipped
 | vram_read_l0_a.gb | ✅ |  |
 | vram_read_l0_b.gb | ✅ |  |
 | vram_read_l0_c.gb | ✅ |  |
-| vram_read_l0_d.gb | ❌ | [actual=0xff expected=0xf0] |
+| vram_read_l0_d.gb | ✅ |  |
 | vram_read_l1_a.gb | ✅ |  |
 | vram_read_l1_b.gb | ❌ | [actual=0xf0 expected=0xff] |
 | vram_read_l1_c.gb | ✅ |  |
-| vram_read_l1_d.gb | ❌ | [actual=0xff expected=0xf0] |
+| vram_read_l1_d.gb | ✅ |  |
 | vram_write_l0_a.gb | ✅ |  |
 | vram_write_l0_b.gb | ✅ |  |
 | vram_write_l0_c.gb | ✅ |  |
-| vram_write_l0_d.gb | ❌ | [actual=0xf0 expected=0x91] |
+| vram_write_l0_d.gb | ✅ |  |
 | vram_write_l1_a.gb | ✅ |  |
 | vram_write_l1_b.gb | ✅ |  |
 | vram_write_l1_c.gb | ✅ |  |
-| vram_write_l1_d.gb | ❌ | [actual=0xf0 expected=0x91] |
+| vram_write_l1_d.gb | ✅ |  |
 | win0_a.gb | ✅ |  |
 | win0_b.gb | ❌ | [actual=0x83 expected=0x80] |
 | win0_scx3_a.gb | ✅ |  |

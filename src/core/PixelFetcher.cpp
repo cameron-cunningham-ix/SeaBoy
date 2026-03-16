@@ -45,11 +45,13 @@ namespace SeaBoy
         m_pixelX       = 0;
         m_inWindow     = false;
         m_drewWindow   = false;
-        // PanDocs.4.8 Rendering: Mode 3 minimum = 160 + 12 dots; the 12 dots
-        // are two initial tile fetches. After the Bug-A fix (step at dot 80),
-        // the first push arrives at ~dot 88, but hardware first pixel is at
-        // dot 92. Model the remaining 4-dot gap as an output hold-off.
-        m_initialDelay = 4;
+        // PanDocs.4.8 Rendering: Mode 3 minimum = 160 + 12 dots.
+        // The first tile fetch takes 8 dots (steps 0-7, push at step 7).
+        // After the push, 4 more dots pass before the first pixel exits
+        // the pipeline (hardware warm-up / T-cycle alignment).
+        // Total startup: 8 (fetch) + 4 (warm-up) = 12 dots.
+        // With 160 pixels at 1 per dot: Mode 3 = 12 + 160 = 172 dots.
+        m_initialDelay = 12;
 
         m_fetchedTileIndex = 0;
         m_fetchedLo = 0;
@@ -154,15 +156,16 @@ namespace SeaBoy
             break;
         }
 
-        case 6: // Sleep: first half
+        case 6: // Sleep (idle dot between GetTileHi and Push)
             ++m_bgStep;
             break;
 
-        case 7: // Sleep: second half
-            ++m_bgStep;
-            break;
-
-        default: // Push attempt (step >= 8)
+        case 7: // Push attempt — completes the 8-dot tile fetch cycle
+            // PanDocs.4.8 Pixel FIFO: push 8 pixels when BG FIFO is empty,
+            // then restart at step 0. Stall here if FIFO is non-empty.
+            // Keeping the cycle at exactly 8 dots (steps 0-7) ensures the
+            // fetcher refills the FIFO at the same rate pixels are consumed
+            // (8 pixels per 8 dots), preventing inter-tile stalls.
             if (m_bgFifoSize == 0)
             {
                 pushToBgFifo();
@@ -170,7 +173,7 @@ namespace SeaBoy
                 m_bgTileX &= 0x1Fu; // wrap at 32
                 m_bgStep = 0;
             }
-            // else stall (don't advance)
+            // else stall at step 7 until FIFO drains to 0
             break;
         }
     }

@@ -11,9 +11,9 @@
 // The pixel fetcher drives Mode 3 (Drawing). Each T-cycle, the BG fetcher state
 // machine advances and (when the FIFO is non-empty) one pixel is output.
 //
-// BG fetcher state machine (5 stages, 2 dots each except Push):
-//   GetTile -> GetTileDataLo -> GetTileDataHi -> Sleep -> Push
-//   Push retries each dot until BG FIFO is empty, then pushes 8 pixels.
+// BG fetcher state machine (8-dot cycle):
+//   GetTile (2) -> GetTileDataLo (2) -> GetTileDataHi (2) -> Sleep (1) -> Push (1)
+//   Push pushes 8 pixels when BG FIFO is empty; stalls at step 7 otherwise.
 //
 // Sprite fetch: triggered when pixelX reaches sprite.x - 8. Pauses BG fetcher
 // and pixel output for 6 dots (3 steps × 2 dots), then mixes sprite pixels
@@ -72,7 +72,7 @@ namespace SeaBoy
 
     private:
         // --- BG/Window fetcher ---
-        // Steps 0,1: GetTile; 2,3: GetTileLo; 4,5: GetTileHi; 6,7: Sleep; 8+: Push
+        // Steps 0,1: GetTile; 2,3: GetTileLo; 4,5: GetTileHi; 6: Sleep; 7: Push/Stall
         uint8_t m_bgStep    = 0;
         uint8_t m_bgTileX   = 0;  // current tile column in tilemap (0-31)
         uint8_t m_fetchedTileIndex = 0;
