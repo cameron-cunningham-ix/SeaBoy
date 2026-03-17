@@ -82,6 +82,9 @@ public:
     // When true, pause emulation automatically after loading a ROM.
     bool m_startPaused = false;
 
+    // Hardware model override applied on every loadROM().
+    SeaBoy::HardwareMode m_hardwareMode = SeaBoy::HardwareMode::Auto;
+
     // Debugger reference for Window menu toggles. Set via setDebugger().
     DebuggerUI* m_debugger = nullptr;
     void setDebugger(DebuggerUI* dbg) { m_debugger = dbg; }
@@ -379,6 +382,17 @@ public:
                                 m_gameBoy->ppu().palettes().setShades(p.shades);
                         }
                     }
+                    ImGui::EndMenu();
+                }
+
+                if (ImGui::BeginMenu("Hardware Model"))
+                {
+                    bool isAuto = (m_hardwareMode == SeaBoy::HardwareMode::Auto);
+                    bool isDMG  = (m_hardwareMode == SeaBoy::HardwareMode::DMG);
+                    bool isCGB  = (m_hardwareMode == SeaBoy::HardwareMode::CGB);
+                    if (ImGui::MenuItem("Auto",        nullptr, isAuto)) m_hardwareMode = SeaBoy::HardwareMode::Auto;
+                    if (ImGui::MenuItem("Emulate DMG", nullptr, isDMG))  m_hardwareMode = SeaBoy::HardwareMode::DMG;
+                    if (ImGui::MenuItem("Emulate CGB", nullptr, isCGB))  m_hardwareMode = SeaBoy::HardwareMode::CGB;
                     ImGui::EndMenu();
                 }
                 ImGui::EndMenu();

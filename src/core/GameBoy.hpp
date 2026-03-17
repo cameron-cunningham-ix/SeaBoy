@@ -23,6 +23,10 @@ namespace SeaBoy
     // PanDocs.4.5 - LCD Status Registers & PanDocs.4.8 Rendering
     constexpr uint32_t TCYCLES_PER_FRAME = 70224;
 
+    // Hardware model override for ROM loading.
+    // Auto = detect from ROM header (0x0143); DMG/CGB = force that model.
+    enum class HardwareMode { Auto, DMG, CGB };
+
     class GameBoy
     {
     public:
@@ -64,6 +68,10 @@ namespace SeaBoy
         // CGB mode flag - true if the loaded ROM has CGB flag 0x80 or 0xC0.
         [[nodiscard]] bool isCGB() const { return m_cgbMode; }
 
+        // Hardware model override - takes effect on next loadROM().
+        void setHardwareMode(HardwareMode mode) { m_modeOverride = mode; }
+        [[nodiscard]] HardwareMode hardwareMode() const { return m_modeOverride; }
+
         // Joypad access (const)
         [[nodiscard]] const Joypad& joypad() const { return m_joypad; }
 
@@ -94,7 +102,8 @@ namespace SeaBoy
         PPU    m_ppu;
         APU    m_apu;
         Joypad m_joypad;
-        bool   m_cgbMode = false;
+        bool         m_cgbMode = false;
+        HardwareMode m_modeOverride = HardwareMode::Auto;
         std::string m_romPath;
 
         // M-cycle callback - ticks timer and PPU during CPU execution.

@@ -24,6 +24,7 @@ int main(int argc, char *argv[])
     // Optionally load a ROM passed as a command-line argument
     if (argc > 1)
     {
+        gameBoy.setHardwareMode(platform.m_hardwareMode);
         if (gameBoy.loadROM(argv[1]))
             platform.m_currentROMPath = argv[1];
         else
@@ -65,6 +66,7 @@ int main(int argc, char *argv[])
                 gameBoy.saveSRAM(platform.m_currentSavePath);
             }
 
+            gameBoy.setHardwareMode(platform.m_hardwareMode);
             if (gameBoy.loadROM(platform.m_pendingROMPath))
             {
                 platform.m_currentROMPath = platform.m_pendingROMPath;
@@ -82,6 +84,7 @@ int main(int argc, char *argv[])
         {
             if (!platform.m_currentROMPath.empty())
             {
+                gameBoy.setHardwareMode(platform.m_hardwareMode);
                 gameBoy.loadROM(platform.m_currentROMPath);
                 if (platform.m_startPaused)
                     debugger.pause();

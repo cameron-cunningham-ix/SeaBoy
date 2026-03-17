@@ -57,8 +57,14 @@ namespace SeaBoy
 
         // PanDocs.10 - CGB flag at header byte 0x0143
         // 0x80 = CGB+DMG compatible, 0xC0 = CGB only
-        uint8_t cgbFlag = (data.size() > 0x0143u) ? data[0x0143] : 0x00;
-        m_cgbMode = (cgbFlag == 0x80 || cgbFlag == 0xC0);
+        if (m_modeOverride == HardwareMode::CGB) {
+            m_cgbMode = true;
+        } else if (m_modeOverride == HardwareMode::DMG) {
+            m_cgbMode = false;
+        } else {
+            uint8_t cgbFlag = (data.size() > 0x0143u) ? data[0x0143] : 0x00;
+            m_cgbMode = (cgbFlag == 0x80 || cgbFlag == 0xC0);
+        }
 
         m_mmu.setCGBMode(m_cgbMode);
 

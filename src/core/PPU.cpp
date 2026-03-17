@@ -55,7 +55,8 @@ namespace SeaBoy
         m_ly          = 0;
 
         m_lcdc = 0x91; // PanDocs.22 Power Up Sequence
-        m_stat = 0x00;
+        m_stat = cgb ? 0x81 : 0x85; // 0x81 listed as starting value for DMG0, however BGB also seems to start at 0x81 in CGB mode.
+        // BGB starts STAT at 0x85 when explicitly GB, which lines up with DMG/MGB in Power Up Sequence table.
         m_scy  = 0x00;
         m_scx  = 0x00;
         m_lyc  = 0x00;

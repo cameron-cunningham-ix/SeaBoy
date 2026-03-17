@@ -50,8 +50,18 @@ namespace SeaBoy
         // After the push, 4 more dots pass before the first pixel exits
         // the pipeline (hardware warm-up / T-cycle alignment).
         // Total startup: 8 (fetch) + 4 (warm-up) = 12 dots.
-        // With 160 pixels at 1 per dot: Mode 3 = 12 + 160 = 172 dots.
-        m_initialDelay = 12;
+        //
+        // SCX fine scroll causes (SCX & 7) pixels to be discarded (m_discard).
+        // On real hardware the total SCX penalty is quantized to 4-dot groups:
+        //   SCX&7 = 0:   +0 dots  (mode 3 = 172)
+        //   SCX&7 = 1-4: +4 dots  (mode 3 = 176)
+        //   SCX&7 = 5-7: +8 dots  (mode 3 = 180)
+        // The discard loop adds exactly (SCX & 7) dots, so we pad
+        // m_initialDelay to round (initialDelay + discard) up to the
+        // next 4-dot boundary.
+        // mooneye: acceptance/ppu/hblank_ly_scx_timing-GS
+        uint8_t scxFine = scx & 7u;
+        m_initialDelay = 12u + ((4u - (scxFine & 3u)) & 3u);
 
         m_fetchedTileIndex = 0;
         m_fetchedLo = 0;

@@ -802,9 +802,9 @@ void DebuggerUI::render()
     // Global keyboard shortcuts work regardless of which panels are open
     if (ImGui::IsKeyPressed(ImGuiKey_F5, false))
         m_paused = !m_paused;
-    if (m_paused && ImGui::IsKeyPressed(ImGuiKey_F10, false))
+    if (m_paused && ImGui::IsKeyPressed(ImGuiKey_F10, true))
         m_stepPending = true;
-    if (m_paused && ImGui::IsKeyPressed(ImGuiKey_F6, false))
+    if (m_paused && ImGui::IsKeyPressed(ImGuiKey_F6, true))
         m_stepFramePending = true;
 
     if (m_showControls)      renderControlPanel();
