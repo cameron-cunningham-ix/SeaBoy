@@ -588,16 +588,18 @@ namespace SeaBoy
         }
 
         if (!m_powered) {
-            if (m_mmu.isCGBMode()) return;  // CGB: 
-            // DMG: NRx1 registers (length timers) are writable while APU is off
+            if (m_mmu.isCGBMode()) return;  // CGB:
+            // DMG: NRx1 registers (length timers) are writable while APU is off.
+            // Store the raw field the same way the powered-on write does - clockLength()
+            // counts UP to the max, so remaining = max - stored value.
             if (addr == 0xFF11u) {      // NR11 - CH1 length timer
-                m_ch1.lengthTimer = 64 - (val & 0x3Fu);
-            } else if (addr == 0xFF15u) { // NR21 - CH2 length timer
-                m_ch2.lengthTimer = 64 - (val & 0x3Fu);
-            } else if (addr == 0xFF1Au) { // NR31 - CH3 length timer
-                m_ch3.lengthTimer = 256 - val;
+                m_ch1.lengthTimer = val & 0x3Fu;
+            } else if (addr == 0xFF16u) { // NR21 - CH2 length timer
+                m_ch2.lengthTimer = val & 0x3Fu;
+            } else if (addr == 0xFF1Bu) { // NR31 - CH3 length timer
+                m_ch3.lengthTimer = val;
             } else if (addr == 0xFF20u) { // NR41 - CH4 length timer
-                m_ch4.lengthTimer = 64 - (val & 0x3Fu);
+                m_ch4.lengthTimer = val & 0x3Fu;
             }
             return;
         }

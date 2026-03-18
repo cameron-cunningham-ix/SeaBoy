@@ -190,14 +190,9 @@ declare -a ROM_STATUS
 
 for rom_rel in "${BLARGG_ROMS[@]}"; do
     rom="$ROOT_DIR/$rom_rel"
-    # Label: parent-dir/filename for roms in subdirs, just filename for top-level
-    parent="$(basename "$(dirname "$rom_rel")")"
-    fname="$(basename "$rom_rel")"
-    if [[ "$parent" == "blargg" ]]; then
-        label="$fname"
-    else
-        label="$parent/$fname"
-    fi
+    # Label: path relative to roms/blargg/ guarantees unique keys even when
+    # multiple suites share a rom_singles/ subdirectory name.
+    label="${rom_rel#roms/blargg/}"
     ROM_LABELS+=("$label")
 
     if [[ ! -f "$rom" ]]; then

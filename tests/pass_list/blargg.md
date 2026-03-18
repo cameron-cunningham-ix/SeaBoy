@@ -1,5 +1,5 @@
 # Blargg Test Results
-Results: 30 passed, 11 failed, 0 skipped
+Results: 40 passed, 12 failed, 0 skipped
 | Test Name | Pass/Fail (✅/❌) |
 |-----------|------|
 | cpu_instrs.gb | ✅ |
@@ -17,20 +17,31 @@ Results: 30 passed, 11 failed, 0 skipped
 | instr_timing.gb | ✅ |
 | interrupt_time.gb | ❌ |
 | cgb_sound/cgb_sound.gb | ❌ |
-| rom_singles/01-registers.gb | ✅ |
-| rom_singles/02-len ctr.gb | ✅ |
-| rom_singles/03-trigger.gb | ✅ |
-| rom_singles/04-sweep.gb | ✅ |
-| rom_singles/05-sweep details.gb | ✅ |
-| rom_singles/06-overflow on trigger.gb | ✅ |
-| rom_singles/07-len sweep period sync.gb | ✅ |
-| rom_singles/08-len ctr during power.gb | ✅ |
-| rom_singles/09-wave read while on.gb | ❌ |
-| rom_singles/10-wave trigger while on.gb | ❌ |
-| rom_singles/11-regs after power.gb | ✅ |
-| rom_singles/12-wave.gb | ❌ |
+| cgb_sound/rom_singles/01-registers.gb | ✅ |
+| cgb_sound/rom_singles/02-len ctr.gb | ✅ |
+| cgb_sound/rom_singles/03-trigger.gb | ✅ |
+| cgb_sound/rom_singles/04-sweep.gb | ✅ |
+| cgb_sound/rom_singles/05-sweep details.gb | ✅ |
+| cgb_sound/rom_singles/06-overflow on trigger.gb | ✅ |
+| cgb_sound/rom_singles/07-len sweep period sync.gb | ✅ |
+| cgb_sound/rom_singles/08-len ctr during power.gb | ✅ |
+| cgb_sound/rom_singles/09-wave read while on.gb | ❌ |
+| cgb_sound/rom_singles/10-wave trigger while on.gb | ❌ |
+| cgb_sound/rom_singles/11-regs after power.gb | ✅ |
+| cgb_sound/rom_singles/12-wave.gb | ❌ |
 | dmg_sound/dmg_sound.gb | ❌ |
-| rom_singles/12-wave write while on.gb | ❌ |
+| dmg_sound/rom_singles/01-registers.gb | ✅ |
+| dmg_sound/rom_singles/02-len ctr.gb | ✅ |
+| dmg_sound/rom_singles/03-trigger.gb | ✅ |
+| dmg_sound/rom_singles/04-sweep.gb | ✅ |
+| dmg_sound/rom_singles/05-sweep details.gb | ✅ |
+| dmg_sound/rom_singles/06-overflow on trigger.gb | ✅ |
+| dmg_sound/rom_singles/07-len sweep period sync.gb | ✅ |
+| dmg_sound/rom_singles/08-len ctr during power.gb | ✅ |
+| dmg_sound/rom_singles/09-wave read while on.gb | ❌ |
+| dmg_sound/rom_singles/10-wave trigger while on.gb | ✅ |
+| dmg_sound/rom_singles/11-regs after power.gb | ✅ |
+| dmg_sound/rom_singles/12-wave write while on.gb | ❌ |
 | oam_bug/1-lcd_sync.gb | ❌ |
 | oam_bug/2-causes.gb | ✅ |
 | oam_bug/3-non_causes.gb | ✅ |
