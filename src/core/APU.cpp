@@ -64,6 +64,8 @@ namespace SeaBoy
         m_sampleTimer    = 0;
         m_hpfCapLeft     = 0.0;
         m_hpfCapRight    = 0.0;
+        m_chBufWrite     = 0;
+        m_chBufRead      = 0;
     }
 
     // -- Tick ------------------------------------------------------------
@@ -405,6 +407,15 @@ namespace SeaBoy
 
         bool anyDacOn = m_ch1.dacEnabled() || m_ch2.dacEnabled()
                      || m_ch3.dacEnabled() || m_ch4.dacEnabled();
+
+        // Capture per-channel outputs for oscilloscope (DebuggerUI)
+        m_chBuf[0][m_chBufWrite] = m_ch1.output();
+        m_chBuf[1][m_chBufWrite] = m_ch2.output();
+        m_chBuf[2][m_chBufWrite] = m_ch3.output();
+        m_chBuf[3][m_chBufWrite] = m_ch4.output();
+        m_chBufWrite = (m_chBufWrite + 1) % CH_BUF_SIZE;
+        if (m_chBufWrite == m_chBufRead)
+            m_chBufRead = (m_chBufRead + 1) % CH_BUF_SIZE;
 
         double ch1Dac = m_ch1.dacEnabled() ? dacConvert(m_ch1.output()) : 0.0;
         double ch2Dac = m_ch2.dacEnabled() ? dacConvert(m_ch2.output()) : 0.0;
@@ -814,6 +825,85 @@ namespace SeaBoy
             case 0xFF24u: m_nr50 = val; break;
             case 0xFF25u: m_nr51 = val; break;
         }
+    }
+
+    // -- Debug inspector -------------------------------------------------
+
+    APU::DebugState APU::getDebugState() const
+    {
+        DebugState ds{};
+
+        ds.powered = m_powered;
+        ds.nr50    = m_nr50;
+        ds.nr51    = m_nr51;
+        ds.nr52    = 0x70u;
+        if (m_powered)    ds.nr52 |= 0x80u;
+        if (m_ch1.active) ds.nr52 |= 0x01u;
+        if (m_ch2.active) ds.nr52 |= 0x02u;
+        if (m_ch3.active) ds.nr52 |= 0x04u;
+        if (m_ch4.active) ds.nr52 |= 0x08u;
+
+        // CH1
+        ds.ch1Active       = m_ch1.active;
+        ds.ch1DacEnabled   = m_ch1.dacEnabled();
+        ds.ch1Volume       = m_ch1.volume;
+        ds.ch1DutyMode     = m_ch1.dutyMode();
+        ds.ch1DutyStep     = m_ch1.dutyStep;
+        ds.ch1Period       = m_ch1.period;
+        ds.ch1LengthTimer  = m_ch1.lengthTimer;
+        ds.ch1LengthEnable = m_ch1.lengthEnable;
+        ds.nr10            = m_nr10;
+        ds.sweepShadow     = m_sweep.shadow;
+        ds.sweepEnabled    = m_sweep.enabled;
+
+        // CH2
+        ds.ch2Active       = m_ch2.active;
+        ds.ch2DacEnabled   = m_ch2.dacEnabled();
+        ds.ch2Volume       = m_ch2.volume;
+        ds.ch2DutyMode     = m_ch2.dutyMode();
+        ds.ch2DutyStep     = m_ch2.dutyStep;
+        ds.ch2Period       = m_ch2.period;
+        ds.ch2LengthTimer  = m_ch2.lengthTimer;
+        ds.ch2LengthEnable = m_ch2.lengthEnable;
+
+        // CH3
+        ds.ch3Active       = m_ch3.active;
+        ds.ch3DacEnabled   = m_ch3.dacEnabled();
+        ds.ch3Period       = m_ch3.period;
+        ds.ch3LengthTimer  = m_ch3.lengthTimer;
+        ds.ch3LengthEnable = m_ch3.lengthEnable;
+        ds.ch3OutputLevel  = (m_ch3.nr32 >> 5) & 0x03u;
+        ds.ch3SampleIndex  = m_ch3.sampleIndex;
+        std::copy(m_waveRam, m_waveRam + 16, ds.waveRam);
+
+        // CH4
+        ds.ch4Active       = m_ch4.active;
+        ds.ch4DacEnabled   = m_ch4.dacEnabled();
+        ds.ch4Volume       = m_ch4.volume;
+        ds.ch4LengthTimer  = m_ch4.lengthTimer;
+        ds.ch4LengthEnable = m_ch4.lengthEnable;
+        ds.nr43            = m_ch4.nr43;
+        ds.lfsr            = m_ch4.lfsr;
+
+        ds.frameSeqStep = m_frameSeqStep;
+
+        return ds;
+    }
+
+    uint32_t APU::drainChannelSamples(float* ch0, float* ch1, float* ch2, float* ch3,
+                                      uint32_t maxSamples)
+    {
+        uint32_t count = 0;
+        while (count < maxSamples && m_chBufRead != m_chBufWrite)
+        {
+            ch0[count] = m_chBuf[0][m_chBufRead] / 15.0f;
+            ch1[count] = m_chBuf[1][m_chBufRead] / 15.0f;
+            ch2[count] = m_chBuf[2][m_chBufRead] / 15.0f;
+            ch3[count] = m_chBuf[3][m_chBufRead] / 15.0f;
+            m_chBufRead = (m_chBufRead + 1) % CH_BUF_SIZE;
+            ++count;
+        }
+        return count;
     }
 
 }

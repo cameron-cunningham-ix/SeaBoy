@@ -415,6 +415,7 @@ public:
                 ImGui::MenuItem("Tilemap Viewer", nullptr, &m_debugger->m_showTilemapViewer);
                 ImGui::Separator();
                 ImGui::MenuItem("ROM Info",       nullptr, &m_debugger->m_showROMInfo);
+                ImGui::MenuItem("APU Debugger",   nullptr, &m_debugger->m_showAPUDebugger);
 
                 ImGui::Separator();
 
@@ -714,6 +715,7 @@ private:
             out << "showTileViewer=" << m_debugger->m_showTileViewer << "\n";
             out << "showTilemapViewer=" << m_debugger->m_showTilemapViewer << "\n";
             out << "showROMInfo=" << m_debugger->m_showROMInfo << "\n";
+            out << "showAPUDebugger=" << m_debugger->m_showAPUDebugger << "\n";
         }
 
         m_currentLayoutName = name;
@@ -764,6 +766,7 @@ private:
                 else if (key == "showTileViewer")    m_debugger->m_showTileViewer = val;
                 else if (key == "showTilemapViewer") m_debugger->m_showTilemapViewer = val;
                 else if (key == "showROMInfo")       m_debugger->m_showROMInfo = val;
+                else if (key == "showAPUDebugger")   m_debugger->m_showAPUDebugger = val;
             }
         }
 

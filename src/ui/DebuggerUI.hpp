@@ -48,6 +48,7 @@ public:
     bool m_showTileViewer    = false;
     bool m_showTilemapViewer = false;
     bool m_showROMInfo       = false;
+    bool m_showAPUDebugger   = false;
 
 private:
     SeaBoy::GameBoy& m_gb;
@@ -90,6 +91,16 @@ private:
     void renderTileViewer();
     void renderTilemapViewer();
     void renderROMInfo();
+
+    // APU oscilloscope — per-channel ring buffers (256 samples each, written each frame)
+    static constexpr int kOscBufSize = 256;
+    float m_oscCh[4][kOscBufSize]{};
+    int   m_oscOffset = 0;
+
+    void renderAPUDebugger();
+    void renderPulseSection(const char* label, bool active, bool dacEnabled,
+        uint8_t volume, uint16_t period, uint8_t lengthTimer, bool lengthEnable,
+        uint8_t dutyMode, uint8_t dutyStep, const float* oscBuf);
 
     // Disassembler — decode one instruction at addr, return byte length
     uint8_t disassemble(uint16_t addr, char* outBuf, int bufSize) const;

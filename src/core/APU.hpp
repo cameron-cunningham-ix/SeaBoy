@@ -54,6 +54,55 @@ namespace SeaBoy
         void serialize(BinaryWriter& w) const;
         void deserialize(BinaryReader& r);
 
+        // -- Debug inspector -------------------------------------------------
+
+        struct DebugState
+        {
+            // Master
+            bool    powered;
+            uint8_t nr50, nr51, nr52;
+
+            // CH1 — Pulse + Sweep
+            bool     ch1Active, ch1DacEnabled;
+            uint8_t  ch1Volume, ch1DutyMode, ch1DutyStep;
+            uint16_t ch1Period;
+            uint8_t  ch1LengthTimer;
+            bool     ch1LengthEnable;
+            uint8_t  nr10;
+            uint16_t sweepShadow;
+            bool     sweepEnabled;
+
+            // CH2 — Pulse
+            bool     ch2Active, ch2DacEnabled;
+            uint8_t  ch2Volume, ch2DutyMode, ch2DutyStep;
+            uint16_t ch2Period;
+            uint8_t  ch2LengthTimer;
+            bool     ch2LengthEnable;
+
+            // CH3 — Wave
+            bool     ch3Active, ch3DacEnabled;
+            uint16_t ch3Period;
+            uint16_t ch3LengthTimer;
+            bool     ch3LengthEnable;
+            uint8_t  ch3OutputLevel;  // (nr32 >> 5) & 3: 0=mute,1=100%,2=50%,3=25%
+            uint8_t  ch3SampleIndex;
+            uint8_t  waveRam[16];
+
+            // CH4 — Noise
+            bool     ch4Active, ch4DacEnabled;
+            uint8_t  ch4Volume, ch4LengthTimer;
+            bool     ch4LengthEnable;
+            uint8_t  nr43;   // clkShift[7:4], width[3], divisor[2:0]
+            uint16_t lfsr;
+
+            // Frame sequencer
+            uint8_t frameSeqStep;
+        };
+
+        DebugState getDebugState() const;
+        uint32_t   drainChannelSamples(float* ch0, float* ch1, float* ch2, float* ch3,
+                                       uint32_t maxSamples);
+
     private:
         // -- Duty cycle table --------------------------------------------
         // PanDocs Audio Registers - NR11
@@ -306,6 +355,12 @@ namespace SeaBoy
         // High-pass filter state - PanDocs Audio Details - Mixer
         double m_hpfCapLeft  = 0.0;
         double m_hpfCapRight = 0.0;
+
+        // Per-channel oscilloscope capture ring buffer (written each generated sample)
+        static constexpr uint32_t CH_BUF_SIZE = 512;
+        uint8_t  m_chBuf[4][CH_BUF_SIZE]{};
+        uint32_t m_chBufWrite = 0;
+        uint32_t m_chBufRead  = 0;
     };
 
 }

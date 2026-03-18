@@ -818,6 +818,7 @@ void DebuggerUI::render()
     if (m_showTileViewer)    renderTileViewer();
     if (m_showTilemapViewer) renderTilemapViewer();
     if (m_showROMInfo)       renderROMInfo();
+    if (m_showAPUDebugger)   renderAPUDebugger();
 }
 
 // ---------------------------------------------------------------------------
@@ -876,6 +877,7 @@ void DebuggerUI::renderROMInfo()
         licensee[1] = (rom[0x0145] >= 0x20 && rom[0x0145] <= 0x7E) ? static_cast<char>(rom[0x0145]) : '?';
     }
 
+
     const uint8_t type = cart->typeCode();
 
     if (ImGui::BeginTable("##rominfo", 2, ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingFixedFit))
@@ -899,6 +901,158 @@ void DebuggerUI::renderROMInfo()
 
         ImGui::EndTable();
     }
+
+    ImGui::End();
+}
+
+// ---------------------------------------------------------------------------
+// Panel: APU Debugger
+// ---------------------------------------------------------------------------
+
+namespace
+{
+    // Duty pattern strings matching kDutyTable in APU.cpp
+    static const char* kDutyPatterns[4] = {
+        "_______#",  // 12.5%
+        "#______#",  // 25%
+        "#____###",  // 50%
+        "_######_",  // 75%
+    };
+    static const char* kDutyPercent[4] = { "12.5%", "25%", "50%", "75%" };
+    static const char* kCh3OutputLabels[4] = { "Mute", "100%", "50%", "25%" };
+}
+
+void DebuggerUI::renderPulseSection(const char* label, bool active, bool dacEnabled,
+    uint8_t volume, uint16_t period, uint8_t lengthTimer, bool lengthEnable,
+    uint8_t dutyMode, uint8_t dutyStep, const float* oscBuf)
+{
+    ImGui::SeparatorText(label);
+    ImGui::Text("Active: %d  DAC: %d  Vol: %2d  Period: %03X",
+        active, dacEnabled, volume, period);
+    ImGui::Text("Duty: [%s] %s  Step: %d  Len: %d/64  LenEn: %d",
+        kDutyPatterns[dutyMode & 3], kDutyPercent[dutyMode & 3],
+        dutyStep, lengthTimer, lengthEnable);
+
+    char plotLabel[16];
+    std::snprintf(plotLabel, sizeof(plotLabel), "##osc_%s", label);
+    ImGui::PlotLines(plotLabel, oscBuf, kOscBufSize, m_oscOffset,
+        nullptr, 0.0f, 1.0f, ImVec2(ImGui::GetContentRegionAvail().x, 40.0f));
+}
+
+void DebuggerUI::renderAPUDebugger()
+{
+    if (!ImGui::Begin("APU Debugger", &m_showAPUDebugger)) { ImGui::End(); return; }
+
+    // Drain per-channel samples from APU into oscilloscope ring buffers
+    {
+        float tmp[4][256];
+        uint32_t got = m_gb.apu().drainChannelSamples(
+            tmp[0], tmp[1], tmp[2], tmp[3], 256);
+        for (uint32_t i = 0; i < got; ++i)
+        {
+            for (int ch = 0; ch < 4; ++ch)
+                m_oscCh[ch][m_oscOffset] = tmp[ch][i];
+            m_oscOffset = (m_oscOffset + 1) % kOscBufSize;
+        }
+    }
+
+    const auto ds = m_gb.apu().getDebugState();
+
+    // --- Master Control ---
+    ImGui::SeparatorText("Master Control");
+    ImGui::Text("Power: %s   NR52: %02X", ds.powered ? "ON" : "OFF", ds.nr52);
+    ImGui::Text("CH1:%d  CH2:%d  CH3:%d  CH4:%d",
+        ds.nr52 & 1, (ds.nr52 >> 1) & 1, (ds.nr52 >> 2) & 1, (ds.nr52 >> 3) & 1);
+
+    uint8_t volL = ((ds.nr50 >> 4) & 7) + 1;
+    uint8_t volR = (ds.nr50 & 7) + 1;
+    ImGui::Text("NR50: %02X   Vol L: %d  Vol R: %d", ds.nr50, volL, volR);
+    ImGui::Text("NR51: %02X   Panning:", ds.nr51);
+
+    static const char* kChNames[4] = { "CH1", "CH2", "CH3", "CH4" };
+    for (int i = 0; i < 4; ++i)
+    {
+        bool l = (ds.nr51 >> (4 + i)) & 1;
+        bool r = (ds.nr51 >> i) & 1;
+        const char* pan = (l && r) ? "L+R" : l ? "L  " : r ? "  R" : "---";
+        ImGui::Text("  %s: %s", kChNames[i], pan);
+    }
+
+    // --- CH1: Pulse + Sweep ---
+    renderPulseSection("CH1: Pulse + Sweep",
+        ds.ch1Active, ds.ch1DacEnabled, ds.ch1Volume, ds.ch1Period,
+        ds.ch1LengthTimer, ds.ch1LengthEnable, ds.ch1DutyMode, ds.ch1DutyStep,
+        m_oscCh[0]);
+
+    uint8_t sweepPace = (ds.nr10 >> 4) & 0x07u;
+    uint8_t sweepDir  = (ds.nr10 >> 3) & 0x01u;
+    uint8_t sweepStep = ds.nr10 & 0x07u;
+    ImGui::Text("  Sweep  NR10:%02X  pace=%d  dir=%s  step=%d  en=%d  shadow=%03X",
+        ds.nr10, sweepPace, sweepDir ? "sub" : "add", sweepStep,
+        static_cast<int>(ds.sweepEnabled), ds.sweepShadow);
+
+    // --- CH2: Pulse ---
+    renderPulseSection("CH2: Pulse",
+        ds.ch2Active, ds.ch2DacEnabled, ds.ch2Volume, ds.ch2Period,
+        ds.ch2LengthTimer, ds.ch2LengthEnable, ds.ch2DutyMode, ds.ch2DutyStep,
+        m_oscCh[1]);
+
+    // --- CH3: Wave ---
+    ImGui::SeparatorText("CH3: Wave");
+    ImGui::Text("Active: %d  DAC: %d  Period: %03X  SampleIdx: %d",
+        ds.ch3Active, ds.ch3DacEnabled, ds.ch3Period, ds.ch3SampleIndex);
+    ImGui::Text("Output: %s  Len: %d/256  LenEn: %d",
+        kCh3OutputLabels[ds.ch3OutputLevel & 3], ds.ch3LengthTimer, ds.ch3LengthEnable);
+
+    // Wave RAM: 32 nibbles decoded from 16 bytes
+    float waveNibs[32];
+    for (int i = 0; i < 32; ++i)
+    {
+        uint8_t byte = ds.waveRam[i >> 1];
+        uint8_t nib  = (i & 1) ? (byte & 0x0Fu) : (byte >> 4);
+        waveNibs[i]  = static_cast<float>(nib) / 15.0f;
+    }
+    ImGui::Text("Wave RAM:");
+    ImGui::PlotLines("##waveram", waveNibs, 32, 0,
+        nullptr, 0.0f, 1.0f, ImVec2(ImGui::GetContentRegionAvail().x, 50.0f));
+
+    // Hex dump of wave RAM (2 rows of 8 bytes)
+    char hexRow[48];
+    std::snprintf(hexRow, sizeof(hexRow),
+        "%02X %02X %02X %02X %02X %02X %02X %02X",
+        ds.waveRam[0], ds.waveRam[1], ds.waveRam[2], ds.waveRam[3],
+        ds.waveRam[4], ds.waveRam[5], ds.waveRam[6], ds.waveRam[7]);
+    ImGui::TextUnformatted(hexRow);
+    std::snprintf(hexRow, sizeof(hexRow),
+        "%02X %02X %02X %02X %02X %02X %02X %02X",
+        ds.waveRam[8],  ds.waveRam[9],  ds.waveRam[10], ds.waveRam[11],
+        ds.waveRam[12], ds.waveRam[13], ds.waveRam[14], ds.waveRam[15]);
+    ImGui::TextUnformatted(hexRow);
+
+    // CH3 oscilloscope
+    ImGui::PlotLines("##oscch3", m_oscCh[2], kOscBufSize, m_oscOffset,
+        nullptr, 0.0f, 1.0f, ImVec2(ImGui::GetContentRegionAvail().x, 40.0f));
+
+    // --- CH4: Noise ---
+    ImGui::SeparatorText("CH4: Noise");
+    uint8_t clkShift = (ds.nr43 >> 4) & 0x0Fu;
+    uint8_t lfsrMode = (ds.nr43 >> 3) & 0x01u;
+    uint8_t divisor  = ds.nr43 & 0x07u;
+    ImGui::Text("Active: %d  DAC: %d  Vol: %2d  Len: %d/64  LenEn: %d",
+        ds.ch4Active, ds.ch4DacEnabled, ds.ch4Volume, ds.ch4LengthTimer, ds.ch4LengthEnable);
+    ImGui::Text("NR43: %02X   ClkShift: %d  LFSR: %s  Divisor: %d",
+        ds.nr43, clkShift, lfsrMode ? "7-bit" : "15-bit", divisor);
+    ImGui::Text("LFSR state: %04X", ds.lfsr);
+    ImGui::PlotLines("##oscch4", m_oscCh[3], kOscBufSize, m_oscOffset,
+        nullptr, 0.0f, 1.0f, ImVec2(ImGui::GetContentRegionAvail().x, 40.0f));
+
+    // --- Frame Sequencer ---
+    ImGui::SeparatorText("Frame Sequencer");
+    ImGui::Text("Step: %d  (next: %s)",
+        ds.frameSeqStep,
+        ds.frameSeqStep == 7 ? "env" :
+        (ds.frameSeqStep == 2 || ds.frameSeqStep == 6) ? "len+sweep" :
+        (ds.frameSeqStep % 2 == 0) ? "len" : "---");
 
     ImGui::End();
 }
