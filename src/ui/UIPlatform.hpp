@@ -49,7 +49,7 @@ private:
 
     // Layout save/load state
     std::string m_currentLayoutName;
-    std::string m_pendingLayoutLoad; // deferred load — applied before next DockSpace()
+    std::string m_pendingLayoutLoad; // deferred load - applied before next DockSpace()
     bool m_openSaveLayoutPopup = false;
     char m_layoutNameBuf[128]{};
 
@@ -73,7 +73,7 @@ public:
     // Active .sav file path (auto-derived from ROM, or user-chosen via Save As / Load).
     std::string m_currentSavePath;
 
-    // Restart flag — signals main loop to reload current ROM.
+    // Restart flag - signals main loop to reload current ROM.
     bool m_pendingRestart = false;
 
     // First-frame flag for initial dock layout.
@@ -416,6 +416,10 @@ public:
                 ImGui::Separator();
                 ImGui::MenuItem("ROM Info",       nullptr, &m_debugger->m_showROMInfo);
                 ImGui::MenuItem("APU Debugger",   nullptr, &m_debugger->m_showAPUDebugger);
+                ImGui::MenuItem("Watchpoints",    nullptr, &m_debugger->m_showWatchpoints);
+                ImGui::MenuItem("Exec History",   nullptr, &m_debugger->m_showExecHistory);
+                ImGui::MenuItem("Event Log",      nullptr, &m_debugger->m_showEventLog);
+                ImGui::MenuItem("Memory Log",     nullptr, &m_debugger->m_showMemoryLog);
 
                 ImGui::Separator();
 
@@ -458,12 +462,12 @@ public:
             ImGui::EndMenuBar();
         }
 
-        // Keybindings popup modal — OpenPopup must be in same scope as BeginPopupModal
+        // Keybindings popup modal - OpenPopup must be in same scope as BeginPopupModal
         if (openKeybindings)
             ImGui::OpenPopup("Keybindings");
         renderKeybindingsPopup();
 
-        // Save Layout popup — deferred OpenPopup from menu
+        // Save Layout popup - deferred OpenPopup from menu
         if (m_openSaveLayoutPopup)
         {
             ImGui::OpenPopup("Save Layout As");
@@ -533,7 +537,7 @@ public:
                     break;
                 case SDL_EVENT_KEY_DOWN:
                 {
-                    // Keybinding rebind capture — intercept the key press
+                    // Keybinding rebind capture - intercept the key press
                     if (m_rebindingIndex >= 0 && !e.key.repeat)
                     {
                         if (e.key.scancode != SDL_SCANCODE_ESCAPE) // Escape cancels rebind
@@ -607,7 +611,7 @@ private:
         return (index >= 0 && index < 8) ? fields[index] : nullptr;
     }
 
-    // Keybindings popup modal — called from within the dockspace host window.
+    // Keybindings popup modal - called from within the dockspace host window.
     void renderKeybindingsPopup()
     {
         ImVec2 center = ImGui::GetMainViewport()->GetCenter();
@@ -716,6 +720,10 @@ private:
             out << "showTilemapViewer=" << m_debugger->m_showTilemapViewer << "\n";
             out << "showROMInfo=" << m_debugger->m_showROMInfo << "\n";
             out << "showAPUDebugger=" << m_debugger->m_showAPUDebugger << "\n";
+            out << "showWatchpoints=" << m_debugger->m_showWatchpoints << "\n";
+            out << "showExecHistory=" << m_debugger->m_showExecHistory << "\n";
+            out << "showEventLog=" << m_debugger->m_showEventLog << "\n";
+            out << "showMemoryLog=" << m_debugger->m_showMemoryLog << "\n";
         }
 
         m_currentLayoutName = name;
@@ -727,7 +735,7 @@ private:
         m_pendingLayoutLoad = name;
     }
 
-    // Actually applies the layout — must be called before DockSpace().
+    // Actually applies the layout - must be called before DockSpace().
     void applyPendingLayout()
     {
         if (m_pendingLayoutLoad.empty()) return;
@@ -767,6 +775,10 @@ private:
                 else if (key == "showTilemapViewer") m_debugger->m_showTilemapViewer = val;
                 else if (key == "showROMInfo")       m_debugger->m_showROMInfo = val;
                 else if (key == "showAPUDebugger")   m_debugger->m_showAPUDebugger = val;
+                else if (key == "showWatchpoints")   m_debugger->m_showWatchpoints = val;
+                else if (key == "showExecHistory")   m_debugger->m_showExecHistory = val;
+                else if (key == "showEventLog")      m_debugger->m_showEventLog = val;
+                else if (key == "showMemoryLog")     m_debugger->m_showMemoryLog = val;
             }
         }
 

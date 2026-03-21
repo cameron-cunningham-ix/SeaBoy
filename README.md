@@ -5,7 +5,7 @@ A Game Boy / Game Boy Color emulator written in C++20.
 
 ## Features
 
-- Cycle-accurate SM83 CPU — passes all Blargg `cpu_instrs`, `instr_timing`, `mem_timing`, and `mem_timing-2` tests
+- Cycle-accurate SM83 CPU - passes all Blargg `cpu_instrs`, `instr_timing`, `mem_timing`, and `mem_timing-2` tests
 - MBC0–5 cartridge support
 - Timer with T-cycle accuracy
 - PPU with OAM corruption bug emulation
@@ -22,7 +22,7 @@ A Game Boy / Game Boy Color emulator written in C++20.
 | C++ compiler | MSVC 2022 / GCC 12 / Clang 15 | C++20 required |
 | Git | any | FetchContent clones dependencies |
 
-All library dependencies (SDL3, Dear ImGui, Native File Dialog Extended) are fetched automatically by CMake at configure time — no manual installation needed.
+All library dependencies (SDL3, Dear ImGui, Native File Dialog Extended) are fetched automatically by CMake at configure time - no manual installation needed.
 
 ## Building
 
@@ -83,7 +83,7 @@ SeaBoy/
 
 ## Reference Material
 
-- [Pan Docs](https://gbdev.io/pandocs/) — primary hardware reference
+- [Pan Docs](https://gbdev.io/pandocs/) - primary hardware reference
 - [GBZ80 instruction set](https://rgbds.gbdev.io/docs/v1.0.1/gbz80.7)
 - [Opcode table](https://www.pastraiser.com/cpu/gameboy/gameboy_opcodes.html)
 - [Another opcode table](https://izik1.github.io/gbops/index.html)

@@ -61,7 +61,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # ---------------------------------------------------------------------------
-# Paths — always run from project root so sub-scripts find roms/ etc.
+# Paths - always run from project root so sub-scripts find roms/ etc.
 # ---------------------------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -105,7 +105,7 @@ if [[ $DO_BUILD -eq 1 ]]; then
     else
         BUILD_STATUS="FAIL"
         echo ""
-        echo -e "Build: $(color_status FAIL) — aborting (fix build errors first)"
+        echo -e "Build: $(color_status FAIL) - aborting (fix build errors first)"
         echo ""
         exit 1
     fi

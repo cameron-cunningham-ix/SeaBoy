@@ -684,7 +684,7 @@ namespace SeaBoy
 
         std::ifstream file(path, std::ios::binary | std::ios::ate);
         if (!file.is_open())
-            return false; // Not an error — save file may not exist yet
+            return false; // Not an error - save file may not exist yet
 
         std::streamsize size = file.tellg();
         file.seekg(0, std::ios::beg);

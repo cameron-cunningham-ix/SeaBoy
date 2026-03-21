@@ -62,7 +62,7 @@ namespace SeaBoy
             bool    powered;
             uint8_t nr50, nr51, nr52;
 
-            // CH1 — Pulse + Sweep
+            // CH1 - Pulse + Sweep
             bool     ch1Active, ch1DacEnabled;
             uint8_t  ch1Volume, ch1DutyMode, ch1DutyStep;
             uint16_t ch1Period;
@@ -72,14 +72,14 @@ namespace SeaBoy
             uint16_t sweepShadow;
             bool     sweepEnabled;
 
-            // CH2 — Pulse
+            // CH2 - Pulse
             bool     ch2Active, ch2DacEnabled;
             uint8_t  ch2Volume, ch2DutyMode, ch2DutyStep;
             uint16_t ch2Period;
             uint8_t  ch2LengthTimer;
             bool     ch2LengthEnable;
 
-            // CH3 — Wave
+            // CH3 - Wave
             bool     ch3Active, ch3DacEnabled;
             uint16_t ch3Period;
             uint16_t ch3LengthTimer;
@@ -88,7 +88,7 @@ namespace SeaBoy
             uint8_t  ch3SampleIndex;
             uint8_t  waveRam[16];
 
-            // CH4 — Noise
+            // CH4 - Noise
             bool     ch4Active, ch4DacEnabled;
             uint8_t  ch4Volume, ch4LengthTimer;
             bool     ch4LengthEnable;

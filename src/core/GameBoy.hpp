@@ -65,6 +65,59 @@ namespace SeaBoy
         // Audio access - used by main.cpp to drain samples for SDL audio.
         [[nodiscard]] APU& apu() { return m_apu; }
 
+        // Data watchpoints - delegated to MMU; called by DebuggerUI via these forwarders.
+        void addWatchpoint(const Watchpoint& wp)  { m_mmu.addWatchpoint(wp); }
+        void removeWatchpoint(uint16_t addr)       { m_mmu.removeWatchpoint(addr); }
+        void clearWatchpoints()                    { m_mmu.clearWatchpoints(); }
+        bool hasWatchpoints() const                { return m_mmu.hasWatchpoints(); }
+
+        // Write-trace callback - delegated to MMU.
+        void setWriteTraceCallback(MMU::WriteTraceCallback fn, void* ctx) { m_mmu.setWriteTraceCallback(fn, ctx); }
+
+        // Absolute T-cycle counter - monotonically increasing, never reset between frames.
+        [[nodiscard]] uint64_t totalCycles() const { return m_totalCycles; }
+
+        // Consume a watch hit from the last tick(). Returns false if none fired.
+        bool consumePendingWatch(WatchHit& out);
+
+        // Event log - interrupt and control-flow events fired during emulation.
+        // IntRequested is fired by GameBoy::tick() via IF polling.
+        // All other events originate from CPU and are forwarded here.
+        enum class EventKind : uint8_t
+        {
+            IntRequested,   // IF bit newly set; param = IRQ bit index (0-4)
+            IntServiced,    // CPU jumped to ISR vector; param = IRQ bit index (0-4)
+            IMEEnabled,     // IME became true (EI delay expired or RETI)
+            IMEDisabled,    // IME cleared (DI)
+            HaltEnter,      // CPU entered HALT
+            HaltExit,       // CPU woken from HALT; param = pending IF & IE bits
+            RETI,           // RETI executed
+        };
+        struct GameEvent
+        {
+            uint64_t  cycle;  // absolute T-cycle counter at time of event
+            uint16_t  pc;     // PC at time of event
+            uint8_t   ie;     // IE register snapshot
+            uint8_t   ifReg;  // IF register snapshot
+            EventKind kind;
+            uint8_t   param;  // IRQ bit index (0-4) or pending bits depending on kind
+        };
+        using EventCallback = void(*)(void* ctx, const GameEvent& ev);
+        void setEventCallback(EventCallback fn, void* ctx) { m_eventFn = fn; m_eventCtx = ctx; }
+
+        // Execution history callback - called with a snapshot before every cpu.step().
+        // Null by default; a single null-check in tick() makes this zero overhead when unset.
+        struct ExecSnapshot
+        {
+            uint16_t  pc;
+            uint8_t   opcode;   // raw byte at pc (0xCB = CB-prefixed instruction)
+            Registers regs;     // full register file copy at start of instruction
+            bool      ime;
+            bool      halted;
+        };
+        using ExecCallback = void(*)(void* ctx, const ExecSnapshot& snap);
+        void setExecCallback(ExecCallback fn, void* ctx) { m_execFn = fn; m_execCtx = ctx; }
+
         // CGB mode flag - true if the loaded ROM has CGB flag 0x80 or 0xC0.
         [[nodiscard]] bool isCGB() const { return m_cgbMode; }
 
@@ -111,6 +164,23 @@ namespace SeaBoy
 
         // Joypad interrupt callback - sets IF bit 4 on button press.
         static void onJoypadIRQ(void* ctx);
+
+        // Watch callback - fires when a data breakpoint matches.
+        static void onWatchHit(void* ctx, const WatchHit& hit);
+
+        // Pending watch hit from the last tick(); only the first hit per tick is stored.
+        bool     m_watchHitPending = false;
+        WatchHit m_pendingWatchHit{};
+
+        ExecCallback m_execFn  = nullptr;
+        void*        m_execCtx = nullptr;
+
+        // Event log callback - routes CPU events and IF polling to the UI.
+        static void onCPUEvent(void* ctx, const CPU::CPUEvent& ev);
+        EventCallback m_eventFn  = nullptr;
+        void*         m_eventCtx = nullptr;
+        uint64_t      m_totalCycles = 0;
+        uint8_t       m_prevIF      = 0;
     };
 
 }

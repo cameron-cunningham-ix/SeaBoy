@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
             fprintf(stderr, "Warning: could not load ROM '%s'\n", argv[1]);
     }
 
-    // SDL3 audio stream for APU output — PanDocs Audio
+    // SDL3 audio stream for APU output - PanDocs Audio
     SDL_AudioSpec audioSpec{};
     audioSpec.freq     = 48000;
     audioSpec.format   = SDL_AUDIO_F32;
@@ -99,7 +99,7 @@ int main(int argc, char *argv[])
             platform.m_pendingRestart = false;
         }
 
-        // Audio-driven sync — skip when paused to avoid blocking the UI
+        // Audio-driven sync - skip when paused to avoid blocking the UI
         if (audioStream && !debugger.isPaused())
         {
             constexpr int MAX_QUEUED_BYTES = 1608 * 2 * sizeof(float);
@@ -109,16 +109,25 @@ int main(int argc, char *argv[])
             }
         }
 
-        // Emulation tick — respects pause / step / breakpoints
+        // Emulation tick - respects pause / step / breakpoints
         bool romLoaded = gameBoy.mmu().cartridge() != nullptr;
         if (romLoaded && !debugger.isPaused())
         {
             // Run one full frame worth of T-cycles
-            // PanDocs.4.8 — 154 lines × 456 T-cycles = 70 224 T-cycles per frame
+            // PanDocs.4.8 - 154 lines × 456 T-cycles = 70 224 T-cycles per frame
             uint32_t frameCycles = 0;
             while (frameCycles < SeaBoy::TCYCLES_PER_FRAME)
             {
                 frameCycles += gameBoy.tick();
+
+                SeaBoy::WatchHit watchHit{};
+                if (gameBoy.hasWatchpoints() && gameBoy.consumePendingWatch(watchHit))
+                {
+                    debugger.notifyWatchHit(watchHit);
+                    debugger.pause();
+                    break;
+                }
+
                 if (!debugger.breakpointsEmpty() &&
                     debugger.checkBreakpoints(gameBoy.cpu().registers().PC))
                 {
@@ -129,13 +138,43 @@ int main(int argc, char *argv[])
         }
         else if (romLoaded && debugger.consumeStep())
         {
-            gameBoy.tick();
+            static_cast<void>(gameBoy.tick());
+            SeaBoy::WatchHit watchHit{};
+            if (gameBoy.hasWatchpoints() && gameBoy.consumePendingWatch(watchHit))
+            {
+                debugger.notifyWatchHit(watchHit);
+                debugger.pause();
+            }
         }
         else if (romLoaded && debugger.consumeStepFrame())
         {
             uint32_t frameCycles = 0;
             while (frameCycles < SeaBoy::TCYCLES_PER_FRAME)
                 frameCycles += gameBoy.tick();
+        }
+        else if (romLoaded)
+        {
+            int n = debugger.consumeStepNInstr();
+            if (n > 0)
+            {
+                for (int i = 0; i < n; ++i)
+                {
+                    gameBoy.tick();
+                    SeaBoy::WatchHit watchHit{};
+                    if (gameBoy.hasWatchpoints() && gameBoy.consumePendingWatch(watchHit))
+                    {
+                        debugger.notifyWatchHit(watchHit);
+                        debugger.pause();
+                        break;
+                    }
+                    if (!debugger.breakpointsEmpty() &&
+                        debugger.checkBreakpoints(gameBoy.cpu().registers().PC))
+                    {
+                        debugger.pause();
+                        break;
+                    }
+                }
+            }
         }
 
         // Drain APU samples into SDL audio stream

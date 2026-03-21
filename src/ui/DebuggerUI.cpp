@@ -9,7 +9,7 @@
 #include "src/cartridge/Cartridge.hpp"
 
 // ---------------------------------------------------------------------------
-// SM83 Disassembler — table-driven opcode decoding
+// SM83 Disassembler - table-driven opcode decoding
 // ---------------------------------------------------------------------------
 
 namespace
@@ -134,6 +134,9 @@ DebuggerUI::DebuggerUI(SeaBoy::GameBoy& gb, SDL_Renderer* renderer)
     : m_gb(gb)
     , m_renderer(renderer)
 {
+    m_gb.setExecCallback(&DebuggerUI::onExecSnapshot, this);
+    m_gb.setEventCallback(&DebuggerUI::onGameEvent, this);
+    m_gb.setWriteTraceCallback(&DebuggerUI::onMemWrite, this);
 }
 
 DebuggerUI::~DebuggerUI()
@@ -154,9 +157,70 @@ bool DebuggerUI::consumeStepFrame()
     return false;
 }
 
-bool DebuggerUI::checkBreakpoints(uint16_t pc) const
+int DebuggerUI::consumeStepNInstr()
 {
-    return std::find(m_breakpoints.begin(), m_breakpoints.end(), pc) != m_breakpoints.end();
+    if (m_stepNInstrPending) { m_stepNInstrPending = false; return m_stepNInstr; }
+    return 0;
+}
+
+bool DebuggerUI::isBreakpointAddr(uint16_t addr) const
+{
+    for (const auto& bp : m_breakpoints)
+        if (bp.enabled && bp.addr == addr) return true;
+    return false;
+}
+
+bool DebuggerUI::evalCondition(const Breakpoint& bp) const
+{
+    const auto& regs = m_gb.cpu().registers();
+    uint16_t lhs = 0;
+    switch (bp.lhsOperand)
+    {
+        case BPOperand::RegA:  lhs = regs.A;       break;
+        case BPOperand::RegB:  lhs = regs.B;       break;
+        case BPOperand::RegC:  lhs = regs.C;       break;
+        case BPOperand::RegD:  lhs = regs.D;       break;
+        case BPOperand::RegE:  lhs = regs.E;       break;
+        case BPOperand::RegH:  lhs = regs.H;       break;
+        case BPOperand::RegL:  lhs = regs.L;       break;
+        case BPOperand::RegF:  lhs = regs.F;       break;
+        case BPOperand::RegAF: lhs = regs.getAF(); break;
+        case BPOperand::RegBC: lhs = regs.getBC(); break;
+        case BPOperand::RegDE: lhs = regs.getDE(); break;
+        case BPOperand::RegHL: lhs = regs.getHL(); break;
+        case BPOperand::RegSP: lhs = regs.SP;      break;
+        case BPOperand::RegPC: lhs = regs.PC;      break;
+        case BPOperand::Mem8:
+            lhs = m_gb.mmu().peek8(bp.lhsAddr);
+            break;
+        case BPOperand::Mem16:
+            lhs = static_cast<uint16_t>(m_gb.mmu().peek8(bp.lhsAddr)) |
+                  (static_cast<uint16_t>(m_gb.mmu().peek8(static_cast<uint16_t>(bp.lhsAddr + 1u))) << 8);
+            break;
+    }
+    switch (bp.condOp)
+    {
+        case BPCondOp::EQ: return lhs == bp.rhsValue;
+        case BPCondOp::NE: return lhs != bp.rhsValue;
+        case BPCondOp::LT: return lhs <  bp.rhsValue;
+        case BPCondOp::LE: return lhs <= bp.rhsValue;
+        case BPCondOp::GT: return lhs >  bp.rhsValue;
+        case BPCondOp::GE: return lhs >= bp.rhsValue;
+    }
+    return true;
+}
+
+bool DebuggerUI::checkBreakpoints(uint16_t pc)
+{
+    for (auto& bp : m_breakpoints)
+    {
+        if (!bp.enabled || bp.addr != pc) continue;
+        ++bp.hitCount;
+        if (bp.hitTarget > 0 && bp.hitCount != bp.hitTarget) continue;
+        if (bp.hasCondition && !evalCondition(bp)) continue;
+        return true;
+    }
+    return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -179,6 +243,13 @@ void DebuggerUI::renderControlPanel()
         ImGui::SameLine();
         if (ImGui::Button("Step Frame (F6)"))
             m_stepFramePending = true;
+
+        ImGui::SetNextItemWidth(80.0f);
+        ImGui::InputInt("##stepN", &m_stepNInstr, 0, 0);
+        if (m_stepNInstr < 1) m_stepNInstr = 1;
+        ImGui::SameLine();
+        if (ImGui::Button("Step N instr"))
+            m_stepNInstrPending = true;
     }
 
     // Calculate average framerate
@@ -230,36 +301,190 @@ void DebuggerUI::renderBreakpoints()
 {
     if (!ImGui::Begin("Breakpoints", &m_showBreakpoints)) { ImGui::End(); return; }
 
-    ImGui::SetNextItemWidth(60.0f);
+    static const char* kOperandNames[] = {
+        "A","B","C","D","E","H","L","F",
+        "AF","BC","DE","HL","SP","PC","[n]8","[n]16"
+    };
+    static const char* kCondOpNames[] = { "==","!=","<","<=",">",">=" };
+
+    // --- Add row ---
+    ImGui::SetNextItemWidth(54.0f);
     bool enter = ImGui::InputText("##bp_addr", m_bpInputBuf, sizeof(m_bpInputBuf),
         ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_EnterReturnsTrue);
     ImGui::SameLine();
-    if (ImGui::Button("Add") || enter)
+    bool doAdd = ImGui::Button("Add") || (enter && m_bpInputBuf[0] != '\0');
+    ImGui::SameLine();
+    ImGui::Checkbox("Cond##add", &m_bpAddCond);
+
+    if (m_bpAddCond)
     {
-        if (m_bpInputBuf[0] != '\0')
+        ImGui::SetNextItemWidth(68.0f);
+        ImGui::Combo("##bp_oper", &m_bpAddOperandIdx, kOperandNames, 16);
+        if (m_bpAddOperandIdx >= 14)
         {
-            uint16_t addr = static_cast<uint16_t>(std::strtol(m_bpInputBuf, nullptr, 16));
-            // Avoid duplicates
-            if (std::find(m_breakpoints.begin(), m_breakpoints.end(), addr) == m_breakpoints.end())
-                m_breakpoints.push_back(addr);
-            m_bpInputBuf[0] = '\0';
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(50.0f);
+            ImGui::InputText("##bp_lhsa", m_bpAddLhsAddrBuf, sizeof(m_bpAddLhsAddrBuf),
+                ImGuiInputTextFlags_CharsHexadecimal);
         }
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(42.0f);
+        ImGui::Combo("##bp_op", &m_bpAddOpIdx, kCondOpNames, 6);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(50.0f);
+        ImGui::InputText("##bp_rhs", m_bpAddRhsBuf, sizeof(m_bpAddRhsBuf),
+            ImGuiInputTextFlags_CharsHexadecimal);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(50.0f);
+        ImGui::InputScalar("Hit##add", ImGuiDataType_U32, &m_bpAddHitTarget);
+    }
+
+    if (doAdd && m_bpInputBuf[0] != '\0')
+    {
+        uint16_t addr = static_cast<uint16_t>(std::strtol(m_bpInputBuf, nullptr, 16));
+        bool dup = false;
+        for (const auto& b : m_breakpoints) if (b.addr == addr) { dup = true; break; }
+        if (!dup)
+        {
+            Breakpoint bp;
+            bp.addr         = addr;
+            bp.hasCondition = m_bpAddCond;
+            bp.lhsOperand   = static_cast<BPOperand>(m_bpAddOperandIdx);
+            bp.lhsAddr      = static_cast<uint16_t>(std::strtol(m_bpAddLhsAddrBuf, nullptr, 16));
+            bp.condOp       = static_cast<BPCondOp>(m_bpAddOpIdx);
+            bp.rhsValue     = static_cast<uint16_t>(std::strtol(m_bpAddRhsBuf, nullptr, 16));
+            bp.hitTarget    = m_bpAddHitTarget;
+            m_breakpoints.push_back(bp);
+        }
+        m_bpInputBuf[0] = '\0';
     }
 
     ImGui::Separator();
 
+    // --- List ---
     int removeIdx = -1;
     for (int i = 0; i < static_cast<int>(m_breakpoints.size()); ++i)
     {
+        auto& bp = m_breakpoints[i];
         ImGui::PushID(i);
-        ImGui::Text("%04X", m_breakpoints[i]);
+
+        // Enable toggle
+        ImGui::Checkbox("##en", &bp.enabled);
         ImGui::SameLine();
-        if (ImGui::SmallButton("X"))
-            removeIdx = i;
+
+        // Address (dimmed when disabled)
+        if (!bp.enabled)
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
+        ImGui::Text("$%04X", bp.addr);
+        if (!bp.enabled)
+            ImGui::PopStyleColor();
+        ImGui::SameLine();
+
+        // Condition summary
+        if (bp.hasCondition)
+        {
+            char condStr[48];
+            if (bp.lhsOperand >= BPOperand::Mem8)
+                std::snprintf(condStr, sizeof(condStr), "[$%04X]%s$%04X",
+                    bp.lhsAddr, kCondOpNames[static_cast<int>(bp.condOp)], bp.rhsValue);
+            else
+                std::snprintf(condStr, sizeof(condStr), "%s%s$%04X",
+                    kOperandNames[static_cast<int>(bp.lhsOperand)],
+                    kCondOpNames[static_cast<int>(bp.condOp)],
+                    bp.rhsValue);
+            ImGui::TextUnformatted(condStr);
+        }
+        else
+        {
+            ImGui::TextDisabled("(unconditional)");
+        }
+        ImGui::SameLine();
+
+        // Hit count display
+        if (bp.hitTarget > 0)
+            ImGui::Text("hit:%u/%u", bp.hitCount, bp.hitTarget);
+        else
+            ImGui::Text("hit:%u", bp.hitCount);
+        ImGui::SameLine();
+
+        if (ImGui::SmallButton("Rst")) bp.hitCount = 0;
+        ImGui::SameLine();
+
+        // Edit toggle
+        bool editOpen = (m_bpEditIdx == i);
+        if (ImGui::SmallButton(editOpen ? "v" : ">"))
+        {
+            if (editOpen)
+            {
+                m_bpEditIdx = -1;
+            }
+            else
+            {
+                m_bpEditIdx          = i;
+                m_bpEditCond         = bp.hasCondition;
+                m_bpEditOperandIdx   = static_cast<int>(bp.lhsOperand);
+                std::snprintf(m_bpEditLhsAddrBuf, sizeof(m_bpEditLhsAddrBuf), "%04X", bp.lhsAddr);
+                m_bpEditOpIdx        = static_cast<int>(bp.condOp);
+                std::snprintf(m_bpEditRhsBuf, sizeof(m_bpEditRhsBuf), "%04X", bp.rhsValue);
+                m_bpEditHitTarget    = bp.hitTarget;
+            }
+        }
+        ImGui::SameLine();
+
+        if (ImGui::SmallButton("X")) removeIdx = i;
+
+        // Inline edit section
+        if (editOpen)
+        {
+            ImGui::Indent(16.0f);
+            ImGui::Checkbox("Condition##edit", &m_bpEditCond);
+            if (m_bpEditCond)
+            {
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(68.0f);
+                ImGui::Combo("##edit_oper", &m_bpEditOperandIdx, kOperandNames, 16);
+                if (m_bpEditOperandIdx >= 14)
+                {
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(50.0f);
+                    ImGui::InputText("##edit_lhsa", m_bpEditLhsAddrBuf, sizeof(m_bpEditLhsAddrBuf),
+                        ImGuiInputTextFlags_CharsHexadecimal);
+                }
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(72.0f);
+                ImGui::Combo("##edit_op", &m_bpEditOpIdx, kCondOpNames, 6);
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(50.0f);
+                ImGui::InputText("##edit_rhs", m_bpEditRhsBuf, sizeof(m_bpEditRhsBuf),
+                    ImGuiInputTextFlags_CharsHexadecimal);
+            }
+            ImGui::SetNextItemWidth(60.0f);
+            ImGui::InputScalar("Hit target##edit", ImGuiDataType_U32, &m_bpEditHitTarget);
+
+            if (ImGui::SmallButton("Apply"))
+            {
+                bp.hasCondition = m_bpEditCond;
+                bp.lhsOperand   = static_cast<BPOperand>(m_bpEditOperandIdx);
+                bp.lhsAddr      = static_cast<uint16_t>(std::strtol(m_bpEditLhsAddrBuf, nullptr, 16));
+                bp.condOp       = static_cast<BPCondOp>(m_bpEditOpIdx);
+                bp.rhsValue     = static_cast<uint16_t>(std::strtol(m_bpEditRhsBuf, nullptr, 16));
+                bp.hitTarget    = m_bpEditHitTarget;
+                m_bpEditIdx = -1;
+            }
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Cancel")) m_bpEditIdx = -1;
+            ImGui::Unindent(16.0f);
+        }
+
         ImGui::PopID();
     }
+
     if (removeIdx >= 0)
+    {
         m_breakpoints.erase(m_breakpoints.begin() + removeIdx);
+        if (m_bpEditIdx == removeIdx)        m_bpEditIdx = -1;
+        else if (m_bpEditIdx > removeIdx)    --m_bpEditIdx;
+    }
 
     ImGui::End();
 }
@@ -347,8 +572,8 @@ void DebuggerUI::renderDisassembly()
     auto renderLine = [&](uint16_t a) {
         uint8_t len = disassemble(a, buf, sizeof(buf));
         bool isCurrent = (a == pc);
-        // Show breakpoint marker
-        bool isBP = checkBreakpoints(a);
+        // Show breakpoint marker (pure lookup - no hit-count side effect)
+        bool isBP = isBreakpointAddr(a);
         if (isBP)
             ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "*");
         else
@@ -581,7 +806,7 @@ void DebuggerUI::renderOAMViewer()
 }
 
 // ---------------------------------------------------------------------------
-// Tile Viewer — decode all 384 VRAM tiles into a 128×192 texture
+// Tile Viewer - decode all 384 VRAM tiles into a 128×192 texture
 // ---------------------------------------------------------------------------
 
 // DMG grayscale shades (RGBA8888)
@@ -669,7 +894,7 @@ void DebuggerUI::renderTileViewer()
 }
 
 // ---------------------------------------------------------------------------
-// Tilemap Viewer — decode a 32×32 tile BG/Window map into 256×256 texture
+// Tilemap Viewer - decode a 32×32 tile BG/Window map into 256×256 texture
 // ---------------------------------------------------------------------------
 
 void DebuggerUI::rebuildTilemapTexture()
@@ -819,6 +1044,10 @@ void DebuggerUI::render()
     if (m_showTilemapViewer) renderTilemapViewer();
     if (m_showROMInfo)       renderROMInfo();
     if (m_showAPUDebugger)   renderAPUDebugger();
+    if (m_showWatchpoints)   renderWatchpoints();
+    if (m_showExecHistory)   renderExecHistory();
+    if (m_showEventLog)      renderEventLog();
+    if (m_showMemoryLog)     renderMemoryLog();
 }
 
 // ---------------------------------------------------------------------------
@@ -1054,5 +1283,486 @@ void DebuggerUI::renderAPUDebugger()
         (ds.frameSeqStep == 2 || ds.frameSeqStep == 6) ? "len+sweep" :
         (ds.frameSeqStep % 2 == 0) ? "len" : "---");
 
+    ImGui::End();
+}
+
+// ---------------------------------------------------------------------------
+// Panel: Watchpoints (data breakpoints)
+// ---------------------------------------------------------------------------
+
+void DebuggerUI::renderWatchpoints()
+{
+    static const char* kTypeLabels[]          = { "Read", "Write", "Read+Write" };
+    static const SeaBoy::WatchType kTypeValues[] = {
+        SeaBoy::WatchType::Read,
+        SeaBoy::WatchType::Write,
+        SeaBoy::WatchType::ReadWrite,
+    };
+
+    const char* titleSuffix = m_watchHitActive ? "Watchpoints (!)###Watchpoints" : "Watchpoints###Watchpoints";
+    if (!ImGui::Begin(titleSuffix, &m_showWatchpoints)) { ImGui::End(); return; }
+
+    // --- Add row ---
+    ImGui::SetNextItemWidth(60.0f);
+    bool enter = ImGui::InputText("##wp_addr", m_wpInputBuf, sizeof(m_wpInputBuf),
+        ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_EnterReturnsTrue);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(90.0f);
+    ImGui::Combo("##wp_type", &m_wpTypeCombo, kTypeLabels, 3);
+    ImGui::SameLine();
+    if (ImGui::Button("Add") || enter)
+    {
+        if (m_wpInputBuf[0] != '\0')
+        {
+            uint16_t addr = static_cast<uint16_t>(std::strtol(m_wpInputBuf, nullptr, 16));
+            SeaBoy::WatchType wtype = kTypeValues[m_wpTypeCombo];
+            // Update or append in UI list
+            bool found = false;
+            for (auto& e : m_watchpoints)
+            {
+                if (e.addr == addr) { e.type = wtype; found = true; break; }
+            }
+            if (!found)
+                m_watchpoints.push_back({ addr, wtype });
+            m_gb.addWatchpoint({ addr, wtype });
+            m_wpInputBuf[0] = '\0';
+        }
+    }
+
+    // --- Active watchpoints list ---
+    ImGui::SeparatorText("Active");
+
+    int removeIdx = -1;
+    for (int i = 0; i < static_cast<int>(m_watchpoints.size()); ++i)
+    {
+        ImGui::PushID(i);
+        const auto& e = m_watchpoints[i];
+        // Derive combo index from type
+        int tidx = (e.type == SeaBoy::WatchType::Read) ? 0 :
+                   (e.type == SeaBoy::WatchType::Write) ? 1 : 2;
+        ImGui::Text("%04X  %-10s", e.addr, kTypeLabels[tidx]);
+        ImGui::SameLine();
+        if (ImGui::SmallButton("X"))
+            removeIdx = i;
+        ImGui::PopID();
+    }
+    if (removeIdx >= 0)
+    {
+        m_gb.removeWatchpoint(m_watchpoints[removeIdx].addr);
+        m_watchpoints.erase(m_watchpoints.begin() + removeIdx);
+    }
+
+    if (m_watchpoints.empty())
+        ImGui::TextDisabled("(none)");
+
+    if (!m_watchpoints.empty())
+    {
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Clear All"))
+        {
+            m_gb.clearWatchpoints();
+            m_watchpoints.clear();
+        }
+    }
+
+    // --- Last hit ---
+    ImGui::SeparatorText("Last Hit");
+    if (m_watchHitActive)
+    {
+        const char* hitType = (m_lastWatchHit.type == SeaBoy::WatchType::Read) ? "Read" : "Write";
+        ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f),
+            "Addr: %04X  Type: %s  Val: %02X  PC: %04X",
+            m_lastWatchHit.addr, hitType,
+            m_lastWatchHit.value, m_lastWatchHit.pc);
+        if (ImGui::SmallButton("Clear Hit"))
+            m_watchHitActive = false;
+    }
+    else
+    {
+        ImGui::TextDisabled("(no hit yet)");
+    }
+
+    ImGui::End();
+}
+
+// ---------------------------------------------------------------------------
+// Execution History Ring Buffer
+// ---------------------------------------------------------------------------
+
+void DebuggerUI::onExecSnapshot(void* ctx, const SeaBoy::GameBoy::ExecSnapshot& snap)
+{
+    auto* self = static_cast<DebuggerUI*>(ctx);
+    if (!self->m_historyEnabled) return;
+    self->m_historyBuf[self->m_historyHead] = snap;
+    self->m_historyHead = (self->m_historyHead + 1) % kHistorySize;
+    if (self->m_historyCount < kHistorySize) ++self->m_historyCount;
+}
+
+void DebuggerUI::renderExecHistory()
+{
+    if (!ImGui::Begin("Execution History", &m_showExecHistory)) { ImGui::End(); return; }
+
+    // --- Controls ---
+    if (ImGui::Checkbox("Record", &m_historyEnabled) && m_historyEnabled)
+    {
+        // Clear stale entries when re-enabling so display starts fresh
+        m_historyHead  = 0;
+        m_historyCount = 0;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Clear"))
+    {
+        m_historyHead  = 0;
+        m_historyCount = 0;
+    }
+    ImGui::SameLine();
+    ImGui::Text("%d / %d", m_historyCount, kHistorySize);
+
+    ImGui::Separator();
+
+    // --- Table ---
+    constexpr ImGuiTableFlags tableFlags =
+        ImGuiTableFlags_ScrollY       |
+        ImGuiTableFlags_RowBg         |
+        ImGuiTableFlags_BordersInnerV |
+        ImGuiTableFlags_SizingFixedFit;
+
+    if (!ImGui::BeginTable("##exec_hist", 6, tableFlags,
+            ImVec2(0.0f, 0.0f))) // stretch to window
+    {
+        ImGui::End();
+        return;
+    }
+
+    ImGui::TableSetupScrollFreeze(0, 1);
+    ImGui::TableSetupColumn("#",        ImGuiTableColumnFlags_WidthFixed,  42.0f);
+    ImGui::TableSetupColumn("PC",       ImGuiTableColumnFlags_WidthFixed,  46.0f);
+    ImGui::TableSetupColumn("Op",       ImGuiTableColumnFlags_WidthFixed,  28.0f);
+    ImGui::TableSetupColumn("Mnemonic", ImGuiTableColumnFlags_WidthFixed, 200.0f);
+    ImGui::TableSetupColumn("Regs",     ImGuiTableColumnFlags_WidthStretch);
+    ImGui::TableSetupColumn("Flags",    ImGuiTableColumnFlags_WidthFixed,  70.0f);
+    ImGui::TableHeadersRow();
+
+    char mnemonicBuf[64];
+    for (int i = 0; i < m_historyCount; ++i)
+    {
+        int slot = (m_historyHead - m_historyCount + i + kHistorySize) % kHistorySize;
+        const auto& s = m_historyBuf[slot];
+        bool isNewest = (i == m_historyCount - 1);
+
+        ImGui::TableNextRow();
+
+        if (isNewest)
+            ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0,
+                ImGui::GetColorU32(ImVec4(0.2f, 0.55f, 0.2f, 0.4f)));
+
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("%d", (m_historyHead - m_historyCount + i + kHistorySize) % 10000);
+
+        ImGui::TableSetColumnIndex(1);
+        ImGui::Text("%04X", s.pc);
+
+        ImGui::TableSetColumnIndex(2);
+        ImGui::Text("%02X", s.opcode);
+
+        ImGui::TableSetColumnIndex(3);
+        disassemble(s.pc, mnemonicBuf, sizeof(mnemonicBuf));
+        ImGui::TextUnformatted(mnemonicBuf);
+
+        ImGui::TableSetColumnIndex(4);
+        ImGui::Text("AF:%04X BC:%04X DE:%04X HL:%04X SP:%04X",
+            s.regs.getAF(), s.regs.getBC(), s.regs.getDE(), s.regs.getHL(), s.regs.SP);
+
+        ImGui::TableSetColumnIndex(5);
+        ImGui::Text("%c%c%c%c %s%s",
+            s.regs.flagZ() ? 'Z' : '-',
+            s.regs.flagN() ? 'N' : '-',
+            s.regs.flagH() ? 'H' : '-',
+            s.regs.flagC() ? 'C' : '-',
+            s.ime    ? "I" : "-",
+            s.halted ? "H" : "-");
+
+        // if (isNewest)
+        //     ImGui::SetScrollHereY(1.0f); // keep newest visible when running
+    }
+
+    // When paused, don't auto-scroll - let user browse freely
+    // (SetScrollHereY on the last row above handles the running case)
+
+    ImGui::EndTable();
+    ImGui::End();
+}
+
+// ---------------------------------------------------------------------------
+// Event / Interrupt Log
+// ---------------------------------------------------------------------------
+
+void DebuggerUI::onGameEvent(void* ctx, const SeaBoy::GameBoy::GameEvent& ev)
+{
+    auto* ui = static_cast<DebuggerUI*>(ctx);
+    if (!ui->m_eventEnabled) return;
+
+    ui->m_eventBuf[ui->m_eventHead] = ev;
+    ui->m_eventHead = (ui->m_eventHead + 1) % kEventBufSize;
+    if (ui->m_eventCount < kEventBufSize)
+        ++ui->m_eventCount;
+
+    // Pause on serviced interrupt if requested
+    using EK = SeaBoy::GameBoy::EventKind;
+    if (ev.kind == EK::IntServiced && ev.param < 5 && ui->m_pauseOnIRQ[ev.param])
+        ui->m_paused = true;
+}
+
+void DebuggerUI::renderEventLog()
+{
+    if (!ImGui::Begin("Event Log", &m_showEventLog)) { ImGui::End(); return; }
+
+    using EK = SeaBoy::GameBoy::EventKind;
+
+    static const char* kKindNames[] = {
+        "IntReq", "IntSvc", "IMEen", "IMEdis", "Halt+", "Halt-", "RETI"
+    };
+    static const char* kIRQNames[] = { "VBlank", "STAT", "Timer", "Serial", "Joypad" };
+
+    // --- Controls ---
+    if (ImGui::Checkbox("Record", &m_eventEnabled) && m_eventEnabled)
+    {
+        m_eventHead  = 0;
+        m_eventCount = 0;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Clear")) { m_eventHead = 0; m_eventCount = 0; }
+    ImGui::SameLine();
+    ImGui::Text("%d / %d", m_eventCount, kEventBufSize);
+
+    // Per-kind filter toggles
+    ImGui::Separator();
+    ImGui::TextUnformatted("Filter:");
+    for (int k = 0; k < 7; ++k)
+    {
+        ImGui::SameLine();
+        ImGui::Checkbox(kKindNames[k], &m_eventFilter[k]);
+    }
+
+    // Pause-on-IRQ row
+    ImGui::TextUnformatted("Pause on:");
+    for (int b = 0; b < 5; ++b)
+    {
+        ImGui::SameLine();
+        ImGui::Checkbox(kIRQNames[b], &m_pauseOnIRQ[b]);
+    }
+
+    ImGui::Separator();
+
+    // --- Table ---
+    constexpr ImGuiTableFlags tableFlags =
+        ImGuiTableFlags_ScrollY       |
+        ImGuiTableFlags_RowBg         |
+        ImGuiTableFlags_BordersInnerV |
+        ImGuiTableFlags_SizingFixedFit;
+
+    if (!ImGui::BeginTable("##evlog", 5, tableFlags, ImVec2(0.0f, 0.0f)))
+    {
+        ImGui::End();
+        return;
+    }
+
+    ImGui::TableSetupScrollFreeze(0, 1);
+    ImGui::TableSetupColumn("Cycle",   ImGuiTableColumnFlags_WidthFixed, 100.0f);
+    ImGui::TableSetupColumn("PC",      ImGuiTableColumnFlags_WidthFixed,  48.0f);
+    ImGui::TableSetupColumn("Type",    ImGuiTableColumnFlags_WidthFixed,  60.0f);
+    ImGui::TableSetupColumn("Detail",  ImGuiTableColumnFlags_WidthStretch);
+    ImGui::TableSetupColumn("IE  IF",  ImGuiTableColumnFlags_WidthFixed,  70.0f);
+    ImGui::TableHeadersRow();
+
+    bool scrollToBottom = false;
+    for (int i = 0; i < m_eventCount; ++i)
+    {
+        int slot = (m_eventHead - m_eventCount + i + kEventBufSize) % kEventBufSize;
+        const auto& ev = m_eventBuf[slot];
+        int kindIdx = static_cast<int>(ev.kind);
+        if (kindIdx < 0 || kindIdx > 6) continue;
+        if (!m_eventFilter[kindIdx]) continue;
+
+        bool isNewest = (i == m_eventCount - 1);
+
+        ImGui::TableNextRow();
+
+        // Row highlight: green for IntServiced, yellow for IntRequested
+        if (ev.kind == EK::IntServiced)
+            ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0,
+                ImGui::GetColorU32(ImVec4(0.2f, 0.55f, 0.2f, 0.4f)));
+        else if (ev.kind == EK::IntRequested)
+            ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0,
+                ImGui::GetColorU32(ImVec4(0.55f, 0.55f, 0.15f, 0.4f)));
+        else if (ev.kind == EK::HaltEnter)
+            ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0,
+                ImGui::GetColorU32(ImVec4(0.2f, 0.2f, 0.55f, 0.4f)));
+
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("%llu", static_cast<unsigned long long>(ev.cycle));
+
+        ImGui::TableSetColumnIndex(1);
+        ImGui::Text("%04X", ev.pc);
+
+        ImGui::TableSetColumnIndex(2);
+        ImGui::TextUnformatted(kKindNames[kindIdx]);
+
+        ImGui::TableSetColumnIndex(3);
+        if (ev.kind == EK::IntRequested || ev.kind == EK::IntServiced)
+        {
+            ImGui::Text("%s (bit%u)", ev.param < 5 ? kIRQNames[ev.param] : "?", ev.param);
+        }
+        else if (ev.kind == EK::HaltExit)
+        {
+            // param = pending IF & IE bits; list which IRQs are pending
+            char detail[48] = "";
+            for (uint8_t b = 0; b < 5; ++b)
+                if (ev.param & (1u << b))
+                {
+                    if (detail[0]) std::strncat(detail, ",", sizeof(detail) - std::strlen(detail) - 1);
+                    std::strncat(detail, kIRQNames[b], sizeof(detail) - std::strlen(detail) - 1);
+                }
+            ImGui::TextUnformatted(detail);
+        }
+
+        ImGui::TableSetColumnIndex(4);
+        ImGui::Text("%02X  %02X", ev.ie, ev.ifReg);
+
+        // if (isNewest) scrollToBottom = true;
+    }
+
+    // if (scrollToBottom)
+    //     ImGui::SetScrollHereY(1.0f);
+
+    ImGui::EndTable();
+    ImGui::End();
+}
+
+// ---------------------------------------------------------------------------
+// Memory Write Log
+// ---------------------------------------------------------------------------
+
+void DebuggerUI::onMemWrite(void* ctx, uint16_t addr, uint8_t prevVal, uint8_t newVal)
+{
+    auto* ui = static_cast<DebuggerUI*>(ctx);
+    if (!ui->m_memLogEnabled) return;
+
+    // Address filter
+    if (ui->m_memLogFilterEnabled && ui->m_memLogAddrFilterBuf[0] != '\0')
+    {
+        uint16_t filter = static_cast<uint16_t>(std::strtol(ui->m_memLogAddrFilterBuf, nullptr, 16));
+        if (addr != filter) return;
+    }
+
+    // Optionally skip no-op writes (prev == new)
+    if (ui->m_memLogHideNoOp && prevVal == newVal) return;
+
+    MemLogEntry entry;
+    entry.cycle   = ui->m_gb.totalCycles();
+    entry.pc      = ui->m_gb.cpu().registers().PC;
+    entry.addr    = addr;
+    entry.prevVal = prevVal;
+    entry.newVal  = newVal;
+
+    ui->m_memLogBuf[ui->m_memLogHead] = entry;
+    ui->m_memLogHead = (ui->m_memLogHead + 1) % kMemLogSize;
+    if (ui->m_memLogCount < kMemLogSize)
+        ++ui->m_memLogCount;
+}
+
+void DebuggerUI::renderMemoryLog()
+{
+    if (!ImGui::Begin("Memory Log", &m_showMemoryLog)) { ImGui::End(); return; }
+
+    // --- Controls ---
+    if (ImGui::Checkbox("Record", &m_memLogEnabled) && m_memLogEnabled)
+    {
+        m_memLogHead  = 0;
+        m_memLogCount = 0;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Clear")) { m_memLogHead = 0; m_memLogCount = 0; }
+    ImGui::SameLine();
+    ImGui::Text("%d / %d", m_memLogCount, kMemLogSize);
+    ImGui::SameLine();
+    ImGui::Checkbox("Hide no-op", &m_memLogHideNoOp);
+
+    ImGui::Checkbox("Filter addr", &m_memLogFilterEnabled);
+    if (m_memLogFilterEnabled)
+    {
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(60.0f);
+        ImGui::InputText("##memlog_filter", m_memLogAddrFilterBuf, sizeof(m_memLogAddrFilterBuf),
+            ImGuiInputTextFlags_CharsHexadecimal);
+    }
+
+    ImGui::Separator();
+
+    // --- Table ---
+    constexpr ImGuiTableFlags tableFlags =
+        ImGuiTableFlags_ScrollY       |
+        ImGuiTableFlags_RowBg         |
+        ImGuiTableFlags_BordersInnerV |
+        ImGuiTableFlags_SizingFixedFit;
+
+    if (!ImGui::BeginTable("##memlog", 6, tableFlags, ImVec2(0.0f, 0.0f)))
+    {
+        ImGui::End();
+        return;
+    }
+
+    ImGui::TableSetupScrollFreeze(0, 1);
+    ImGui::TableSetupColumn("Cycle",  ImGuiTableColumnFlags_WidthFixed, 100.0f);
+    ImGui::TableSetupColumn("PC",     ImGuiTableColumnFlags_WidthFixed,  48.0f);
+    ImGui::TableSetupColumn("Addr",   ImGuiTableColumnFlags_WidthFixed,  48.0f);
+    ImGui::TableSetupColumn("Prev",   ImGuiTableColumnFlags_WidthFixed,  36.0f);
+    ImGui::TableSetupColumn("New",    ImGuiTableColumnFlags_WidthFixed,  36.0f);
+    ImGui::TableSetupColumn("Delta",  ImGuiTableColumnFlags_WidthFixed,  50.0f);
+    ImGui::TableHeadersRow();
+
+    bool scrollToBottom = false;
+    for (int i = 0; i < m_memLogCount; ++i)
+    {
+        int slot = (m_memLogHead - m_memLogCount + i + kMemLogSize) % kMemLogSize;
+        const auto& e = m_memLogBuf[slot];
+
+        ImGui::TableNextRow();
+
+        const int delta = static_cast<int>(e.newVal) - static_cast<int>(e.prevVal);
+        if (delta > 0)
+            ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0,
+                ImGui::GetColorU32(ImVec4(0.15f, 0.45f, 0.15f, 0.4f)));
+        else if (delta < 0)
+            ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0,
+                ImGui::GetColorU32(ImVec4(0.45f, 0.15f, 0.15f, 0.4f)));
+
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("%llu", static_cast<unsigned long long>(e.cycle));
+
+        ImGui::TableSetColumnIndex(1);
+        ImGui::Text("%04X", e.pc);
+
+        ImGui::TableSetColumnIndex(2);
+        ImGui::Text("%04X", e.addr);
+
+        ImGui::TableSetColumnIndex(3);
+        ImGui::Text("%02X", e.prevVal);
+
+        ImGui::TableSetColumnIndex(4);
+        ImGui::Text("%02X", e.newVal);
+
+        ImGui::TableSetColumnIndex(5);
+        if (delta > 0)      ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.4f, 1.0f), "+%d", delta);
+        else if (delta < 0) ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "%d",  delta);
+        else                ImGui::TextDisabled("=");
+
+        if (i == m_memLogCount - 1) scrollToBottom = true;
+    }
+
+    if (scrollToBottom)
+        ImGui::SetScrollHereY(1.0f);
+
+    ImGui::EndTable();
     ImGui::End();
 }

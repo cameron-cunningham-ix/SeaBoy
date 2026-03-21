@@ -258,7 +258,7 @@ namespace SeaBoy
         // VRAM locked during Mode 3 (Drawing) - PanDocs.4.3 LCD Access Timing
         if ((m_lcdc & LCDC::LCDEnable) && m_mode == PPUMode::Drawing)
             return 0xFF;
-        // PanDocs.10 VBK — CGB VRAM bank offset
+        // PanDocs.10 VBK - CGB VRAM bank offset
         uint16_t offset = (addr & 0x1FFFu) + (m_cgbMode ? (static_cast<uint16_t>(m_vbk & 1) << 13) : 0u);
         return m_vram[offset];
     }
@@ -273,7 +273,7 @@ namespace SeaBoy
 
     uint8_t PPU::readOAM(uint16_t addr) const
     {
-        // PanDocs.4.3.1 OAM DMA Transfer — when DMA is active, the DMA controller
+        // PanDocs.4.3.1 OAM DMA Transfer - when DMA is active, the DMA controller
         // owns the OAM bus, overriding normal PPU mode-based locking.
         if (m_dmaActive)
         {
@@ -292,7 +292,7 @@ namespace SeaBoy
 
     void PPU::writeOAM(uint16_t addr, uint8_t val)
     {
-        // PanDocs.4.3.1 OAM DMA Transfer — DMA owns the OAM bus
+        // PanDocs.4.3.1 OAM DMA Transfer - DMA owns the OAM bus
         if (m_dmaActive)
         {
             // Fresh startup: OAM still writable; restart startup: locked (old DMA held bus)
@@ -440,7 +440,7 @@ namespace SeaBoy
         }
     }
 
-    // PanDocs.10 VRAM DMA Transfers — HDMA5 write handler
+    // PanDocs.10 VRAM DMA Transfers - HDMA5 write handler
     void PPU::writeHDMA5(uint8_t val)
     {
         if (!m_cgbMode) return;

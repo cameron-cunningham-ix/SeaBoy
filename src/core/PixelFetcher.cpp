@@ -170,7 +170,7 @@ namespace SeaBoy
             ++m_bgStep;
             break;
 
-        case 7: // Push attempt — completes the 8-dot tile fetch cycle
+        case 7: // Push attempt - completes the 8-dot tile fetch cycle
             // PanDocs.4.8 Pixel FIFO: push 8 pixels when BG FIFO is empty,
             // then restart at step 0. Stall here if FIFO is non-empty.
             // Keeping the cycle at exactly 8 dots (steps 0-7) ensures the
@@ -316,7 +316,7 @@ namespace SeaBoy
                 ((m_objFetchedHi >> bit) & 1u) << 1u |
                 ((m_objFetchedLo >> bit) & 1u));
 
-            // Lower OAM index wins — don't overwrite occupied slots
+            // Lower OAM index wins - don't overwrite occupied slots
             if (colorID != 0 && !m_objFifo[fifoSlot].occupied)
             {
                 m_objFifo[fifoSlot].colorID    = colorID;

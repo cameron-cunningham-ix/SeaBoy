@@ -162,7 +162,7 @@ namespace SeaBoy
         uint8_t m_vram[0x4000]{};
         uint8_t m_oam[160]{};
 
-        // CGB state - PanDocs.10 VBK — VRAM Bank Select (CGB only)
+        // CGB state - PanDocs.10 VBK - VRAM Bank Select (CGB only)
         uint8_t m_vbk     = 0;     // VRAM bank select (0 or 1)
         bool    m_cgbMode = false;
 

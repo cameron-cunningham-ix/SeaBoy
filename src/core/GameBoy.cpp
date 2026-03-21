@@ -27,6 +27,12 @@ namespace SeaBoy
         // M-cycle callback: tick subsystems after every bus access / internal cycle.
         m_mmu.setCycleCallback(&GameBoy::onBusCycle, this);
 
+        // Watch callback: fired from MMU when a data breakpoint matches.
+        m_mmu.setWatchCallback(&GameBoy::onWatchHit, this);
+
+        // CPU event callback: forwards CPU-level events to the UI event log.
+        m_cpu.setCPUEventCallback(&GameBoy::onCPUEvent, this);
+
         m_cpu.reset();
         m_timer.reset();
         m_ppu.reset();
@@ -88,9 +94,50 @@ namespace SeaBoy
 
     uint32_t GameBoy::tick()
     {
+        const uint16_t pc = m_cpu.registers().PC;
+        // Latch current PC so WatchHit carries the instruction that triggered the watch.
+        m_mmu.setWatchPC(pc);
+
+        // Fire execution history callback with pre-step snapshot (zero cost when null).
+        if (m_execFn)
+        {
+            ExecSnapshot snap;
+            snap.pc     = pc;
+            snap.opcode = m_mmu.peek8(pc);
+            snap.regs   = m_cpu.registers();
+            snap.ime    = m_cpu.ime();
+            snap.halted = m_cpu.halted();
+            m_execFn(m_execCtx, snap);
+        }
+
         // Subsystems (timer, PPU, APU) are ticked at M-cycle granularity
         // via the onBusCycle callback during cpu.step(), not after.
-        return m_cpu.step();
+        const uint8_t ifBefore = m_eventFn ? m_mmu.readIF() : m_prevIF;
+        const uint32_t cycles = m_cpu.step();
+        m_totalCycles += cycles;
+
+        // Fire IntRequested for each IF bit newly set during this tick.
+        if (m_eventFn)
+        {
+            const uint8_t ifAfter = m_mmu.readIF();
+            uint8_t newBits = static_cast<uint8_t>(ifAfter & ~ifBefore & 0x1Fu);
+            for (uint8_t b = 0; b < 5; ++b)
+            {
+                if (newBits & (1u << b))
+                {
+                    GameEvent ev{};
+                    ev.cycle  = m_totalCycles;
+                    ev.pc     = m_cpu.registers().PC;
+                    ev.ie     = m_mmu.readIE();
+                    ev.ifReg  = ifAfter;
+                    ev.kind   = EventKind::IntRequested;
+                    ev.param  = b;
+                    m_eventFn(m_eventCtx, ev);
+                }
+            }
+        }
+
+        return cycles;
     }
 
     void GameBoy::onBusCycle(void* ctx, uint32_t tCycles)
@@ -103,6 +150,24 @@ namespace SeaBoy
         uint32_t ppuCycles = gb->m_mmu.isDoubleSpeed() ? (tCycles / 2) : tCycles;
         gb->m_ppu.tick(ppuCycles);
         gb->m_apu.tick(ppuCycles, gb->m_timer.sysCounter());
+    }
+
+    void GameBoy::onWatchHit(void* ctx, const WatchHit& hit)
+    {
+        auto* gb = static_cast<GameBoy*>(ctx);
+        if (!gb->m_watchHitPending) // capture only the first hit per tick
+        {
+            gb->m_watchHitPending = true;
+            gb->m_pendingWatchHit = hit;
+        }
+    }
+
+    bool GameBoy::consumePendingWatch(WatchHit& out)
+    {
+        if (!m_watchHitPending) return false;
+        out = m_pendingWatchHit;
+        m_watchHitPending = false;
+        return true;
     }
 
     void GameBoy::onJoypadIRQ(void* ctx)
@@ -130,6 +195,31 @@ namespace SeaBoy
     bool GameBoy::loadSRAM(const std::string& path)
     {
         return SaveFile::load(*this, path);
+    }
+
+    void GameBoy::onCPUEvent(void* ctx, const CPU::CPUEvent& ev)
+    {
+        auto* gb = static_cast<GameBoy*>(ctx);
+        if (!gb->m_eventFn) return;
+
+        GameEvent gev{};
+        gev.cycle  = gb->m_totalCycles;
+        gev.pc     = ev.pc;
+        gev.ie     = ev.ie;
+        gev.ifReg  = ev.ifReg;
+        gev.param  = ev.param;
+
+        switch (ev.kind)
+        {
+            case CPU::CPUEventKind::ISREntry:    gev.kind = EventKind::IntServiced; break;
+            case CPU::CPUEventKind::IMEEnabled:  gev.kind = EventKind::IMEEnabled;  break;
+            case CPU::CPUEventKind::IMEDisabled: gev.kind = EventKind::IMEDisabled; break;
+            case CPU::CPUEventKind::HaltEnter:   gev.kind = EventKind::HaltEnter;   break;
+            case CPU::CPUEventKind::HaltExit:    gev.kind = EventKind::HaltExit;    break;
+            case CPU::CPUEventKind::RETI:        gev.kind = EventKind::RETI;        break;
+        }
+
+        gb->m_eventFn(gb->m_eventCtx, gev);
     }
 
 }

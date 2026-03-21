@@ -796,6 +796,7 @@ uint32_t op_76(CPU& cpu) {
         cpu.setHaltBug(true);
     } else {
         cpu.setHalted(true);
+        cpu.fireCPUEvent(CPU::CPUEventKind::HaltEnter);
     }
     return 4;
 }
@@ -1149,6 +1150,8 @@ uint32_t op_D9(CPU& cpu) {
     cpu.regs().PC = stackPop(cpu);
     cpu.setIME(true);
     cpu.setImeDelay(0);
+    cpu.fireCPUEvent(CPU::CPUEventKind::RETI);
+    cpu.fireCPUEvent(CPU::CPUEventKind::IMEEnabled);
     cpu.internalCycle(); // set PC
     return 16;
 }
@@ -1317,6 +1320,7 @@ uint32_t op_F2(CPU& cpu) {
 uint32_t op_F3(CPU& cpu) {
     cpu.setIME(false);
     cpu.setImeDelay(0);  // cancel any pending EI
+    cpu.fireCPUEvent(CPU::CPUEventKind::IMEDisabled);
     return 4;
 }
 

@@ -49,6 +49,31 @@ namespace SeaBoy
         void setHaltBug(bool v)     { m_haltBug  = v; }
         void setImeDelay(uint8_t v) { m_imeDelay = v; }
 
+        // CPU-level interrupt/control-flow events - fired synchronously during step().
+        // Consumed by GameBoy and forwarded to the UI event log.
+        enum class CPUEventKind : uint8_t
+        {
+            ISREntry,    // CPU jumped to ISR vector; param = IRQ bit index (0-4)
+            IMEEnabled,  // IME set (EI delay expired or RETI)
+            IMEDisabled, // IME cleared (DI)
+            HaltEnter,   // CPU entered HALT (normal case)
+            HaltExit,    // CPU woken from HALT; param = pending IF & IE
+            RETI,        // RETI executed
+        };
+        struct CPUEvent
+        {
+            CPUEventKind kind;
+            uint16_t     pc;    // PC at time of event
+            uint8_t      param; // IRQ bit index or pending bits depending on kind
+            uint8_t      ie;    // IE snapshot
+            uint8_t      ifReg; // IF snapshot
+        };
+        using CPUEventFn = void(*)(void* ctx, const CPUEvent& ev);
+        void setCPUEventCallback(CPUEventFn fn, void* ctx) { m_cpuEvFn = fn; m_cpuEvCtx = ctx; }
+
+        // Fire a CPU event (also callable from opcode handlers via cpu.fireCPUEvent).
+        void fireCPUEvent(CPUEventKind kind, uint8_t param = 0);
+
         // Save state serialization
         void serialize(BinaryWriter& w) const;
         void deserialize(BinaryReader& r);
@@ -72,6 +97,10 @@ namespace SeaBoy
         bool m_halted       = false; // HALT state - PanDocs.9.2
         bool m_haltBug      = false; // HALT bug pending - PanDocs.9.2
         uint8_t m_imeDelay = 0; // EI 2-step delay counter: 2→1→0 (IME set when hits 0) - PanDocs Interrupts
+
+        // CPU event callback
+        CPUEventFn m_cpuEvFn  = nullptr;
+        void*      m_cpuEvCtx = nullptr;
 
         // Check and service pending interrupts.
         // Returns 20 T-cycles if an interrupt was dispatched, 0 otherwise.

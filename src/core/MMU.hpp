@@ -29,6 +29,21 @@
 
 namespace SeaBoy
 {
+    // -- Data watchpoint types -------------------------------------------
+
+    enum class WatchType : uint8_t { Read = 1, Write = 2, ReadWrite = 3 };
+
+    struct Watchpoint { uint16_t addr; WatchType type; };
+
+    // Filled by MMU when a watchpoint fires; consumed by the main loop / DebuggerUI.
+    struct WatchHit
+    {
+        uint16_t  addr;   // address accessed
+        WatchType type;   // the actual access (Read or Write, never ReadWrite)
+        uint8_t   value;  // byte value read or written
+        uint16_t  pc;     // CPU PC latched by GameBoy before tick()
+    };
+
     // Named address constants
     constexpr uint16_t ADDR_P1        = 0xFF00; // Joypad / P1 register
     constexpr uint16_t ADDR_ROM_BANK  = 0x3FFF;
@@ -85,6 +100,23 @@ namespace SeaBoy
         // after every 4 T-cycle bus access or internal cycle.
         using CycleCallback = void(*)(void* ctx, uint32_t tCycles);
         void setCycleCallback(CycleCallback fn, void* ctx) { m_cycleFn = fn; m_cycleCtx = ctx; }
+
+        // Watchpoint callback - fired from read8/write8 when a data breakpoint matches.
+        // Same decoupling pattern as CycleCallback: core holds a fn ptr, UI never imported.
+        using WatchCallback = void(*)(void* ctx, const WatchHit& hit);
+        void setWatchCallback(WatchCallback fn, void* ctx) { m_watchFn = fn; m_watchCtx = ctx; }
+        void setWatchPC(uint16_t pc) { m_watchPC = pc; }
+
+        // Write-trace callback - fired from write8 for every write (addr, prevVal, newVal).
+        // prevVal is the value read via peek8 before the write completes.
+        // Zero cost when null. Does not fire from writeIF/writeIE helpers.
+        using WriteTraceCallback = void(*)(void* ctx, uint16_t addr, uint8_t prevVal, uint8_t newVal);
+        void setWriteTraceCallback(WriteTraceCallback fn, void* ctx) { m_writeFn = fn; m_writeCtx = ctx; }
+
+        void addWatchpoint(const Watchpoint& wp);
+        void removeWatchpoint(uint16_t addr);
+        void clearWatchpoints();
+        bool hasWatchpoints() const { return !m_watchpoints.empty(); }
 
         // Tick subsystems without a bus access (for CPU internal M-cycles).
         void tickCycle() { if (m_cycleFn) m_cycleFn(m_cycleCtx, 4); }
@@ -193,6 +225,18 @@ namespace SeaBoy
         // M-cycle callback (null until setCycleCallback is called)
         CycleCallback m_cycleFn  = nullptr;
         void*         m_cycleCtx = nullptr;
+
+        // Watchpoints - checked in read8/write8
+        std::vector<Watchpoint> m_watchpoints;
+        WatchCallback           m_watchFn  = nullptr;
+        void*                   m_watchCtx = nullptr;
+        uint16_t                m_watchPC  = 0;
+
+        // Write-trace callback
+        WriteTraceCallback m_writeFn  = nullptr;
+        void*              m_writeCtx = nullptr;
+
+        void checkWatch(uint16_t addr, WatchType accessType, uint8_t value);
 
     };
 

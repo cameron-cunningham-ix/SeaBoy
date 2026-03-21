@@ -282,7 +282,7 @@ namespace SeaBoy
         if (cgb)
         {
             // CGB post-boot register values
-            // A=0x11 is critical — games check this to detect CGB hardware
+            // A=0x11 is critical - games check this to detect CGB hardware
             m_regs.A  = 0x11;
             m_regs.setF(0x80);    // Z=1 N=0 H=0 C=0 on CGB
             m_regs.B  = 0x00;
@@ -333,6 +333,18 @@ namespace SeaBoy
         m_mmu.tickCycle();
     }
 
+    void CPU::fireCPUEvent(CPUEventKind kind, uint8_t param)
+    {
+        if (!m_cpuEvFn) return;
+        CPUEvent ev;
+        ev.kind   = kind;
+        ev.pc     = m_regs.PC;
+        ev.param  = param;
+        ev.ie     = m_mmu.readIE();
+        ev.ifReg  = m_mmu.readIF();
+        m_cpuEvFn(m_cpuEvCtx, ev);
+    }
+
     uint32_t CPU::handleInterrupts()
     {
         // PanDocs.9 - Interrupt Service Routine
@@ -359,6 +371,12 @@ namespace SeaBoy
         else if (pending & INT_TIMER)   { bit = INT_TIMER;    vector = IV_TIMER;   }
         else if (pending & INT_SERIAL)  { bit = INT_SERIAL;   vector = IV_SERIAL;  }
         else if (pending & INT_JOYPAD)  { bit = INT_JOYPAD;   vector = IV_JOYPAD;  }
+
+        // Notify event log: ISR entry (param = bit index 0-4)
+        {
+            uint8_t idx = 0; uint8_t tmp = bit; while (tmp > 1) { tmp >>= 1; ++idx; }
+            fireCPUEvent(CPUEventKind::ISREntry, idx);
+        }
 
         // ISR dispatch = 5 M-cycles (20 T-cycles):
         //   M1-M2: two internal wait cycles
@@ -418,6 +436,7 @@ namespace SeaBoy
         if (m_halted && pending)
         {
             m_halted = false; // Wake from HALT - PanDocs.9.2
+            fireCPUEvent(CPUEventKind::HaltExit, pending);
         }
 
         if (pending)
@@ -460,7 +479,10 @@ namespace SeaBoy
         {
             --m_imeDelay;
             if (m_imeDelay == 0)
+            {
                 m_ime = true;
+                fireCPUEvent(CPUEventKind::IMEEnabled);
+            }
         }
 
         return cycles;

@@ -56,7 +56,7 @@ namespace SeaBoy
         return m_ppu && m_ppu->isDMAActive();
     }
 
-    // PanDocs.2 SVBK — CGB WRAM bank offset for 0xD000–0xDFFF region.
+    // PanDocs.2 SVBK - CGB WRAM bank offset for 0xD000–0xDFFF region.
     // Bank 0 maps to 1. Returns byte offset into m_wram[].
     static inline uint32_t wramBankOffset(uint8_t svbk)
     {
@@ -162,6 +162,7 @@ namespace SeaBoy
         else if (addr == ADDR_IE)
             val = m_ie;
 
+        checkWatch(addr, WatchType::Read, val);
         // Tick subsystems after each bus access (4 T-cycles per M-cycle)
         if (m_cycleFn) m_cycleFn(m_cycleCtx, 4);
         return val;
@@ -174,6 +175,9 @@ namespace SeaBoy
             m_testRam[addr] = val;
             return;
         }
+
+        // Capture previous value for write-trace before any routing modifies memory.
+        const uint8_t prevVal = m_writeFn ? peek8(addr) : 0u;
 
         // ROM area: MBC register writes (bank switching etc.) - delegated to Cartridge
         if (addr <= ADDR_ROM_END)
@@ -253,6 +257,8 @@ namespace SeaBoy
             m_ie = val;
         // else: writes to unmapped regions are silently ignored
 
+        if (m_writeFn) m_writeFn(m_writeCtx, addr, prevVal, val);
+        checkWatch(addr, WatchType::Write, val);
         // Tick subsystems after each bus access (4 T-cycles per M-cycle)
         if (m_cycleFn) m_cycleFn(m_cycleCtx, 4);
     }
@@ -371,6 +377,44 @@ namespace SeaBoy
     void MMU::resetTimerDIV()
     {
         if (m_timer) m_timer->resetDIV();
+    }
+
+    // -- Watchpoint implementation ----------------------------------------
+
+    void MMU::checkWatch(uint16_t addr, WatchType accessType, uint8_t value)
+    {
+        if (!m_watchFn || m_watchpoints.empty()) return;
+        for (const auto& wp : m_watchpoints)
+        {
+            if (wp.addr == addr &&
+                (static_cast<uint8_t>(wp.type) & static_cast<uint8_t>(accessType)) != 0)
+            {
+                m_watchFn(m_watchCtx, WatchHit{ addr, accessType, value, m_watchPC });
+                return; // fire once per access even if multiple watchpoints match
+            }
+        }
+    }
+
+    void MMU::addWatchpoint(const Watchpoint& wp)
+    {
+        for (auto& e : m_watchpoints)
+        {
+            if (e.addr == wp.addr) { e.type = wp.type; return; } // update type if exists
+        }
+        m_watchpoints.push_back(wp);
+    }
+
+    void MMU::removeWatchpoint(uint16_t addr)
+    {
+        m_watchpoints.erase(
+            std::remove_if(m_watchpoints.begin(), m_watchpoints.end(),
+                [addr](const Watchpoint& w) { return w.addr == addr; }),
+            m_watchpoints.end());
+    }
+
+    void MMU::clearWatchpoints()
+    {
+        m_watchpoints.clear();
     }
 
 }
