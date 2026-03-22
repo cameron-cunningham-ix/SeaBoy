@@ -85,6 +85,9 @@ public:
     // Hardware model override applied on every loadROM().
     SeaBoy::HardwareMode m_hardwareMode = SeaBoy::HardwareMode::Auto;
 
+    // Emulation speed as a percentage (25–400, steps of 25). 100 = real hardware speed.
+    int m_speedPercent = 100;
+
     // Debugger reference for Window menu toggles. Set via setDebugger().
     DebuggerUI* m_debugger = nullptr;
     void setDebugger(DebuggerUI* dbg) { m_debugger = dbg; }
@@ -393,6 +396,19 @@ public:
                     if (ImGui::MenuItem("Auto",        nullptr, isAuto)) m_hardwareMode = SeaBoy::HardwareMode::Auto;
                     if (ImGui::MenuItem("Emulate DMG", nullptr, isDMG))  m_hardwareMode = SeaBoy::HardwareMode::DMG;
                     if (ImGui::MenuItem("Emulate CGB", nullptr, isCGB))  m_hardwareMode = SeaBoy::HardwareMode::CGB;
+                    ImGui::EndMenu();
+                }
+
+                if (ImGui::BeginMenu("Emulation Speed"))
+                {
+                    for (int s = 25; s <= 400; s += 25)
+                    {
+                        char label[16];
+                        snprintf(label, sizeof(label), "%d%%", s);
+                        bool selected = (m_speedPercent == s);
+                        if (ImGui::MenuItem(label, nullptr, selected))
+                            m_speedPercent = s;
+                    }
                     ImGui::EndMenu();
                 }
                 ImGui::EndMenu();

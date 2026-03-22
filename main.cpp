@@ -47,6 +47,9 @@ int main(int argc, char *argv[])
     platform.setDebugger(&debugger);
     platform.setGameBoy(&gameBoy);
 
+    int prevSpeedPercent = platform.m_speedPercent;
+    uint64_t frameStartNs = SDL_GetTicksNS();
+
     bool running = true;
     while (running)
     {
@@ -99,14 +102,11 @@ int main(int argc, char *argv[])
             platform.m_pendingRestart = false;
         }
 
-        // Audio-driven sync - skip when paused to avoid blocking the UI
-        if (audioStream && !debugger.isPaused())
+        // Flush stale audio when speed changes to prevent distortion on transitions
+        if (audioStream && platform.m_speedPercent != prevSpeedPercent)
         {
-            constexpr int MAX_QUEUED_BYTES = 1608 * 2 * sizeof(float);
-            while (SDL_GetAudioStreamQueued(audioStream) > MAX_QUEUED_BYTES)
-            {
-                SDL_Delay(1);
-            }
+            SDL_ClearAudioStream(audioStream);
+            prevSpeedPercent = platform.m_speedPercent;
         }
 
         // Emulation tick - respects pause / step / breakpoints
@@ -177,14 +177,38 @@ int main(int argc, char *argv[])
             }
         }
 
-        // Drain APU samples into SDL audio stream
+        // Drain APU samples into SDL audio stream.
+        // Cap the queue to ~4 frames of audio to prevent unbounded growth at >100%.
+        // If the queue overflows the cap, flush it so audio stays roughly in sync.
         if (audioStream)
         {
             float samples[2048]; // up to 1024 stereo pairs
             uint32_t count = gameBoy.apu().drainSamples(samples, 1024);
             if (count > 0)
+            {
+                constexpr int MAX_QUEUED_BYTES = 800 * 4 * 2 * static_cast<int>(sizeof(float));
+                if (SDL_GetAudioStreamQueued(audioStream) > MAX_QUEUED_BYTES)
+                    SDL_ClearAudioStream(audioStream);
                 SDL_PutAudioStreamData(audioStream, samples,
                     static_cast<int>(count * 2 * sizeof(float)));
+            }
+        }
+
+        // Wall-clock throttle: pace each frame to the target duration based on speed.
+        // 70224 T-cycles @ 4.194304 MHz ≈ 16742 µs per frame at 1×.
+        if (!debugger.isPaused())
+        {
+            constexpr uint64_t BASE_FRAME_NS = 16742000ULL;
+            uint64_t targetNs = BASE_FRAME_NS * 100ULL / static_cast<uint64_t>(platform.m_speedPercent);
+            uint64_t now = SDL_GetTicksNS();
+            uint64_t elapsed = now - frameStartNs;
+            if (elapsed < targetNs)
+                SDL_DelayNS(targetNs - elapsed);
+            frameStartNs = SDL_GetTicksNS();
+        }
+        else
+        {
+            frameStartNs = SDL_GetTicksNS();
         }
 
         // Push the PPU framebuffer to the display texture
