@@ -517,6 +517,7 @@ namespace SeaBoy
 
     // ---- SaveState orchestration ----
 
+#ifndef PICO_BUILD
     bool SaveState::save(const GameBoy& gb, const std::string& path)
     {
         std::ofstream file(path, std::ios::binary);
@@ -625,9 +626,14 @@ namespace SeaBoy
 
         return true;
     }
+#else
+    bool SaveState::save(const GameBoy&, const std::string&) { return false; }
+    bool SaveState::load(GameBoy&,       const std::string&) { return false; }
+#endif
 
     // ---- SaveFile (SRAM persistence) ----
 
+#ifndef PICO_BUILD
     std::string SaveFile::getSavePath(const std::string& romPath)
     {
         size_t dot = romPath.rfind('.');
@@ -635,6 +641,9 @@ namespace SeaBoy
             return romPath + ".sav";
         return romPath.substr(0, dot) + ".sav";
     }
+#else
+    std::string SaveFile::getSavePath(const std::string& p) { return p; }
+#endif
 
     bool SaveFile::hasBattery(const uint8_t* rom, size_t romSize)
     {
@@ -657,6 +666,7 @@ namespace SeaBoy
         }
     }
 
+#ifndef PICO_BUILD
     bool SaveFile::save(const GameBoy& gb, const std::string& path)
     {
         const Cartridge* cart = gb.mmu().cartridge();
@@ -699,5 +709,9 @@ namespace SeaBoy
         cart->loadSRAM(data.data(), data.size());
         return true;
     }
+#else
+    bool SaveFile::save(const GameBoy&, const std::string&) { return false; }
+    bool SaveFile::load(GameBoy&,       const std::string&) { return false; }
+#endif
 
 }

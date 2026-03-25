@@ -1,7 +1,10 @@
 build/
+build_pico/
+build_pico2/
 *.ini
 roms/
 layouts/
 staging/
 installer/
 .github/
+info/

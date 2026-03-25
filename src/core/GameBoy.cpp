@@ -3,8 +3,10 @@
 
 #include <cstdio>
 #include <cstring>
+#ifndef PICO_BUILD
 #include <fstream>
 #include <vector>
+#endif
 
 namespace SeaBoy
 {
@@ -41,6 +43,12 @@ namespace SeaBoy
 
     bool GameBoy::loadROM(const std::string& path)
     {
+#ifdef PICO_BUILD
+        // On Pico, ROMs are loaded via mmu().loadROM(data, size) directly from SD card.
+        // This string-path overload is unused; call sites use the MMU API instead.
+        (void)path;
+        return false;
+#else
         std::ifstream file(path, std::ios::binary | std::ios::ate);
         if (!file.is_open())
         {
@@ -90,6 +98,7 @@ namespace SeaBoy
         }
 
         return true;
+#endif
     }
 
     uint32_t GameBoy::tick()

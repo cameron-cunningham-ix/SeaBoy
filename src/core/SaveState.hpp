@@ -2,9 +2,11 @@
 
 #include <cstdint>
 #include <cstring>
-#include <fstream>
 #include <string>
+#ifndef PICO_BUILD
+#include <fstream>
 #include <vector>
+#endif
 
 // Save state serialization for SeaBoy emulator.
 // Binary format: "SBST" magic + version byte + ROM title hash + sequential component data.
@@ -13,6 +15,34 @@ namespace SeaBoy
 {
     class GameBoy;
 
+#ifdef PICO_BUILD
+    // On Pico, BinaryWriter/BinaryReader are no-op stubs.
+    // serialize/deserialize methods still compile but do nothing.
+    // Actual save-state I/O is handled via FatFs in later stages.
+    struct BinaryWriter
+    {
+        void write8(uint8_t)             {}
+        void write16(uint16_t)           {}
+        void write32(uint32_t)           {}
+        void writeBool(bool)             {}
+        void writeInt(int)               {}
+        void writeDouble(double)         {}
+        void writeBlock(const void*, size_t) {}
+        bool good() const { return false; }
+    };
+
+    struct BinaryReader
+    {
+        uint8_t  read8()                  { return 0; }
+        uint16_t read16()                 { return 0; }
+        uint32_t read32()                 { return 0; }
+        bool     readBool()               { return false; }
+        int      readInt()                { return 0; }
+        double   readDouble()             { return 0.0; }
+        void     readBlock(void*, size_t) {}
+        bool     good() const             { return false; }
+    };
+#else
     // Simple binary writer wrapping std::ofstream.
     struct BinaryWriter
     {
@@ -54,6 +84,7 @@ namespace SeaBoy
 
         bool good() const { return in.good(); }
     };
+#endif
 
     // Save state file format constants
     constexpr char SAVE_STATE_MAGIC[4] = {'S', 'B', 'S', 'T'};

@@ -346,7 +346,13 @@ namespace SeaBoy
         uint8_t m_waveRam[16]{};
 
         // Audio sample output
-        static constexpr uint32_t SAMPLE_BUFFER_SIZE = 4096;
+        static constexpr uint32_t SAMPLE_BUFFER_SIZE =
+#ifdef PICO_BUILD
+            1024   // ~85 ms at 48 kHz; saves ~24 KB of SRAM
+#else
+            4096
+#endif
+            ;
         float    m_sampleBuffer[SAMPLE_BUFFER_SIZE * 2]{}; // interleaved L, R
         uint32_t m_sampleWritePos = 0;
         uint32_t m_sampleReadPos  = 0;
