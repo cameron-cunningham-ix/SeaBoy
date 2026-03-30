@@ -17,7 +17,7 @@ namespace SeaBoy::Opcodes
 // ---------------------------------------------------------------------------
 // Helper: push a 16-bit value onto the stack
 // PanDocs.25 OAM Corruption Bug: PUSH triggers Write corruption for each SP--
-// IDU when SP is in 0xFE00–0xFEFF. Trigger fires with the pre-decrement value.
+// IDU when SP is in 0xFE00-0xFEFF. Trigger fires with the pre-decrement value.
 // ---------------------------------------------------------------------------
 static void stackPush(CPU& cpu, uint16_t val) {
     cpu.mmu().triggerOAMCorrupt(cpu.regs().SP, OAMCorruptType::Write); // SP-- IDU (high byte)
@@ -28,7 +28,7 @@ static void stackPush(CPU& cpu, uint16_t val) {
 
 // Helper: pop a 16-bit value from the stack
 // PanDocs.25 OAM Corruption Bug: POP triggers 3 corruption events when SP is in
-// 0xFE00–0xFEFF - one read, one glitched write from the SP++ IDU, and a second
+// 0xFE00-0xFEFF - one read, one glitched write from the SP++ IDU, and a second
 // read without a second glitched write.
 static uint16_t stackPop(CPU& cpu) {
     uint16_t sp0 = cpu.regs().SP;
@@ -846,7 +846,7 @@ static uint32_t alu_r8(CPU& cpu, uint8_t op, uint8_t srcIdx) {
     return cycles;
 }
 
-// ADD A, r8 (0x80–0x87)
+// ADD A, r8 (0x80-0x87)
 uint32_t op_80(CPU& cpu) { return alu_r8(cpu, 0, 0); }
 uint32_t op_81(CPU& cpu) { return alu_r8(cpu, 0, 1); }
 uint32_t op_82(CPU& cpu) { return alu_r8(cpu, 0, 2); }
@@ -856,7 +856,7 @@ uint32_t op_85(CPU& cpu) { return alu_r8(cpu, 0, 5); }
 uint32_t op_86(CPU& cpu) { return alu_r8(cpu, 0, 6); }
 uint32_t op_87(CPU& cpu) { return alu_r8(cpu, 0, 7); }
 
-// ADC A, r8 (0x88–0x8F)
+// ADC A, r8 (0x88-0x8F)
 uint32_t op_88(CPU& cpu) { return alu_r8(cpu, 1, 0); }
 uint32_t op_89(CPU& cpu) { return alu_r8(cpu, 1, 1); }
 uint32_t op_8A(CPU& cpu) { return alu_r8(cpu, 1, 2); }
@@ -866,7 +866,7 @@ uint32_t op_8D(CPU& cpu) { return alu_r8(cpu, 1, 5); }
 uint32_t op_8E(CPU& cpu) { return alu_r8(cpu, 1, 6); }
 uint32_t op_8F(CPU& cpu) { return alu_r8(cpu, 1, 7); }
 
-// SUB A, r8 (0x90–0x97)
+// SUB A, r8 (0x90-0x97)
 uint32_t op_90(CPU& cpu) { return alu_r8(cpu, 2, 0); }
 uint32_t op_91(CPU& cpu) { return alu_r8(cpu, 2, 1); }
 uint32_t op_92(CPU& cpu) { return alu_r8(cpu, 2, 2); }
@@ -876,7 +876,7 @@ uint32_t op_95(CPU& cpu) { return alu_r8(cpu, 2, 5); }
 uint32_t op_96(CPU& cpu) { return alu_r8(cpu, 2, 6); }
 uint32_t op_97(CPU& cpu) { return alu_r8(cpu, 2, 7); }
 
-// SBC A, r8 (0x98–0x9F)
+// SBC A, r8 (0x98-0x9F)
 uint32_t op_98(CPU& cpu) { return alu_r8(cpu, 3, 0); }
 uint32_t op_99(CPU& cpu) { return alu_r8(cpu, 3, 1); }
 uint32_t op_9A(CPU& cpu) { return alu_r8(cpu, 3, 2); }
@@ -886,7 +886,7 @@ uint32_t op_9D(CPU& cpu) { return alu_r8(cpu, 3, 5); }
 uint32_t op_9E(CPU& cpu) { return alu_r8(cpu, 3, 6); }
 uint32_t op_9F(CPU& cpu) { return alu_r8(cpu, 3, 7); }
 
-// AND A, r8 (0xA0–0xA7)
+// AND A, r8 (0xA0-0xA7)
 uint32_t op_A0(CPU& cpu) { return alu_r8(cpu, 4, 0); }
 uint32_t op_A1(CPU& cpu) { return alu_r8(cpu, 4, 1); }
 uint32_t op_A2(CPU& cpu) { return alu_r8(cpu, 4, 2); }
@@ -896,7 +896,7 @@ uint32_t op_A5(CPU& cpu) { return alu_r8(cpu, 4, 5); }
 uint32_t op_A6(CPU& cpu) { return alu_r8(cpu, 4, 6); }
 uint32_t op_A7(CPU& cpu) { return alu_r8(cpu, 4, 7); }
 
-// XOR A, r8 (0xA8–0xAF)
+// XOR A, r8 (0xA8-0xAF)
 uint32_t op_A8(CPU& cpu) { return alu_r8(cpu, 5, 0); }
 uint32_t op_A9(CPU& cpu) { return alu_r8(cpu, 5, 1); }
 uint32_t op_AA(CPU& cpu) { return alu_r8(cpu, 5, 2); }
@@ -906,7 +906,7 @@ uint32_t op_AD(CPU& cpu) { return alu_r8(cpu, 5, 5); }
 uint32_t op_AE(CPU& cpu) { return alu_r8(cpu, 5, 6); }
 uint32_t op_AF(CPU& cpu) { return alu_r8(cpu, 5, 7); }
 
-// OR A, r8 (0xB0–0xB7)
+// OR A, r8 (0xB0-0xB7)
 uint32_t op_B0(CPU& cpu) { return alu_r8(cpu, 6, 0); }
 uint32_t op_B1(CPU& cpu) { return alu_r8(cpu, 6, 1); }
 uint32_t op_B2(CPU& cpu) { return alu_r8(cpu, 6, 2); }
@@ -916,7 +916,7 @@ uint32_t op_B5(CPU& cpu) { return alu_r8(cpu, 6, 5); }
 uint32_t op_B6(CPU& cpu) { return alu_r8(cpu, 6, 6); }
 uint32_t op_B7(CPU& cpu) { return alu_r8(cpu, 6, 7); }
 
-// CP A, r8 (0xB8–0xBF)
+// CP A, r8 (0xB8-0xBF)
 uint32_t op_B8(CPU& cpu) { return alu_r8(cpu, 7, 0); }
 uint32_t op_B9(CPU& cpu) { return alu_r8(cpu, 7, 1); }
 uint32_t op_BA(CPU& cpu) { return alu_r8(cpu, 7, 2); }

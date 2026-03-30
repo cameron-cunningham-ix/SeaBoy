@@ -99,7 +99,7 @@ set(JSON_Install    OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(nlohmann_json)
 
 # -----------------------------
-# stb (header-only) – used by mealybug_runner for PNG writing
+# stb (header-only) - used by mealybug_runner for PNG writing
 # stb has no CMakeLists.txt so we use FetchContent_Populate directly.
 # -----------------------------
 FetchContent_Declare(
@@ -184,7 +184,7 @@ add_custom_command(TARGET SeaBoy POST_BUILD
 )
 
 # -----------------------------
-# sm83_runner – SingleStepTests/sm83 CPU test harness
+# sm83_runner - SingleStepTests/sm83 CPU test harness
 #
 # Clone the test data once:
 #   git clone --depth 1 https://github.com/SingleStepTests/sm83.git tests/sm83_data
@@ -227,7 +227,7 @@ set_target_properties(sm83_runner PROPERTIES
 )
 
 # -----------------------------
-# blargg_runner – headless Blargg ROM test harness
+# blargg_runner - headless Blargg ROM test harness
 #
 # Download ROMs from: https://gbdev.gg/wiki/articles/Test_ROMs
 # Individual cpu_instrs sub-tests: 01-special.gb … 11-op a,(hl).gb
@@ -271,7 +271,7 @@ set_target_properties(blargg_runner PROPERTIES
 )
 
 # -----------------------------
-# mealybug_runner – PPU visual regression test harness
+# mealybug_runner - PPU visual regression test harness
 #
 # ROMs + expected PNGs from:
 #   https://github.com/mattcurrie/mealybug-tearoom-tests
@@ -324,7 +324,7 @@ set_target_properties(mealybug_runner PROPERTIES
 )
 
 # -----------------------------
-# mooneye_runner – mooneye-test-suite register-based pass/fail harness
+# mooneye_runner - mooneye-test-suite register-based pass/fail harness
 #
 # Clone ROMs:
 #   git clone https://github.com/Gekkio/mooneye-test-suite roms/mooneye-test-suite
@@ -371,7 +371,7 @@ set_target_properties(mooneye_runner PROPERTIES
 )
 
 # -----------------------------
-# microtest_runner – gbmicrotest cycle-accurate micro-test harness
+# microtest_runner - gbmicrotest cycle-accurate micro-test harness
 #
 # ROMs from: https://github.com/aappleby/gbmicrotest
 # Pre-built binaries in roms/gbmicrotest-main/bin/

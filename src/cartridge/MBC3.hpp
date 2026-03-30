@@ -8,14 +8,14 @@ namespace SeaBoy
     // PanDocs 17.4 MBC3
     //
     // Register map (write-only, decoded from ROM address bus):
-    //   0x0000–0x1FFF  RAM/RTC enable  (lower nibble 0x0A = enable)
-    //   0x2000–0x3FFF  ROM bank number (7-bit; 0 -> 1)
-    //   0x4000–0x5FFF  RAM bank / RTC register select
-    //   0x6000–0x7FFF  Latch clock data (0x00 -> 0x01 sequence latches RTC)
+    //   0x0000-0x1FFF  RAM/RTC enable  (lower nibble 0x0A = enable)
+    //   0x2000-0x3FFF  ROM bank number (7-bit; 0 -> 1)
+    //   0x4000-0x5FFF  RAM bank / RTC register select
+    //   0x6000-0x7FFF  Latch clock data (0x00 -> 0x01 sequence latches RTC)
     //
-    // RAM/RTC read/write at 0xA000–0xBFFF:
-    //   ramBank 0x00–0x03 → RAM bank
-    //   ramBank 0x08–0x0C → RTC register (latched on read, live on write)
+    // RAM/RTC read/write at 0xA000-0xBFFF:
+    //   ramBank 0x00-0x03 -> RAM bank
+    //   ramBank 0x08-0x0C -> RTC register (latched on read, live on write)
     class MBC3 final : public Cartridge
     {
     public:
@@ -36,13 +36,13 @@ namespace SeaBoy
         std::vector<uint8_t> m_ram;
 
         uint8_t m_romBank   = 1;     // 7-bit ROM bank; 0 remapped to 1
-        uint8_t m_ramBank   = 0;     // 0x00–0x03 = RAM banks, 0x08–0x0C = RTC regs
+        uint8_t m_ramBank   = 0;     // 0x00-0x03 = RAM banks, 0x08-0x0C = RTC regs
         bool    m_ramEnable = false;
 
         // RTC live registers
-        uint8_t m_rtcS  = 0;        // Seconds (0–59)
-        uint8_t m_rtcM  = 0;        // Minutes (0–59)
-        uint8_t m_rtcH  = 0;        // Hours   (0–23)
+        uint8_t m_rtcS  = 0;        // Seconds (0-59)
+        uint8_t m_rtcM  = 0;        // Minutes (0-59)
+        uint8_t m_rtcH  = 0;        // Hours   (0-23)
         uint8_t m_rtcDL = 0;        // Day counter lower 8 bits
         uint8_t m_rtcDH = 0;        // Day counter upper 1 bit + carry + halt
 

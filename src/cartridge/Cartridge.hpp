@@ -11,8 +11,8 @@ namespace SeaBoy
 
     // PanDocs.16 - Cartridge abstract interface.
     // Covers the cartridge address regions:
-    //   0x0000–0x7FFF  ROM (bank 0 fixed + switchable bank)
-    //   0xA000–0xBFFF  External RAM (if present)
+    //   0x0000-0x7FFF  ROM (bank 0 fixed + switchable bank)
+    //   0xA000-0xBFFF  External RAM (if present)
     // All other address regions are handled by the MMU directly.
     class Cartridge
     {

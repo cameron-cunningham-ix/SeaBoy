@@ -86,7 +86,11 @@ namespace SeaBoy
 
         std::memset(m_vram,        0, sizeof(m_vram));
         std::memset(m_oam,         0, sizeof(m_oam));
+#ifdef PICO_RP2040
+        std::fill(std::begin(m_frameBuffer), std::end(m_frameBuffer), static_cast<uint16_t>(0x0000));
+#else
         std::fill(std::begin(m_frameBuffer), std::end(m_frameBuffer), 0x000000FFu);
+#endif
     }
 
     void PPU::startOAMScan()

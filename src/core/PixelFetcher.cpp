@@ -20,7 +20,11 @@ namespace SeaBoy
                             uint8_t wx, uint8_t windowLineCounter,
                             bool windowTriggered,
                             const Palettes& palettes,
+#ifdef PICO_RP2040
+                            uint16_t* frameBufferLine,
+#else
                             uint32_t* frameBufferLine,
+#endif
                             bool cgbMode)
     {
         m_vram        = vram;
@@ -416,7 +420,18 @@ namespace SeaBoy
         ObjFifoPixel obj = popObjFifo();
 
         // Mix and output
+#ifdef PICO_RP2040
+        {
+            // Convert RGBA8888 -> RGB565 at write time (saves 45 KB framebuffer)
+            uint32_t rgba = mixPixels(bg, obj);
+            uint8_t r = (rgba >> 24) & 0xFF;
+            uint8_t g = (rgba >> 16) & 0xFF;
+            uint8_t b = (rgba >>  8) & 0xFF;
+            m_fbLine[m_pixelX] = static_cast<uint16_t>(((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3));
+        }
+#else
         m_fbLine[m_pixelX] = mixPixels(bg, obj);
+#endif
         ++m_pixelX;
 
         return (m_pixelX >= 160);
@@ -523,7 +538,11 @@ namespace SeaBoy
     void PixelFetcher::restorePointers(const uint8_t* vram,
                                         const SpriteEntry* sprites, uint8_t spriteCount,
                                         const Palettes& palettes,
+#ifdef PICO_RP2040
+                                        uint16_t* frameBufferLine)
+#else
                                         uint32_t* frameBufferLine)
+#endif
     {
         m_vram        = vram;
         m_sprites     = sprites;

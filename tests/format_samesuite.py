@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-format_samesuite.py — Convert run_samesuite.sh output to pass_list/samesuite.md.
+format_samesuite.py - Convert run_samesuite.sh output to pass_list/samesuite.md.
 
 Usage:
     bash tests/run_samesuite.sh | python tests/format_samesuite.py [--output FILE]

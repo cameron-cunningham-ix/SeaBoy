@@ -31,7 +31,7 @@ namespace SeaBoy
         0xBF, // 0xFF23 NR44
         0x00, // 0xFF24 NR50
         0x00, // 0xFF25 NR51
-        0x70, // 0xFF26 NR52 (bits 6–4 always 1)
+        0x70, // 0xFF26 NR52 (bits 6-4 always 1)
     };
 
     APU::APU(MMU& mmu)
@@ -135,8 +135,8 @@ namespace SeaBoy
                 if (m_ch2.active) m_ch2.tickPeriod();
             }
 
-            // Downsample to 48 kHz - PanDocs Audio Details - Mixer
-            m_sampleTimer += 48000;
+            // Downsample to target sample rate - PanDocs Audio Details - Mixer
+            m_sampleTimer += SAMPLE_RATE;
             if (m_sampleTimer >= 4194304)
             {
                 m_sampleTimer -= 4194304;
@@ -350,7 +350,7 @@ namespace SeaBoy
     void APU::powerOff()
     {
         // PanDocs Audio Registers - NR52 power-off
-        // All registers 0xFF10–0xFF25 reset to 0x00.
+        // All registers 0xFF10-0xFF25 reset to 0x00.
         m_nr10 = 0x00;
         m_nr50 = 0x00;
         m_nr51 = 0x00;
@@ -447,8 +447,12 @@ namespace SeaBoy
 
         // High-pass filter - PanDocs Audio Details - Mixer
         // When all DACs are off, output is 0 and capacitors are held (not updated).
-        // Charge factor adjusted for 48 kHz sample rate: 0.999958^(4194304/48000) ≈ 0.9963
-        constexpr double kChargeFactor = 0.9963;
+        // Charge factor = 0.999958^(4194304/SAMPLE_RATE)
+#if defined(PICO_RP2040)
+        constexpr double kChargeFactor = 0.9920; // 0.999958^(4194304/22050)
+#else
+        constexpr double kChargeFactor = 0.9963; // 0.999958^(4194304/48000)
+#endif
         float outL, outR;
         if (anyDacOn)
         {
@@ -507,7 +511,7 @@ namespace SeaBoy
         // NR52 - always readable
         if (addr == 0xFF26u)
         {
-            uint8_t val = 0x70u; // bits 6–4 always 1
+            uint8_t val = 0x70u; // bits 6-4 always 1
             if (m_powered) val |= 0x80u;
             if (m_ch1.active) val |= 0x01u;
             if (m_ch2.active) val |= 0x02u;
@@ -733,7 +737,7 @@ namespace SeaBoy
                     m_ch3.active = false;
                 break;
             case 0xFF1Bu: // NR31 - length
-                m_ch3.lengthTimer = val; // 0–255, limit is 256
+                m_ch3.lengthTimer = val; // 0-255, limit is 256
                 break;
             case 0xFF1Cu: // NR32 - output level
                 m_ch3.nr32 = val;

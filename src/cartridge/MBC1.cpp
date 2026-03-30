@@ -30,7 +30,7 @@ namespace SeaBoy
             return offset < m_rom.size() ? m_rom[offset] : 0xFFu;
         }
 
-        // GB-CTR 12: 0x4000–0x7FFF always uses BANK2:BANK1, masked to ROM size.
+        // GB-CTR 12: 0x4000-0x7FFF always uses BANK2:BANK1, masked to ROM size.
         if (addr <= 0x7FFFu)
         {
             uint32_t numBanks = static_cast<uint32_t>(m_rom.size() / 0x4000u);
@@ -41,7 +41,7 @@ namespace SeaBoy
             return offset < m_rom.size() ? m_rom[offset] : 0xFFu;
         }
 
-        // 0xA000–0xBFFF: external RAM (bank masked to actual RAM size)
+        // 0xA000-0xBFFF: external RAM (bank masked to actual RAM size)
         if (addr >= 0xA000u && addr <= 0xBFFFu && m_ramEnable && !m_ram.empty())
         {
             uint32_t numRamBanks = static_cast<uint32_t>(m_ram.size() / 0x2000u);
@@ -78,7 +78,7 @@ namespace SeaBoy
             // Banking mode select
             m_mode = (val & 0x01u) != 0u;
         }
-        // 0xA000–0xBFFF: external RAM writes (bank masked to actual RAM size)
+        // 0xA000-0xBFFF: external RAM writes (bank masked to actual RAM size)
         if (addr >= 0xA000u && addr <= 0xBFFFu && m_ramEnable && !m_ram.empty())
         {
             uint32_t numRamBanks = static_cast<uint32_t>(m_ram.size() / 0x2000u);

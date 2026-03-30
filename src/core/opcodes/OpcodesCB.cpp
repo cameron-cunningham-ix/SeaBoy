@@ -2,17 +2,17 @@
 //
 // All CB-prefix instructions operate on an r8 operand encoded in bits [2:0].
 // The operation is encoded in bits [7:3]:
-//   0x00–0x07  RLC r8
-//   0x08–0x0F  RRC r8
-//   0x10–0x17  RL  r8
-//   0x18–0x1F  RR  r8
-//   0x20–0x27  SLA r8
-//   0x28–0x2F  SRA r8
-//   0x30–0x37  SWAP r8
-//   0x38–0x3F  SRL r8
-//   0x40–0x7F  BIT b, r8  (bit b = bits[5:3])
-//   0x80–0xBF  RES b, r8
-//   0xC0–0xFF  SET b, r8
+//   0x00-0x07  RLC r8
+//   0x08-0x0F  RRC r8
+//   0x10-0x17  RL  r8
+//   0x18-0x1F  RR  r8
+//   0x20-0x27  SLA r8
+//   0x28-0x2F  SRA r8
+//   0x30-0x37  SWAP r8
+//   0x38-0x3F  SRL r8
+//   0x40-0x7F  BIT b, r8  (bit b = bits[5:3])
+//   0x80-0xBF  RES b, r8
+//   0xC0-0xFF  SET b, r8
 //
 // All handlers return total T-cycles INCLUDING the 0xCB prefix fetch (4T).
 // Register operands cost 8T total; (HL) indirect operands cost 16T total
@@ -178,7 +178,7 @@ static uint32_t set_op(CPU& cpu, uint8_t bit, uint8_t idx) {
 // Naming: cb_NN where NN is the sub-opcode hex (after the 0xCB prefix byte)
 // ---------------------------------------------------------------------------
 
-// 0x00–0x07  RLC r8
+// 0x00-0x07  RLC r8
 uint32_t cb_00(CPU& cpu) { return shift_op(cpu, 0, do_rlc); }
 uint32_t cb_01(CPU& cpu) { return shift_op(cpu, 1, do_rlc); }
 uint32_t cb_02(CPU& cpu) { return shift_op(cpu, 2, do_rlc); }
@@ -188,7 +188,7 @@ uint32_t cb_05(CPU& cpu) { return shift_op(cpu, 5, do_rlc); }
 uint32_t cb_06(CPU& cpu) { return shift_op(cpu, 6, do_rlc); } // RLC (HL) - 16T
 uint32_t cb_07(CPU& cpu) { return shift_op(cpu, 7, do_rlc); }
 
-// 0x08–0x0F  RRC r8
+// 0x08-0x0F  RRC r8
 uint32_t cb_08(CPU& cpu) { return shift_op(cpu, 0, do_rrc); }
 uint32_t cb_09(CPU& cpu) { return shift_op(cpu, 1, do_rrc); }
 uint32_t cb_0A(CPU& cpu) { return shift_op(cpu, 2, do_rrc); }
@@ -198,7 +198,7 @@ uint32_t cb_0D(CPU& cpu) { return shift_op(cpu, 5, do_rrc); }
 uint32_t cb_0E(CPU& cpu) { return shift_op(cpu, 6, do_rrc); } // RRC (HL) - 16T
 uint32_t cb_0F(CPU& cpu) { return shift_op(cpu, 7, do_rrc); }
 
-// 0x10–0x17  RL r8
+// 0x10-0x17  RL r8
 uint32_t cb_10(CPU& cpu) { return shift_op(cpu, 0, do_rl); }
 uint32_t cb_11(CPU& cpu) { return shift_op(cpu, 1, do_rl); }
 uint32_t cb_12(CPU& cpu) { return shift_op(cpu, 2, do_rl); }
@@ -208,7 +208,7 @@ uint32_t cb_15(CPU& cpu) { return shift_op(cpu, 5, do_rl); }
 uint32_t cb_16(CPU& cpu) { return shift_op(cpu, 6, do_rl); } // RL (HL) - 16T
 uint32_t cb_17(CPU& cpu) { return shift_op(cpu, 7, do_rl); }
 
-// 0x18–0x1F  RR r8
+// 0x18-0x1F  RR r8
 uint32_t cb_18(CPU& cpu) { return shift_op(cpu, 0, do_rr); }
 uint32_t cb_19(CPU& cpu) { return shift_op(cpu, 1, do_rr); }
 uint32_t cb_1A(CPU& cpu) { return shift_op(cpu, 2, do_rr); }
@@ -218,7 +218,7 @@ uint32_t cb_1D(CPU& cpu) { return shift_op(cpu, 5, do_rr); }
 uint32_t cb_1E(CPU& cpu) { return shift_op(cpu, 6, do_rr); } // RR (HL) - 16T
 uint32_t cb_1F(CPU& cpu) { return shift_op(cpu, 7, do_rr); }
 
-// 0x20–0x27  SLA r8
+// 0x20-0x27  SLA r8
 uint32_t cb_20(CPU& cpu) { return shift_op(cpu, 0, do_sla); }
 uint32_t cb_21(CPU& cpu) { return shift_op(cpu, 1, do_sla); }
 uint32_t cb_22(CPU& cpu) { return shift_op(cpu, 2, do_sla); }
@@ -228,7 +228,7 @@ uint32_t cb_25(CPU& cpu) { return shift_op(cpu, 5, do_sla); }
 uint32_t cb_26(CPU& cpu) { return shift_op(cpu, 6, do_sla); } // SLA (HL) - 16T
 uint32_t cb_27(CPU& cpu) { return shift_op(cpu, 7, do_sla); }
 
-// 0x28–0x2F  SRA r8
+// 0x28-0x2F  SRA r8
 uint32_t cb_28(CPU& cpu) { return shift_op(cpu, 0, do_sra); }
 uint32_t cb_29(CPU& cpu) { return shift_op(cpu, 1, do_sra); }
 uint32_t cb_2A(CPU& cpu) { return shift_op(cpu, 2, do_sra); }
@@ -238,7 +238,7 @@ uint32_t cb_2D(CPU& cpu) { return shift_op(cpu, 5, do_sra); }
 uint32_t cb_2E(CPU& cpu) { return shift_op(cpu, 6, do_sra); } // SRA (HL) - 16T
 uint32_t cb_2F(CPU& cpu) { return shift_op(cpu, 7, do_sra); }
 
-// 0x30–0x37  SWAP r8
+// 0x30-0x37  SWAP r8
 uint32_t cb_30(CPU& cpu) { return shift_op(cpu, 0, do_swap); }
 uint32_t cb_31(CPU& cpu) { return shift_op(cpu, 1, do_swap); }
 uint32_t cb_32(CPU& cpu) { return shift_op(cpu, 2, do_swap); }
@@ -248,7 +248,7 @@ uint32_t cb_35(CPU& cpu) { return shift_op(cpu, 5, do_swap); }
 uint32_t cb_36(CPU& cpu) { return shift_op(cpu, 6, do_swap); } // SWAP (HL) - 16T
 uint32_t cb_37(CPU& cpu) { return shift_op(cpu, 7, do_swap); }
 
-// 0x38–0x3F  SRL r8
+// 0x38-0x3F  SRL r8
 uint32_t cb_38(CPU& cpu) { return shift_op(cpu, 0, do_srl); }
 uint32_t cb_39(CPU& cpu) { return shift_op(cpu, 1, do_srl); }
 uint32_t cb_3A(CPU& cpu) { return shift_op(cpu, 2, do_srl); }
@@ -258,7 +258,7 @@ uint32_t cb_3D(CPU& cpu) { return shift_op(cpu, 5, do_srl); }
 uint32_t cb_3E(CPU& cpu) { return shift_op(cpu, 6, do_srl); } // SRL (HL) - 16T
 uint32_t cb_3F(CPU& cpu) { return shift_op(cpu, 7, do_srl); }
 
-// 0x40–0x7F  BIT b, r8  (bit = (opcode >> 3) & 7, reg = opcode & 7)
+// 0x40-0x7F  BIT b, r8  (bit = (opcode >> 3) & 7, reg = opcode & 7)
 uint32_t cb_40(CPU& cpu) { return bit_op(cpu, 0, 0); }
 uint32_t cb_41(CPU& cpu) { return bit_op(cpu, 0, 1); }
 uint32_t cb_42(CPU& cpu) { return bit_op(cpu, 0, 2); }
@@ -324,7 +324,7 @@ uint32_t cb_7D(CPU& cpu) { return bit_op(cpu, 7, 5); }
 uint32_t cb_7E(CPU& cpu) { return bit_op(cpu, 7, 6); }
 uint32_t cb_7F(CPU& cpu) { return bit_op(cpu, 7, 7); }
 
-// 0x80–0xBF  RES b, r8
+// 0x80-0xBF  RES b, r8
 uint32_t cb_80(CPU& cpu) { return res_op(cpu, 0, 0); }
 uint32_t cb_81(CPU& cpu) { return res_op(cpu, 0, 1); }
 uint32_t cb_82(CPU& cpu) { return res_op(cpu, 0, 2); }
@@ -390,7 +390,7 @@ uint32_t cb_BD(CPU& cpu) { return res_op(cpu, 7, 5); }
 uint32_t cb_BE(CPU& cpu) { return res_op(cpu, 7, 6); }
 uint32_t cb_BF(CPU& cpu) { return res_op(cpu, 7, 7); }
 
-// 0xC0–0xFF  SET b, r8
+// 0xC0-0xFF  SET b, r8
 uint32_t cb_C0(CPU& cpu) { return set_op(cpu, 0, 0); }
 uint32_t cb_C1(CPU& cpu) { return set_op(cpu, 0, 1); }
 uint32_t cb_C2(CPU& cpu) { return set_op(cpu, 0, 2); }

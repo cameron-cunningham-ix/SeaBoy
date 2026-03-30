@@ -40,10 +40,10 @@
 // Blargg ROMs report results via three possible channels:
 //   1. Serial port (SB/SC at 0xFF01/02) - v1 test framework
 //   2. Memory-mapped output in external RAM - v2 test framework
-//      0xA001–0xA003: magic signature 0xDE, 0xB0, 0x61
+//      0xA001-0xA003: magic signature 0xDE, 0xB0, 0x61
 //      0xA000:        status (0x80 = running, else done)
 //      0xA004+:       null-terminated text output
-//   3. LCD tile map (VRAM 0x9800–0x9BFF) - LCD-only ROMs (e.g. halt_bug.gb)
+//   3. LCD tile map (VRAM 0x9800-0x9BFF) - LCD-only ROMs (e.g. halt_bug.gb)
 //      Tile indices correspond directly to ASCII values in Blargg's font.
 
 static bool checkPassed(const std::string& s) { return s.find("Passed") != std::string::npos; }
@@ -57,7 +57,7 @@ static bool isDone(const std::string& s) { return checkPassed(s) || checkFailed(
 // Returns the text output if valid signature found and status != 0x80, else empty.
 static std::string checkMemMappedOutput(const SeaBoy::MMU& mmu)
 {
-    // Check magic signature at 0xA001–0xA003
+    // Check magic signature at 0xA001-0xA003
     if (mmu.peek8(0xA001) != 0xDE ||
         mmu.peek8(0xA002) != 0xB0 ||
         mmu.peek8(0xA003) != 0x61)
@@ -81,7 +81,7 @@ static std::string checkMemMappedOutput(const SeaBoy::MMU& mmu)
 // Check the BG/Window tile maps for Blargg LCD-text output.
 // Used for ROMs (e.g. halt_bug.gb) that display results on screen only and do
 // not output via the serial port or the v2 memory-mapped framework.
-// Blargg font: tile index == ASCII value for printable characters (0x20–0x7E).
+// Blargg font: tile index == ASCII value for printable characters (0x20-0x7E).
 // mmu.peek8() routes to PPU::peekVRAM() which bypasses Mode-3 locking.
 static std::string checkTileMapOutput(const SeaBoy::MMU& mmu)
 {

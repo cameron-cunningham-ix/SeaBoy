@@ -35,13 +35,24 @@ namespace SeaBoy
         // Load a ROM file from disk. Returns true on success.
         bool loadROM(const std::string& path);
 
+        // Load a ROM from a raw buffer (no file I/O). Used by Pico SD card loader.
+        bool loadROM(const uint8_t* data, size_t size);
+
+        // Load a ROM by taking ownership of the vector (zero-copy). Avoids the
+        // double allocation of loadROM(ptr, size) which is critical on RP2040.
+        bool loadROM(std::vector<uint8_t>&& rom);
+
         // Execute one instruction and advance all subsystems by the resulting T-cycles.
         // Returns T-cycles consumed. Caller accumulates until TCYCLES_PER_FRAME.
         [[nodiscard]] uint32_t tick();
 
-        // Returns the 160×144 RGBA framebuffer produced by the PPU.
-        // Pointer is valid for the lifetime of this GameBoy instance.
+#ifdef PICO_RP2040
+        // Returns the 160×144 RGB565 framebuffer (RP2040 build).
+        [[nodiscard]] const uint16_t* getFrameBuffer() const { return m_ppu.frameBuffer(); }
+#else
+        // Returns the 160×144 RGBA8888 framebuffer produced by the PPU.
         [[nodiscard]] const uint32_t* getFrameBuffer() const { return m_ppu.frameBuffer(); }
+#endif
 
         // Accumulated serial port output - used by blargg_runner to detect pass/fail.
         [[nodiscard]] const std::string& serialOutput() const { return m_mmu.serialOutput(); }

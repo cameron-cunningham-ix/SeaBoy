@@ -101,6 +101,62 @@ namespace SeaBoy
 #endif
     }
 
+    bool GameBoy::loadROM(const uint8_t* data, size_t size)
+    {
+        if (!data || size < 0x0150u)
+            return false;
+
+        m_mmu.reset();
+        m_mmu.loadROM(data, size);
+
+        // PanDocs.10 - CGB flag at header byte 0x0143
+        if (m_modeOverride == HardwareMode::CGB) {
+            m_cgbMode = true;
+        } else if (m_modeOverride == HardwareMode::DMG) {
+            m_cgbMode = false;
+        } else {
+            uint8_t cgbFlag = data[0x0143];
+            m_cgbMode = (cgbFlag == 0x80 || cgbFlag == 0xC0);
+        }
+
+        m_mmu.setCGBMode(m_cgbMode);
+        m_cpu.reset(m_cgbMode, data[0x014D]);
+        m_timer.reset();
+        m_ppu.reset(m_cgbMode);
+        m_apu.reset();
+
+        return true;
+    }
+
+    bool GameBoy::loadROM(std::vector<uint8_t>&& rom)
+    {
+        if (rom.size() < 0x0150u)
+            return false;
+
+        // Read header fields before moving the vector.
+        uint8_t cgbFlag        = rom[0x0143];
+        uint8_t headerChecksum = rom[0x014D];
+
+        m_mmu.reset();
+        m_mmu.loadROM(std::move(rom)); // zero-copy: vector ownership transfers to Cartridge
+
+        if (m_modeOverride == HardwareMode::CGB) {
+            m_cgbMode = true;
+        } else if (m_modeOverride == HardwareMode::DMG) {
+            m_cgbMode = false;
+        } else {
+            m_cgbMode = (cgbFlag == 0x80 || cgbFlag == 0xC0);
+        }
+
+        m_mmu.setCGBMode(m_cgbMode);
+        m_cpu.reset(m_cgbMode, headerChecksum);
+        m_timer.reset();
+        m_ppu.reset(m_cgbMode);
+        m_apu.reset();
+
+        return true;
+    }
+
     uint32_t GameBoy::tick()
     {
         const uint16_t pc = m_cpu.registers().PC;

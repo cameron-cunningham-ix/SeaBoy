@@ -1,5 +1,5 @@
 build/
-build_pico/
+build_pico1/
 build_pico2/
 *.ini
 roms/

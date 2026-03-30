@@ -22,11 +22,11 @@ namespace SeaBoy
     // PanDocs 17.4 MBC3 read routing
     uint8_t MBC3::read(uint16_t addr) const
     {
-        // 0x0000–0x3FFF: ROM bank 0 (fixed)
+        // 0x0000-0x3FFF: ROM bank 0 (fixed)
         if (addr <= 0x3FFFu)
             return addr < m_rom.size() ? m_rom[addr] : 0xFFu;
 
-        // 0x4000–0x7FFF: switchable ROM bank
+        // 0x4000-0x7FFF: switchable ROM bank
         if (addr <= 0x7FFFu)
         {
             uint32_t offset = static_cast<uint32_t>(m_romBank) * 0x4000u
@@ -34,13 +34,13 @@ namespace SeaBoy
             return offset < m_rom.size() ? m_rom[offset] : 0xFFu;
         }
 
-        // 0xA000–0xBFFF: RAM bank or latched RTC register
+        // 0xA000-0xBFFF: RAM bank or latched RTC register
         if (addr >= 0xA000u && addr <= 0xBFFFu)
         {
             if (!m_ramEnable)
                 return 0xFFu;
 
-            // RAM banks 0x00–0x03
+            // RAM banks 0x00-0x03
             if (m_ramBank <= 0x03u)
             {
                 if (m_ram.empty())
@@ -50,7 +50,7 @@ namespace SeaBoy
                 return offset < m_ram.size() ? m_ram[offset] : 0xFFu;
             }
 
-            // RTC registers 0x08–0x0C (return latched values)
+            // RTC registers 0x08-0x0C (return latched values)
             if (m_hasRTC)
             {
                 switch (m_ramBank)
@@ -72,14 +72,14 @@ namespace SeaBoy
     // PanDocs 17.4 MBC3 write routing
     void MBC3::write(uint16_t addr, uint8_t val)
     {
-        // 0x0000–0x1FFF: RAM/RTC enable
+        // 0x0000-0x1FFF: RAM/RTC enable
         if (addr <= 0x1FFFu)
         {
             m_ramEnable = (val & 0x0Fu) == 0x0Au;
             return;
         }
 
-        // 0x2000–0x3FFF: ROM bank (7-bit; 0 -> 1)
+        // 0x2000-0x3FFF: ROM bank (7-bit; 0 -> 1)
         if (addr <= 0x3FFFu)
         {
             m_romBank = val & 0x7Fu;
@@ -87,14 +87,14 @@ namespace SeaBoy
             return;
         }
 
-        // 0x4000–0x5FFF: RAM bank / RTC register select
+        // 0x4000-0x5FFF: RAM bank / RTC register select
         if (addr <= 0x5FFFu)
         {
             m_ramBank = val;
             return;
         }
 
-        // 0x6000–0x7FFF: Latch clock data
+        // 0x6000-0x7FFF: Latch clock data
         if (addr <= 0x7FFFu)
         {
             // 0x00 -> 0x01 sequence triggers latch
@@ -110,10 +110,10 @@ namespace SeaBoy
             return;
         }
 
-        // 0xA000–0xBFFF: RAM bank write or live RTC register write
+        // 0xA000-0xBFFF: RAM bank write or live RTC register write
         if (addr >= 0xA000u && addr <= 0xBFFFu && m_ramEnable)
         {
-            // RAM banks 0x00–0x03
+            // RAM banks 0x00-0x03
             if (m_ramBank <= 0x03u && !m_ram.empty())
             {
                 uint32_t offset = static_cast<uint32_t>(m_ramBank) * 0x2000u
@@ -123,7 +123,7 @@ namespace SeaBoy
                 return;
             }
 
-            // RTC registers 0x08–0x0C (write to live registers)
+            // RTC registers 0x08-0x0C (write to live registers)
             if (m_hasRTC)
             {
                 switch (m_ramBank)

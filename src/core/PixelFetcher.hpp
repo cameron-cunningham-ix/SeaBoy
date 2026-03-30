@@ -50,7 +50,11 @@ namespace SeaBoy
                   uint8_t lcdc, uint8_t scx, uint8_t scy, uint8_t ly,
                   uint8_t wx, uint8_t windowLineCounter, bool windowTriggered,
                   const Palettes& palettes,
+#ifdef PICO_RP2040
+                  uint16_t* frameBufferLine,
+#else
                   uint32_t* frameBufferLine,
+#endif
                   bool cgbMode = false);
 
         // Advance 1 T-cycle. Returns true when 160 pixels have been output
@@ -68,7 +72,11 @@ namespace SeaBoy
         void restorePointers(const uint8_t* vram,
                              const SpriteEntry* sprites, uint8_t spriteCount,
                              const Palettes& palettes,
+#ifdef PICO_RP2040
+                             uint16_t* frameBufferLine);
+#else
                              uint32_t* frameBufferLine);
+#endif
 
     private:
         // --- BG/Window fetcher ---
@@ -112,7 +120,11 @@ namespace SeaBoy
         const SpriteEntry* m_sprites     = nullptr;
         uint8_t            m_spriteCount = 0;
         const Palettes*    m_palettes    = nullptr;
+#ifdef PICO_RP2040
+        uint16_t*          m_fbLine      = nullptr;
+#else
         uint32_t*          m_fbLine      = nullptr;
+#endif
 
         // --- Snapshot of LCD registers ---
         uint8_t m_lcdc             = 0;

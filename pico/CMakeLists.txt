@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.13)
 
 # ---------------------------------------------------------------------------
-# Pico SDK bootstrap — must happen before project()
+# Pico SDK bootstrap - must happen before project()
 #
 # Set PICO_SDK_PATH one of two ways:
 #   cmake -B build_pico2 -DPICO_SDK_PATH=/path/to/pico-sdk -DPICO_BOARD=pico2 pico/
@@ -32,11 +32,34 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 pico_sdk_init()
 
 # ---------------------------------------------------------------------------
+# FatFs SD card library (carlk3/no-OS-FatFS-SD-SPI-RPi-Pico)
+# The library lives in the FatFs_SPI/ subdirectory of the repo.
+# ---------------------------------------------------------------------------
+include(FetchContent)
+FetchContent_Declare(
+    FatFs_SPI
+    GIT_REPOSITORY https://github.com/carlk3/no-OS-FatFS-SD-SPI-RPi-Pico.git
+    GIT_TAG        master
+)
+FetchContent_GetProperties(FatFs_SPI)
+if(NOT fatfs_spi_POPULATED)
+    FetchContent_Populate(FatFs_SPI)
+    add_subdirectory(${fatfs_spi_SOURCE_DIR}/FatFs_SPI ${fatfs_spi_BINARY_DIR})
+endif()
+
+# ---------------------------------------------------------------------------
 # SeaBoy_pico target
 # Includes all of src/core/ and src/cartridge/ but NO src/ui/ (desktop-only).
 # ---------------------------------------------------------------------------
 add_executable(SeaBoy_pico
     main_pico.cpp
+
+    # Platform drivers
+    input/Buttons.cpp
+    display/ILI9225.cpp
+    storage/SDCard.cpp
+    storage/hw_config.c
+    audio/I2SAudio.cpp
 
     # Core emulation
     ../src/core/MMU.cpp
@@ -63,9 +86,12 @@ add_executable(SeaBoy_pico
 )
 
 target_include_directories(SeaBoy_pico PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/..   # repo root — lets #include "src/core/..." work
-    ${CMAKE_CURRENT_SOURCE_DIR}      # pico/ dir — for future pico-local headers
+    ${CMAKE_CURRENT_SOURCE_DIR}/..   # repo root - lets #include "src/core/..." work
+    ${CMAKE_CURRENT_SOURCE_DIR}      # pico/ dir - for future pico-local headers
 )
+
+# Generate C header from PIO assembly (i2s_out.pio -> i2s_out.pio.h)
+pico_generate_pio_header(SeaBoy_pico ${CMAKE_CURRENT_SOURCE_DIR}/audio/i2s_out.pio)
 
 # ---------------------------------------------------------------------------
 # Compile definitions
@@ -77,13 +103,13 @@ target_compile_definitions(SeaBoy_pico PRIVATE
 # RP2040-specific flag (enables RGB565 framebuffer, 22050 Hz audio in later stages)
 if(PICO_PLATFORM STREQUAL "rp2040")
     target_compile_definitions(SeaBoy_pico PRIVATE PICO_RP2040=1)
-    message(STATUS "SeaBoy: RP2040 build (Pico 1) — RGB565 framebuffer, 22050 Hz audio")
+    message(STATUS "SeaBoy: RP2040 build (Pico 1) - RGB565 framebuffer, 22050 Hz audio")
 else()
-    message(STATUS "SeaBoy: RP2350 build (Pico 2) — RGBA8888 framebuffer, 48000 Hz audio")
+    message(STATUS "SeaBoy: RP2350 build (Pico 2) - RGBA8888 framebuffer, 48000 Hz audio")
 endif()
 
 # ---------------------------------------------------------------------------
-# Pico SDK library linkage
+# Pico SDK + FatFs library linkage
 # ---------------------------------------------------------------------------
 target_link_libraries(SeaBoy_pico PRIVATE
     pico_stdlib
@@ -93,10 +119,11 @@ target_link_libraries(SeaBoy_pico PRIVATE
     hardware_gpio
     hardware_pio
     hardware_pwm
+    FatFs_SPI
 )
 
 # ---------------------------------------------------------------------------
-# USB serial output (printf → USB CDC; no physical UART needed)
+# USB serial output (printf -> USB CDC; no physical UART needed)
 # UART disabled to free GPIO 0/1 for other uses
 # ---------------------------------------------------------------------------
 pico_enable_stdio_usb(SeaBoy_pico  1)

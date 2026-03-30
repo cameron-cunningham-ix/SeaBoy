@@ -11,7 +11,7 @@ static constexpr uint16_t IV_TIMER   = 0x0050;
 static constexpr uint16_t IV_SERIAL  = 0x0058;
 static constexpr uint16_t IV_JOYPAD  = 0x0060;
 
-// Interrupt bit masks in IF/IE (bits 0–4)
+// Interrupt bit masks in IF/IE (bits 0-4)
 static constexpr uint8_t INT_VBLANK  = 0x01;
 static constexpr uint8_t INT_STAT    = 0x02;
 static constexpr uint8_t INT_TIMER   = 0x04;

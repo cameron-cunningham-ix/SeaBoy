@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-format_microtest.py — Convert run_microtest.sh output to pass_list/microtest.md.
+format_microtest.py - Convert run_microtest.sh output to pass_list/microtest.md.
 
 Usage:
     bash tests/run_microtest.sh | python tests/format_microtest.py [--output FILE]

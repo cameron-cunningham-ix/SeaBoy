@@ -44,6 +44,11 @@ namespace SeaBoy
         m_cart = Cartridge::create(std::move(romData));
     }
 
+    void MMU::loadROM(std::vector<uint8_t>&& rom)
+    {
+        m_cart = Cartridge::create(std::move(rom));
+    }
+
     void MMU::enableTestMode()
     {
         m_testRam = std::make_unique<uint8_t[]>(65536);
@@ -56,7 +61,7 @@ namespace SeaBoy
         return m_ppu && m_ppu->isDMAActive();
     }
 
-    // PanDocs.2 SVBK - CGB WRAM bank offset for 0xD000–0xDFFF region.
+    // PanDocs.2 SVBK - CGB WRAM bank offset for 0xD000-0xDFFF region.
     // Bank 0 maps to 1. Returns byte offset into m_wram[].
     static inline uint32_t wramBankOffset(uint8_t svbk)
     {
@@ -75,9 +80,9 @@ namespace SeaBoy
         // PanDocs OAM DMA: the CPU loses access only to the bus the DMA controller
         // is using. On CGB, cartridge/SRAM and WRAM are on separate buses, so only
         // the bus matching the DMA source is locked. VRAM-sourced DMA locks the VRAM
-        // bus ($8000–$9FFF); ROM/WRAM/ERAM-sourced DMA locks the external bus.
+        // bus ($8000-$9FFF); ROM/WRAM/ERAM-sourced DMA locks the external bus.
         // PanDocs says DMG is "HRAM only" but mooneye add_sp_e_timing needs WRAM
-        // to be readable on DMG too. OAM ($FE00–$FE9F) is always locked during DMA
+        // to be readable on DMG too. OAM ($FE00-$FE9F) is always locked during DMA
         // (handled in PPU::readOAM).
         if (isDMAActive() && addr < 0xFE00u)
         {
@@ -96,28 +101,28 @@ namespace SeaBoy
         // ROM (bank 0 + switchable bank) and external RAM - delegated to Cartridge
         if (addr <= ADDR_ROM_END)
             val = m_cart ? m_cart->read(addr) : 0xFFu;
-        // 0x8000–0x9FFF: VRAM - routed to PPU
+        // 0x8000-0x9FFF: VRAM - routed to PPU
         else if (addr >= 0x8000u && addr <= 0x9FFFu)
             val = m_ppu ? m_ppu->readVRAM(addr) : 0xFFu;
         else if (addr >= ADDR_ERAM_BASE && addr <= ADDR_ERAM_END)
             val = m_cart ? m_cart->read(addr) : 0xFFu;
-        // WRAM: 0xC000–0xCFFF = bank 0, 0xD000–0xDFFF = switchable (SVBK) - PanDocs.2
+        // WRAM: 0xC000-0xCFFF = bank 0, 0xD000-0xDFFF = switchable (SVBK) - PanDocs.2
         else if (addr >= 0xC000u && addr <= 0xCFFFu)
             val = m_wram[addr - 0xC000u];
         else if (addr >= 0xD000u && addr <= 0xDFFFu)
             val = m_wram[wramBankOffset(m_svbk) + (addr - 0xD000u)];
-        // Echo RAM: 0xE000–0xEFFF mirrors bank 0, 0xF000–0xFDFF mirrors switchable - PanDocs.2
+        // Echo RAM: 0xE000-0xEFFF mirrors bank 0, 0xF000-0xFDFF mirrors switchable - PanDocs.2
         else if (addr >= 0xE000u && addr <= 0xEFFFu)
             val = m_wram[addr - 0xE000u];
         else if (addr >= 0xF000u && addr <= 0xFDFFu)
             val = m_wram[wramBankOffset(m_svbk) + (addr - 0xF000u)];
-        // 0xFE00–0xFE9F: OAM - routed to PPU
+        // 0xFE00-0xFE9F: OAM - routed to PPU
         else if (addr >= 0xFE00u && addr <= 0xFE9Fu)
             val = m_ppu ? m_ppu->readOAM(addr) : 0xFFu;
-        // Prohibited area: 0xFEA0–0xFEFF returns 0x00 on DMG - PanDocs.2
+        // Prohibited area: 0xFEA0-0xFEFF returns 0x00 on DMG - PanDocs.2
         else if (addr >= 0xFEA0u && addr <= 0xFEFFu)
             val = 0x00u;
-        // I/O registers (0xFF00–0xFF7F)
+        // I/O registers (0xFF00-0xFF7F)
         // Joypad P1 register - PanDocs.6 Joypad Input
         else if (addr == ADDR_P1)
             val = m_joypad ? m_joypad->read() : 0xFFu;
@@ -182,26 +187,26 @@ namespace SeaBoy
         // ROM area: MBC register writes (bank switching etc.) - delegated to Cartridge
         if (addr <= ADDR_ROM_END)
             { if (m_cart) m_cart->write(addr, val); }
-        // 0x8000–0x9FFF: VRAM - routed to PPU
+        // 0x8000-0x9FFF: VRAM - routed to PPU
         else if (addr >= 0x8000u && addr <= 0x9FFFu)
             { if (m_ppu) m_ppu->writeVRAM(addr, val); }
-        // 0xA000–0xBFFF: external RAM writes - delegated to Cartridge
+        // 0xA000-0xBFFF: external RAM writes - delegated to Cartridge
         else if (addr >= ADDR_ERAM_BASE && addr <= ADDR_ERAM_END)
             { if (m_cart) m_cart->write(addr, val); }
-        // WRAM: 0xC000–0xCFFF = bank 0, 0xD000–0xDFFF = switchable (SVBK) - PanDocs.2
+        // WRAM: 0xC000-0xCFFF = bank 0, 0xD000-0xDFFF = switchable (SVBK) - PanDocs.2
         else if (addr >= 0xC000u && addr <= 0xCFFFu)
             m_wram[addr - 0xC000u] = val;
         else if (addr >= 0xD000u && addr <= 0xDFFFu)
             m_wram[wramBankOffset(m_svbk) + (addr - 0xD000u)] = val;
-        // Echo RAM: 0xE000–0xEFFF mirrors bank 0, 0xF000–0xFDFF mirrors switchable - PanDocs.2
+        // Echo RAM: 0xE000-0xEFFF mirrors bank 0, 0xF000-0xFDFF mirrors switchable - PanDocs.2
         else if (addr >= 0xE000u && addr <= 0xEFFFu)
             m_wram[addr - 0xE000u] = val;
         else if (addr >= 0xF000u && addr <= 0xFDFFu)
             m_wram[wramBankOffset(m_svbk) + (addr - 0xF000u)] = val;
-        // 0xFE00–0xFE9F: OAM - routed to PPU
+        // 0xFE00-0xFE9F: OAM - routed to PPU
         else if (addr >= 0xFE00u && addr <= 0xFE9Fu)
             { if (m_ppu) m_ppu->writeOAM(addr, val); }
-        // Prohibited area: 0xFEA0–0xFEFF - writes ignored on DMG - PanDocs.2
+        // Prohibited area: 0xFEA0-0xFEFF - writes ignored on DMG - PanDocs.2
         else if (addr >= 0xFEA0u && addr <= 0xFEFFu)
             { /* ignored */ }
         // Joypad P1 register - PanDocs.6 Joypad Input
@@ -239,7 +244,7 @@ namespace SeaBoy
         // CGB WRAM bank select (0xFF70) - PanDocs.2 SVBK
         else if (addr == 0xFF70u)
             { if (m_cgbMode) m_svbk = val & 0x07u; }
-        // Serial port – PanDocs.7 Serial Data Transfer
+        // Serial port - PanDocs.7 Serial Data Transfer
         else if (addr == 0xFF01u)
             m_sb = val;
         else if (addr == 0xFF02u)
@@ -248,7 +253,7 @@ namespace SeaBoy
             if (val & 0x80u) // Transfer start (internal clock)
             {
                 m_serialOutput += static_cast<char>(m_sb);
-                m_sc &= ~0x80u; // Clear start bit – transfer completes "instantly"
+                m_sc &= ~0x80u; // Clear start bit - transfer completes "instantly"
             }
         }
         else if (addr >= ADDR_HRAM_BASE && addr <= ADDR_HRAM_END)
@@ -331,7 +336,7 @@ namespace SeaBoy
             return m_wram[wramBankOffset(m_svbk) + (addr - 0xF000u)];
         if (addr >= 0xFE00u && addr <= 0xFE9Fu)
             return m_ppu ? m_ppu->peekOAM(addr) : 0xFFu;
-        // Prohibited area: 0xFEA0–0xFEFF returns 0x00 on DMG - PanDocs.2
+        // Prohibited area: 0xFEA0-0xFEFF returns 0x00 on DMG - PanDocs.2
         if (addr >= 0xFEA0u && addr <= 0xFEFFu)
             return 0x00u;
         if (addr == ADDR_IF)

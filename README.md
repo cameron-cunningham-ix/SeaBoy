@@ -6,12 +6,12 @@ A Game Boy / Game Boy Color emulator written in C++20.
 ## Features
 
 - Cycle-accurate SM83 CPU - passes all Blargg `cpu_instrs`, `instr_timing`, `mem_timing`, and `mem_timing-2` tests
-- MBC0–5 cartridge support
+- MBC0-5 cartridge support
 - Timer with T-cycle accuracy
 - PPU with OAM corruption bug emulation
 - SDL3-based display and input
 - Dear ImGui docking UI with integrated debugger
-- Save states (slots 1–9)
+- Save states (slots 1-9)
 
 ## Prerequisites
 
@@ -67,7 +67,7 @@ SeaBoy/
 │   └── Roboto/           # Roboto-Regular font
 ├── src/
 │   ├── core/             # CPU, MMU, PPU, APU, Timer, Joypad, GameBoy
-│   ├── cartridge/        # Header parsing + MBC0–5
+│   ├── cartridge/        # Header parsing + MBC0-5
 │   └── ui/               # UIPlatform, DebuggerUI, SettingsUI
 ├── tests/                # Unit tests
 └── info/                 # Reference docs and Pan Docs snapshots

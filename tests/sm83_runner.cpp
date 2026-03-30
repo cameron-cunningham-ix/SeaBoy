@@ -150,7 +150,7 @@ static TestResult runTest(const json& tc)
 
     cpu.setIME(initial.ime);
     if (initial.has_ei)
-        cpu.setImeDelay(initial.ei ? 1 : 0); // ei=1 → delay=1 (fires at end of this step)
+        cpu.setImeDelay(initial.ei ? 1 : 0); // ei=1 -> delay=1 (fires at end of this step)
 
     // ---- run one step ----
     cpu.step();

@@ -14,11 +14,11 @@ namespace SeaBoy
     // PanDocs.17.3 MBC2 read routing
     uint8_t MBC2::read(uint16_t addr) const
     {
-        // 0x0000–0x3FFF: ROM bank 0 (fixed)
+        // 0x0000-0x3FFF: ROM bank 0 (fixed)
         if (addr <= 0x3FFFu)
             return addr < m_rom.size() ? m_rom[addr] : 0xFFu;
 
-        // 0x4000–0x7FFF: switchable ROM bank 1–15 (masked to actual ROM size)
+        // 0x4000-0x7FFF: switchable ROM bank 1-15 (masked to actual ROM size)
         if (addr <= 0x7FFFu)
         {
             uint32_t numBanks = static_cast<uint32_t>(m_rom.size() / 0x4000u);
@@ -28,7 +28,7 @@ namespace SeaBoy
             return offset < m_rom.size() ? m_rom[offset] : 0xFFu;
         }
 
-        // 0xA000–0xBFFF: 512-nibble internal RAM (mirrored)
+        // 0xA000-0xBFFF: 512-nibble internal RAM (mirrored)
         if (addr >= 0xA000u && addr <= 0xBFFFu)
         {
             if (!m_ramEnable)
@@ -45,7 +45,7 @@ namespace SeaBoy
     // PanDocs.17.3 MBC2 write routing
     void MBC2::write(uint16_t addr, uint8_t val)
     {
-        // 0x0000–0x3FFF: RAM enable or ROM bank select, gated by address bit 8
+        // 0x0000-0x3FFF: RAM enable or ROM bank select, gated by address bit 8
         if (addr <= 0x3FFFu)
         {
             if (addr & 0x0100u)
@@ -62,7 +62,7 @@ namespace SeaBoy
             return;
         }
 
-        // 0xA000–0xBFFF: internal RAM writes (nibble only)
+        // 0xA000-0xBFFF: internal RAM writes (nibble only)
         if (addr >= 0xA000u && addr <= 0xBFFFu && m_ramEnable)
         {
             uint16_t offset = (addr - 0xA000u) & 0x01FFu;

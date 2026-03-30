@@ -186,6 +186,10 @@ int main(int argc, char *argv[])
             uint32_t count = gameBoy.apu().drainSamples(samples, 1024);
             if (count > 0)
             {
+                float vol = platform.m_muted ? 0.0f : (platform.m_volumePercent / 100.0f);
+                if (vol < 1.0f)
+                    for (uint32_t i = 0; i < count * 2; ++i)
+                        samples[i] *= vol;
                 constexpr int MAX_QUEUED_BYTES = 800 * 4 * 2 * static_cast<int>(sizeof(float));
                 if (SDL_GetAudioStreamQueued(audioStream) > MAX_QUEUED_BYTES)
                     SDL_ClearAudioStream(audioStream);

@@ -1,0 +1,34 @@
+; I2S audio output PIO program for MAX98357A
+;
+; Left-justified format: 16-bit stereo, MSB first.
+; Each 32-bit FIFO word = left[31:16] | right[15:0].
+;
+; Pin assignments:
+;   OUT pin 0  = DIN  (data)
+;   Side-set 0 = BCLK (bit clock)
+;   Side-set 1 = LRCLK (word select / left-right clock)
+;
+; LRCLK=0 during left channel, LRCLK=1 during right channel.
+; LRCLK transitions on BCLK falling edge (standard for left-justified).
+;
+; Bit rate: PIO clock = sample_rate * 32 * 2 (2 PIO cycles per bit).
+; Example: 48000 Hz -> PIO clock = 3.072 MHz
+;          22050 Hz -> PIO clock = 1.4112 MHz
+
+.program i2s_out
+.side_set 2
+
+; -- Left channel (16 bits, LRCLK=0) --
+    set x, 14           side 0b00       ; x=14 for 15 loop iterations; BCLK=0 LRCLK=0
+left_bit:
+    out pins, 1         side 0b00       ; shift MSB out on DIN, BCLK=0
+    jmp x-- left_bit    side 0b01       ; BCLK=1 (latch), loop 15 times
+    out pins, 1         side 0b00       ; 16th bit out, BCLK=0
+    set x, 14           side 0b01       ; BCLK=1 (latch 16th bit); prepare x for right
+
+; -- Right channel (16 bits, LRCLK=1) --
+right_bit:
+    out pins, 1         side 0b10       ; shift bit out, BCLK=0, LRCLK=1
+    jmp x-- right_bit   side 0b11       ; BCLK=1 (latch), loop 15 times
+    out pins, 1         side 0b10       ; 16th bit out, BCLK=0
+    nop                 side 0b11       ; BCLK=1 (latch 16th bit); wraps to top

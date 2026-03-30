@@ -15,31 +15,31 @@ import struct
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
-# Opcode table — (format_string, length)
+# Opcode table - (format_string, length)
 # Format specifiers: {n8} = 8-bit imm, {n16} = 16-bit imm, {e8} = signed 8-bit
 # ---------------------------------------------------------------------------
 OPS = [
-    # 0x00–0x0F
+    # 0x00-0x0F
     ("NOP", 1),          ("LD BC,${:04X}", 3),  ("LD (BC),A", 1),    ("INC BC", 1),
     ("INC B", 1),        ("DEC B", 1),           ("LD B,${:02X}", 2), ("RLCA", 1),
     ("LD (${:04X}),SP", 3), ("ADD HL,BC", 1),   ("LD A,(BC)", 1),    ("DEC BC", 1),
     ("INC C", 1),        ("DEC C", 1),           ("LD C,${:02X}", 2), ("RRCA", 1),
-    # 0x10–0x1F
+    # 0x10-0x1F
     ("STOP", 1),         ("LD DE,${:04X}", 3),  ("LD (DE),A", 1),    ("INC DE", 1),
     ("INC D", 1),        ("DEC D", 1),           ("LD D,${:02X}", 2), ("RLA", 1),
     ("JR {:+d}", 2),     ("ADD HL,DE", 1),       ("LD A,(DE)", 1),    ("DEC DE", 1),
     ("INC E", 1),        ("DEC E", 1),           ("LD E,${:02X}", 2), ("RRA", 1),
-    # 0x20–0x2F
+    # 0x20-0x2F
     ("JR NZ,{:+d}", 2),  ("LD HL,${:04X}", 3),  ("LD (HL+),A", 1),   ("INC HL", 1),
     ("INC H", 1),        ("DEC H", 1),           ("LD H,${:02X}", 2), ("DAA", 1),
     ("JR Z,{:+d}", 2),   ("ADD HL,HL", 1),       ("LD A,(HL+)", 1),   ("DEC HL", 1),
     ("INC L", 1),        ("DEC L", 1),           ("LD L,${:02X}", 2), ("CPL", 1),
-    # 0x30–0x3F
+    # 0x30-0x3F
     ("JR NC,{:+d}", 2),  ("LD SP,${:04X}", 3),  ("LD (HL-),A", 1),   ("INC SP", 1),
     ("INC (HL)", 1),     ("DEC (HL)", 1),        ("LD (HL),${:02X}", 2), ("SCF", 1),
     ("JR C,{:+d}", 2),   ("ADD HL,SP", 1),       ("LD A,(HL-)", 1),   ("DEC SP", 1),
     ("INC A", 1),        ("DEC A", 1),           ("LD A,${:02X}", 2), ("CCF", 1),
-    # 0x40–0x7F  (LD r8,r8 / HALT)
+    # 0x40-0x7F  (LD r8,r8 / HALT)
     ("LD B,B", 1),  ("LD B,C", 1),  ("LD B,D", 1),  ("LD B,E", 1),
     ("LD B,H", 1),  ("LD B,L", 1),  ("LD B,(HL)", 1), ("LD B,A", 1),
     ("LD C,B", 1),  ("LD C,C", 1),  ("LD C,D", 1),  ("LD C,E", 1),
@@ -56,7 +56,7 @@ OPS = [
     ("LD (HL),H", 1), ("LD (HL),L", 1), ("HALT", 1),       ("LD (HL),A", 1),
     ("LD A,B", 1),  ("LD A,C", 1),  ("LD A,D", 1),  ("LD A,E", 1),
     ("LD A,H", 1),  ("LD A,L", 1),  ("LD A,(HL)", 1), ("LD A,A", 1),
-    # 0x80–0xBF  (ALU r8)
+    # 0x80-0xBF  (ALU r8)
     ("ADD A,B", 1), ("ADD A,C", 1), ("ADD A,D", 1), ("ADD A,E", 1),
     ("ADD A,H", 1), ("ADD A,L", 1), ("ADD A,(HL)", 1), ("ADD A,A", 1),
     ("ADC A,B", 1), ("ADC A,C", 1), ("ADC A,D", 1), ("ADC A,E", 1),
@@ -73,22 +73,22 @@ OPS = [
     ("OR H", 1),    ("OR L", 1),    ("OR (HL)", 1), ("OR A", 1),
     ("CP B", 1),    ("CP C", 1),    ("CP D", 1),    ("CP E", 1),
     ("CP H", 1),    ("CP L", 1),    ("CP (HL)", 1), ("CP A", 1),
-    # 0xC0–0xCF
+    # 0xC0-0xCF
     ("RET NZ", 1),          ("POP BC", 1),            ("JP NZ,${:04X}", 3),  ("JP ${:04X}", 3),
     ("CALL NZ,${:04X}", 3), ("PUSH BC", 1),           ("ADD A,${:02X}", 2),  ("RST 00H", 1),
     ("RET Z", 1),           ("RET", 1),               ("JP Z,${:04X}", 3),   ("PREFIX CB", 2),
     ("CALL Z,${:04X}", 3),  ("CALL ${:04X}", 3),      ("ADC A,${:02X}", 2),  ("RST 08H", 1),
-    # 0xD0–0xDF
+    # 0xD0-0xDF
     ("RET NC", 1),          ("POP DE", 1),            ("JP NC,${:04X}", 3),  ("???", 1),
     ("CALL NC,${:04X}", 3), ("PUSH DE", 1),           ("SUB ${:02X}", 2),    ("RST 10H", 1),
     ("RET C", 1),           ("RETI", 1),              ("JP C,${:04X}", 3),   ("???", 1),
     ("CALL C,${:04X}", 3),  ("???", 1),               ("SBC A,${:02X}", 2),  ("RST 18H", 1),
-    # 0xE0–0xEF
+    # 0xE0-0xEF
     ("LDH ($FF{:02X}),A", 2), ("POP HL", 1),          ("LD ($FF00+C),A", 1), ("???", 1),
     ("???", 1),               ("PUSH HL", 1),          ("AND ${:02X}", 2),    ("RST 20H", 1),
     ("ADD SP,{:+d}", 2),      ("JP HL", 1),            ("LD (${:04X}),A", 3), ("???", 1),
     ("???", 1),               ("???", 1),              ("XOR ${:02X}", 2),    ("RST 28H", 1),
-    # 0xF0–0xFF
+    # 0xF0-0xFF
     ("LDH A,($FF{:02X})", 2), ("POP AF", 1),          ("LD A,($FF00+C)", 1), ("DI", 1),
     ("???", 1),               ("PUSH AF", 1),          ("OR ${:02X}", 2),     ("RST 30H", 1),
     ("LD HL,SP{:+d}", 2),     ("LD SP,HL", 1),        ("LD A,(${:04X})", 3), ("EI", 1),
@@ -155,7 +155,7 @@ def parse_rom_header(rom: bytes) -> dict:
     if len(rom) < 0x150:
         return info
 
-    # Title: 0x134–0x143 (up to 16 bytes, null-padded)
+    # Title: 0x134-0x143 (up to 16 bytes, null-padded)
     title_bytes = rom[0x134:0x144]
     info["title"] = title_bytes.split(b"\x00")[0].decode("ascii", errors="replace").strip()
 
@@ -270,7 +270,7 @@ def main() -> None:
     lines = disassemble_rom(rom)
     write_md(out_path, rom_path, rom, lines)
 
-    print(f"Disassembled {len(lines)} instructions → {out_path}")
+    print(f"Disassembled {len(lines)} instructions -> {out_path}")
 
 
 if __name__ == "__main__":

@@ -7,11 +7,11 @@ namespace SeaBoy
     // MBC2 - 16 ROM banks × 16 KB, 512 × 4-bit internal RAM.
     // PanDocs.17.3 MBC2
     //
-    // Register map (write to 0x0000–0x3FFF):
+    // Register map (write to 0x0000-0x3FFF):
     //   Bit 8 of address = 0  -> RAM enable (lower nibble 0x0A = enable)
     //   Bit 8 of address = 1  -> ROM bank (lower 4 bits; 0 -> 1)
     //
-    // RAM:  512 nibbles at 0xA000–0xA1FF (mirrored across 0xA000–0xBFFF)
+    // RAM:  512 nibbles at 0xA000-0xA1FF (mirrored across 0xA000-0xBFFF)
     //       Upper nibble always reads 0xF; only lower 4 bits are stored.
     class MBC2 final : public Cartridge
     {

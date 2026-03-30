@@ -96,7 +96,7 @@ namespace SeaBoy
         bool m_ime          = false; // Interrupt Master Enable
         bool m_halted       = false; // HALT state - PanDocs.9.2
         bool m_haltBug      = false; // HALT bug pending - PanDocs.9.2
-        uint8_t m_imeDelay = 0; // EI 2-step delay counter: 2→1→0 (IME set when hits 0) - PanDocs Interrupts
+        uint8_t m_imeDelay = 0; // EI 2-step delay counter: 2->1->0 (IME set when hits 0) - PanDocs Interrupts
 
         // CPU event callback
         CPUEventFn m_cpuEvFn  = nullptr;

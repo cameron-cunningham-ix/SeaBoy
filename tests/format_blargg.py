@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-format_blargg.py — Convert run_blargg.sh output to pass_list/blargg.md.
+format_blargg.py - Convert run_blargg.sh output to pass_list/blargg.md.
 
 Usage:
     bash tests/run_blargg.sh | python tests/format_blargg.py [--output FILE]

@@ -45,7 +45,7 @@ private:
     int textureHeight;
 
     // Keybinding rebind state
-    int m_rebindingIndex = -1; // -1 = not rebinding, 0–7 = which button
+    int m_rebindingIndex = -1; // -1 = not rebinding, 0-7 = which button
 
     // Layout save/load state
     std::string m_currentLayoutName;
@@ -67,7 +67,7 @@ public:
     // Path of currently loaded ROM (for Restart).
     std::string m_currentROMPath;
 
-    // Active save state slot (1–9).
+    // Active save state slot (1-9).
     int m_saveSlot = 1;
 
     // Active .sav file path (auto-derived from ROM, or user-chosen via Save As / Load).
@@ -85,8 +85,12 @@ public:
     // Hardware model override applied on every loadROM().
     SeaBoy::HardwareMode m_hardwareMode = SeaBoy::HardwareMode::Auto;
 
-    // Emulation speed as a percentage (25–400, steps of 25). 100 = real hardware speed.
+    // Emulation speed as a percentage (25-400, steps of 25). 100 = real hardware speed.
     int m_speedPercent = 100;
+
+    // Audio volume as a percentage (0-100). 100 = full volume.
+    int m_volumePercent = 100;
+    bool m_muted = false;
 
     // Debugger reference for Window menu toggles. Set via setDebugger().
     DebuggerUI* m_debugger = nullptr;
@@ -411,6 +415,13 @@ public:
                     }
                     ImGui::EndMenu();
                 }
+
+                if (ImGui::BeginMenu("Audio"))
+                {
+                    ImGui::MenuItem("Mute", nullptr, &m_muted);
+                    ImGui::SliderInt("Volume", &m_volumePercent, 0, 100, "%d%%");
+                    ImGui::EndMenu();
+                }
                 ImGui::EndMenu();
             }
 
@@ -617,7 +628,7 @@ private:
         return base + ".ss" + std::to_string(slot);
     }
 
-    // Returns a pointer to the scancode field in m_bindings for the given index (0–7).
+    // Returns a pointer to the scancode field in m_bindings for the given index (0-7).
     SDL_Scancode* bindingField(int index)
     {
         SDL_Scancode* fields[] = {

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-format_mooneye.py — Convert run_mooneye.sh output to pass_list/mooneye.md.
+format_mooneye.py - Convert run_mooneye.sh output to pass_list/mooneye.md.
 
 Usage:
     bash tests/run_mooneye.sh | python tests/format_mooneye.py [--output FILE]

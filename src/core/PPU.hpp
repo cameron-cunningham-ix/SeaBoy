@@ -12,13 +12,13 @@
 // The PPU renders 160×144 pixels per frame at ~59.7 Hz.
 // Each frame = 154 scanlines × 456 T-cycles/scanline = 70224 T-cycles.
 //
-// Mode state machine per scanline (lines 0–143):
+// Mode state machine per scanline (lines 0-143):
 //   Mode 2 (OAM Scan):  80 T-cycles  - scans OAM for sprites on this line
-//   Mode 3 (Drawing):   172–289 T-cycles - pixel transfer (variable length)
+//   Mode 3 (Drawing):   172-289 T-cycles - pixel transfer (variable length)
 //   Mode 0 (HBlank):    remainder of 456 T-cycles
-// Lines 144–153: Mode 1 (VBlank) for entire scanline.
+// Lines 144-153: Mode 1 (VBlank) for entire scanline.
 //
-// LCD registers: 0xFF40–0xFF4B
+// LCD registers: 0xFF40-0xFF4B
 //   LCDC (0xFF40): LCD control
 //   STAT (0xFF41): LCD status + interrupt enables
 //   SCY  (0xFF42): Scroll Y
@@ -82,22 +82,22 @@ namespace SeaBoy
         // Advance PPU by tCycles T-cycles. Called from GameBoy::onBusCycle.
         void tick(uint32_t tCycles);
 
-        // LCD register I/O - called by MMU for 0xFF40–0xFF4B
+        // LCD register I/O - called by MMU for 0xFF40-0xFF4B
         uint8_t read(uint16_t addr) const;
         void    write(uint16_t addr, uint8_t val);
 
-        // VRAM I/O - called by MMU for 0x8000–0x9FFF
+        // VRAM I/O - called by MMU for 0x8000-0x9FFF
         // Enforces Mode 3 access gating (returns 0xFF / ignores write during Drawing).
         uint8_t readVRAM(uint16_t addr) const;
         void    writeVRAM(uint16_t addr, uint8_t val);
 
-        // OAM I/O - called by MMU for 0xFE00–0xFE9F
+        // OAM I/O - called by MMU for 0xFE00-0xFE9F
         // Enforces Mode 2/3 access gating (returns 0xFF / ignores write during OAMScan/Drawing).
         uint8_t readOAM(uint16_t addr) const;
         void    writeOAM(uint16_t addr, uint8_t val);
 
         // OAM corruption bug - PanDocs.25 OAM Corruption Bug
-        // Called by MMU when a corruption-triggering instruction accesses 0xFE00–0xFEFF
+        // Called by MMU when a corruption-triggering instruction accesses 0xFE00-0xFEFF
         // while the PPU is in Mode 2 on a visible scanline.
         void triggerOAMCorrupt(OAMCorruptType type);
 
@@ -109,8 +109,13 @@ namespace SeaBoy
         }
         uint8_t peekOAM(uint16_t addr)  const { return m_oam[addr - 0xFE00u]; }
 
+#ifdef PICO_RP2040
+        // Framebuffer access - 160×144 RGB565 pixels (RP2040: saves 45 KB SRAM)
+        const uint16_t* frameBuffer() const { return m_frameBuffer; }
+#else
         // Framebuffer access - 160×144 RGBA8888 pixels
         const uint32_t* frameBuffer() const { return m_frameBuffer; }
+#endif
 
         // DMA state query - used by MMU to enforce bus conflict - PanDocs OAM DMA
         bool     isDMAActive() const { return m_dmaActive; }
@@ -179,8 +184,8 @@ namespace SeaBoy
 
         // Mode state machine
         PPUMode  m_mode      = PPUMode::OAMScan;
-        uint32_t m_lineCycle = 0; // T-cycle within current scanline (0–455)
-        uint8_t  m_ly        = 0; // current scanline (0–153)
+        uint32_t m_lineCycle = 0; // T-cycle within current scanline (0-455)
+        uint8_t  m_ly        = 0; // current scanline (0-153)
 
 
         // LCD registers
@@ -202,7 +207,7 @@ namespace SeaBoy
         bool     m_dmaWasRestart  = false; // true if DMA was restarted while already running
         uint8_t  m_dmaStartDelay  = 0;     // T-cycles of startup delay before copy begins
         uint16_t m_dmaSource      = 0;     // source base address (DMA register << 8)
-        uint8_t  m_dmaByte        = 0;     // next byte index to copy (0–159)
+        uint8_t  m_dmaByte        = 0;     // next byte index to copy (0-159)
 
         // STAT interrupt line - tracks previous combined state for edge detection
         bool    m_statLine  = false;
@@ -210,7 +215,12 @@ namespace SeaBoy
         // LY updates. -1 = idle; 0-4 = countdown in progress. - Phase 2B
         int8_t  m_lycDelay  = -1;
 
+#ifdef PICO_RP2040
+        // Framebuffer - 160×144 RGB565 (45 KB vs 90 KB for RGBA8888)
+        uint16_t m_frameBuffer[160 * 144]{};
+#else
         // Framebuffer - 160×144 RGBA8888
         uint32_t m_frameBuffer[160 * 144]{};
+#endif
     };
 }

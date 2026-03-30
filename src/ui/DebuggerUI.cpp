@@ -21,82 +21,82 @@ namespace
     //   %+d  = signed 8-bit relative offset (e8)
     // CB prefix (0xCB) is handled separately.
     static const OpInfo kOps[256] = {
-        // 0x00–0x0F
+        // 0x00-0x0F
         {"NOP",1},{"LD BC,$%04X",3},{"LD (BC),A",1},{"INC BC",1},
         {"INC B",1},{"DEC B",1},{"LD B,$%02X",2},{"RLCA",1},
         {"LD ($%04X),SP",3},{"ADD HL,BC",1},{"LD A,(BC)",1},{"DEC BC",1},
         {"INC C",1},{"DEC C",1},{"LD C,$%02X",2},{"RRCA",1},
-        // 0x10–0x1F
+        // 0x10-0x1F
         {"STOP",1},{"LD DE,$%04X",3},{"LD (DE),A",1},{"INC DE",1},
         {"INC D",1},{"DEC D",1},{"LD D,$%02X",2},{"RLA",1},
         {"JR %+d",2},{"ADD HL,DE",1},{"LD A,(DE)",1},{"DEC DE",1},
         {"INC E",1},{"DEC E",1},{"LD E,$%02X",2},{"RRA",1},
-        // 0x20–0x2F
+        // 0x20-0x2F
         {"JR NZ,%+d",2},{"LD HL,$%04X",3},{"LD (HL+),A",1},{"INC HL",1},
         {"INC H",1},{"DEC H",1},{"LD H,$%02X",2},{"DAA",1},
         {"JR Z,%+d",2},{"ADD HL,HL",1},{"LD A,(HL+)",1},{"DEC HL",1},
         {"INC L",1},{"DEC L",1},{"LD L,$%02X",2},{"CPL",1},
-        // 0x30–0x3F
+        // 0x30-0x3F
         {"JR NC,%+d",2},{"LD SP,$%04X",3},{"LD (HL-),A",1},{"INC SP",1},
         {"INC (HL)",1},{"DEC (HL)",1},{"LD (HL),$%02X",2},{"SCF",1},
         {"JR C,%+d",2},{"ADD HL,SP",1},{"LD A,(HL-)",1},{"DEC SP",1},
         {"INC A",1},{"DEC A",1},{"LD A,$%02X",2},{"CCF",1},
-        // 0x40–0x4F
+        // 0x40-0x4F
         {"LD B,B",1},{"LD B,C",1},{"LD B,D",1},{"LD B,E",1},
         {"LD B,H",1},{"LD B,L",1},{"LD B,(HL)",1},{"LD B,A",1},
         {"LD C,B",1},{"LD C,C",1},{"LD C,D",1},{"LD C,E",1},
         {"LD C,H",1},{"LD C,L",1},{"LD C,(HL)",1},{"LD C,A",1},
-        // 0x50–0x5F
+        // 0x50-0x5F
         {"LD D,B",1},{"LD D,C",1},{"LD D,D",1},{"LD D,E",1},
         {"LD D,H",1},{"LD D,L",1},{"LD D,(HL)",1},{"LD D,A",1},
         {"LD E,B",1},{"LD E,C",1},{"LD E,D",1},{"LD E,E",1},
         {"LD E,H",1},{"LD E,L",1},{"LD E,(HL)",1},{"LD E,A",1},
-        // 0x60–0x6F
+        // 0x60-0x6F
         {"LD H,B",1},{"LD H,C",1},{"LD H,D",1},{"LD H,E",1},
         {"LD H,H",1},{"LD H,L",1},{"LD H,(HL)",1},{"LD H,A",1},
         {"LD L,B",1},{"LD L,C",1},{"LD L,D",1},{"LD L,E",1},
         {"LD L,H",1},{"LD L,L",1},{"LD L,(HL)",1},{"LD L,A",1},
-        // 0x70–0x7F
+        // 0x70-0x7F
         {"LD (HL),B",1},{"LD (HL),C",1},{"LD (HL),D",1},{"LD (HL),E",1},
         {"LD (HL),H",1},{"LD (HL),L",1},{"HALT",1},{"LD (HL),A",1},
         {"LD A,B",1},{"LD A,C",1},{"LD A,D",1},{"LD A,E",1},
         {"LD A,H",1},{"LD A,L",1},{"LD A,(HL)",1},{"LD A,A",1},
-        // 0x80–0x8F
+        // 0x80-0x8F
         {"ADD A,B",1},{"ADD A,C",1},{"ADD A,D",1},{"ADD A,E",1},
         {"ADD A,H",1},{"ADD A,L",1},{"ADD A,(HL)",1},{"ADD A,A",1},
         {"ADC A,B",1},{"ADC A,C",1},{"ADC A,D",1},{"ADC A,E",1},
         {"ADC A,H",1},{"ADC A,L",1},{"ADC A,(HL)",1},{"ADC A,A",1},
-        // 0x90–0x9F
+        // 0x90-0x9F
         {"SUB B",1},{"SUB C",1},{"SUB D",1},{"SUB E",1},
         {"SUB H",1},{"SUB L",1},{"SUB (HL)",1},{"SUB A",1},
         {"SBC A,B",1},{"SBC A,C",1},{"SBC A,D",1},{"SBC A,E",1},
         {"SBC A,H",1},{"SBC A,L",1},{"SBC A,(HL)",1},{"SBC A,A",1},
-        // 0xA0–0xAF
+        // 0xA0-0xAF
         {"AND B",1},{"AND C",1},{"AND D",1},{"AND E",1},
         {"AND H",1},{"AND L",1},{"AND (HL)",1},{"AND A",1},
         {"XOR B",1},{"XOR C",1},{"XOR D",1},{"XOR E",1},
         {"XOR H",1},{"XOR L",1},{"XOR (HL)",1},{"XOR A",1},
-        // 0xB0–0xBF
+        // 0xB0-0xBF
         {"OR B",1},{"OR C",1},{"OR D",1},{"OR E",1},
         {"OR H",1},{"OR L",1},{"OR (HL)",1},{"OR A",1},
         {"CP B",1},{"CP C",1},{"CP D",1},{"CP E",1},
         {"CP H",1},{"CP L",1},{"CP (HL)",1},{"CP A",1},
-        // 0xC0–0xCF
+        // 0xC0-0xCF
         {"RET NZ",1},{"POP BC",1},{"JP NZ,$%04X",3},{"JP $%04X",3},
         {"CALL NZ,$%04X",3},{"PUSH BC",1},{"ADD A,$%02X",2},{"RST 00H",1},
         {"RET Z",1},{"RET",1},{"JP Z,$%04X",3},{"CB %02X",2},
         {"CALL Z,$%04X",3},{"CALL $%04X",3},{"ADC A,$%02X",2},{"RST 08H",1},
-        // 0xD0–0xDF
+        // 0xD0-0xDF
         {"RET NC",1},{"POP DE",1},{"JP NC,$%04X",3},{"???",1},
         {"CALL NC,$%04X",3},{"PUSH DE",1},{"SUB $%02X",2},{"RST 10H",1},
         {"RET C",1},{"RETI",1},{"JP C,$%04X",3},{"???",1},
         {"CALL C,$%04X",3},{"???",1},{"SBC A,$%02X",2},{"RST 18H",1},
-        // 0xE0–0xEF
+        // 0xE0-0xEF
         {"LDH ($FF%02X),A",2},{"POP HL",1},{"LD ($FF00+C),A",1},{"???",1},
         {"???",1},{"PUSH HL",1},{"AND $%02X",2},{"RST 20H",1},
         {"ADD SP,%+d",2},{"JP HL",1},{"LD ($%04X),A",3},{"???",1},
         {"???",1},{"???",1},{"XOR $%02X",2},{"RST 28H",1},
-        // 0xF0–0xFF
+        // 0xF0-0xFF
         {"LDH A,($FF%02X)",2},{"POP AF",1},{"LD A,($FF00+C)",1},{"DI",1},
         {"???",1},{"PUSH AF",1},{"OR $%02X",2},{"RST 30H",1},
         {"LD HL,SP%+d",2},{"LD SP,HL",1},{"LD A,($%04X)",3},{"EI",1},
@@ -924,8 +924,8 @@ void DebuggerUI::rebuildTilemapTexture()
         : static_cast<uint16_t>((lcdc & 0x40) ? 0x1C00 : 0x1800);  // Win map from LCDC bit 6
 
     // Tile data addressing: LCDC bit 4
-    // 1 → unsigned 0x8000-based (VRAM offset 0x0000)
-    // 0 → signed 0x8800-based (VRAM offset 0x1000, index is signed)
+    // 1 -> unsigned 0x8000-based (VRAM offset 0x0000)
+    // 0 -> signed 0x8800-based (VRAM offset 0x1000, index is signed)
     bool unsignedMode = (lcdc & 0x10) != 0;
 
     for (int tileY = 0; tileY < 32; ++tileY)

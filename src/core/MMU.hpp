@@ -15,15 +15,15 @@
 // PanDocs.2 - Memory Map
 //
 // Address space:
-//   0x0000–0x7FFF  ROM (cartridge, bank-switched by MBC)
-//   0x8000–0x9FFF  VRAM (PPU-owned, routed to PPU::readVRAM/writeVRAM)
-//   0xA000–0xBFFF  External RAM (cartridge)
-//   0xC000–0xDFFF  WRAM (8 KB)
-//   0xE000–0xFDFF  Echo RAM (mirrors WRAM 0xC000–0xDFFF)
-//   0xFE00–0xFE9F  OAM (PPU-owned, routed to PPU::readOAM/writeOAM)
-//   0xFEA0–0xFEFF  Prohibited (reads 0x00, writes ignored on DMG)
+//   0x0000-0x7FFF  ROM (cartridge, bank-switched by MBC)
+//   0x8000-0x9FFF  VRAM (PPU-owned, routed to PPU::readVRAM/writeVRAM)
+//   0xA000-0xBFFF  External RAM (cartridge)
+//   0xC000-0xDFFF  WRAM (8 KB)
+//   0xE000-0xFDFF  Echo RAM (mirrors WRAM 0xC000-0xDFFF)
+//   0xFE00-0xFE9F  OAM (PPU-owned, routed to PPU::readOAM/writeOAM)
+//   0xFEA0-0xFEFF  Prohibited (reads 0x00, writes ignored on DMG)
 //   0xFF0F         IF - Interrupt Flag
-//   0xFF80–0xFFFE  HRAM (127 bytes)
+//   0xFF80-0xFFFE  HRAM (127 bytes)
 //   0xFFFF         IE - Interrupt Enable
 //   all other addresses -> open bus, reads return 0xFF
 
@@ -77,6 +77,7 @@ namespace SeaBoy
 
         void reset();
         void loadROM(const uint8_t* data, size_t size);
+        void loadROM(std::vector<uint8_t>&& rom);
 
         // Core bus interface
         // Each call represents a 4 T-cycle bus access.
@@ -122,7 +123,7 @@ namespace SeaBoy
         void tickCycle() { if (m_cycleFn) m_cycleFn(m_cycleCtx, 4); }
 
         // PPU link - set by GameBoy after constructing both MMU and PPU.
-        // MMU routes 0xFF40–0xFF4B to the PPU; null until wired.
+        // MMU routes 0xFF40-0xFF4B to the PPU; null until wired.
         void setPPU(PPU* p) { m_ppu = p; }
 
         // Returns true while an OAM DMA transfer is in progress (including startup delay).
@@ -130,7 +131,7 @@ namespace SeaBoy
         bool isDMAActive() const;
 
         // OAM corruption bug - PanDocs.25 OAM Corruption Bug
-        // Delegates to PPU::triggerOAMCorrupt() when addr is in 0xFE00–0xFEFF.
+        // Delegates to PPU::triggerOAMCorrupt() when addr is in 0xFE00-0xFEFF.
         void triggerOAMCorrupt(uint16_t addr, OAMCorruptType type);
 
         // Serial port output (captured from writes to SB/SC, 0xFF01/02).
@@ -138,7 +139,7 @@ namespace SeaBoy
         const std::string& serialOutput() const { return m_serialOutput; }
 
         // Timer link - set by GameBoy after constructing both MMU and Timer.
-        // MMU routes 0xFF04–0xFF07 to the Timer; null until wired.
+        // MMU routes 0xFF04-0xFF07 to the Timer; null until wired.
         void setTimer(Timer* t) { m_timer = t; }
         
         // Reset timer DIV (internal counter) - called by STOP, no cycle side effects.
@@ -149,7 +150,7 @@ namespace SeaBoy
         void setJoypad(Joypad* j) { m_joypad = j; }
 
         // APU link - set by GameBoy after constructing both MMU and APU.
-        // MMU routes 0xFF10–0xFF26 and 0xFF30–0xFF3F to the APU; null until wired.
+        // MMU routes 0xFF10-0xFF26 and 0xFF30-0xFF3F to the APU; null until wired.
         void setAPU(APU* a) { m_apu = a; }
 
         // CGB mode - enables WRAM banking via SVBK (0xFF70).
@@ -199,9 +200,9 @@ namespace SeaBoy
 
         // WRAM: 8 KB on DMG (2 banks), 32 KB on CGB (8 banks of 4 KB) - PanDocs.2
         // Always allocated as 32 KB; DMG uses only banks 0+1.
-        // 0xC000–0xCFFF: always bank 0. 0xD000–0xDFFF: switchable (SVBK).
+        // 0xC000-0xCFFF: always bank 0. 0xD000-0xDFFF: switchable (SVBK).
         uint8_t m_wram[0x8000]{};
-        uint8_t m_hram[0x7F]{};    // 127 bytes HRAM (0xFF80–0xFFFE)
+        uint8_t m_hram[0x7F]{};    // 127 bytes HRAM (0xFF80-0xFFFE)
         uint8_t m_ifReg = 0xE1;    // IF - power-on value per PanDocs.22 Power Up Sequence
         uint8_t m_ie    = 0x00;    // IE
         uint8_t m_opri = 0x00;     // 0xFF6C - Object Priority Mode - PanDocs.10
@@ -214,7 +215,7 @@ namespace SeaBoy
         // CGB speed switching - PanDocs.10 KEY1 (0xFF4D)
         uint8_t m_key1 = 0;        // bit 7 = current speed, bit 0 = prepare flag
 
-        // Serial port – PanDocs.7 Serial Data Transfer
+        // Serial port - PanDocs.7 Serial Data Transfer
         uint8_t     m_sb = 0;      // 0xFF01 SB: transfer data
         uint8_t     m_sc = 0;      // 0xFF02 SC: transfer control
         std::string m_serialOutput;// Accumulated bytes captured from serial transfers

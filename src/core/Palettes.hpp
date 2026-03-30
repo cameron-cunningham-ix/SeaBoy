@@ -57,7 +57,7 @@ namespace SeaBoy
         uint32_t resolveBGCGB(uint8_t paletteIdx, uint8_t colorID) const;
         uint32_t resolveOBJCGB(uint8_t paletteIdx, uint8_t colorID) const;
 
-        // Set custom DMG shade colors (RGBA8888, 4 entries: white→black)
+        // Set custom DMG shade colors (RGBA8888, 4 entries: white->black)
         void setShades(const uint32_t shades[4])
         {
             for (int i = 0; i < 4; ++i) m_shades[i] = shades[i];

@@ -10,10 +10,10 @@ namespace SeaBoy
     // Key difference from MBC1: bank 0 IS valid (no 0->1 remap). 9-bit ROM bank.
     //
     // Register map (write-only, decoded from ROM address bus):
-    //   0x0000–0x1FFF  RAM enable  (lower nibble 0x0A = enable)
-    //   0x2000–0x2FFF  ROM bank low 8 bits
-    //   0x3000–0x3FFF  ROM bank bit 8
-    //   0x4000–0x5FFF  RAM bank (4-bit, 0–15)
+    //   0x0000-0x1FFF  RAM enable  (lower nibble 0x0A = enable)
+    //   0x2000-0x2FFF  ROM bank low 8 bits
+    //   0x3000-0x3FFF  ROM bank bit 8
+    //   0x4000-0x5FFF  RAM bank (4-bit, 0-15)
     class MBC5 final : public Cartridge
     {
     public:
@@ -32,8 +32,8 @@ namespace SeaBoy
     private:
         std::vector<uint8_t> m_ram;
 
-        uint16_t m_romBank   = 1;     // 9-bit ROM bank (0–511); bank 0 is valid
-        uint8_t  m_ramBank   = 0;     // 4-bit RAM bank (0–15)
+        uint16_t m_romBank   = 1;     // 9-bit ROM bank (0-511); bank 0 is valid
+        uint8_t  m_ramBank   = 0;     // 4-bit RAM bank (0-15)
         bool     m_ramEnable = false;
     };
 

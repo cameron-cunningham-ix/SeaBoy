@@ -44,7 +44,7 @@ namespace SeaBoy
         // Sets IF bit 2 (Timer interrupt) on TIMA overflow after the 4-cycle delay.
         void tick(uint32_t tCycles);
 
-        // I/O register interface - called by MMU for 0xFF04–0xFF07.
+        // I/O register interface - called by MMU for 0xFF04-0xFF07.
         uint8_t read(uint16_t addr) const;
         void    write(uint16_t addr, uint8_t val);
 

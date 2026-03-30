@@ -346,8 +346,18 @@ namespace SeaBoy
         uint8_t m_waveRam[16]{};
 
         // Audio sample output
+        static constexpr uint32_t SAMPLE_RATE =
+#if defined(PICO_RP2040)
+            22050   // no HW FPU on RP2040 - halve sample rate to reduce soft-float load
+#else
+            48000
+#endif
+            ;
+
         static constexpr uint32_t SAMPLE_BUFFER_SIZE =
-#ifdef PICO_BUILD
+#if defined(PICO_RP2040)
+            512    // 512 stereo pairs × 2 × 4 bytes = 4 KB
+#elif defined(PICO_BUILD)
             1024   // ~85 ms at 48 kHz; saves ~24 KB of SRAM
 #else
             4096

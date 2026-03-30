@@ -1,4 +1,4 @@
-// Application icon — the first icon in the .rc is used by Windows Explorer
+// Application icon - the first icon in the .rc is used by Windows Explorer
 IDI_APPICON ICON "SeaBoyLogo_icon.ico"
 
 // Windows version information resource
