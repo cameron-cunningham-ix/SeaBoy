@@ -3,6 +3,9 @@
 #include <cstdint>
 #include <memory>
 #include <vector>
+#ifdef PICO_BUILD
+#include <functional>
+#endif
 
 namespace SeaBoy
 {
@@ -61,10 +64,40 @@ namespace SeaBoy
         // Takes ownership of the ROM data vector.
         static std::unique_ptr<Cartridge> create(std::vector<uint8_t> rom);
 
+#ifdef PICO_BUILD
+        // Bank streaming for large ROMs that don't fit in SRAM.
+        //
+        // On Pico, the ROM vector passed to create() may contain only bank 0 (16 KB).
+        // When a BankLoader is installed, MBC switchable-bank reads (0x4000-0x7FFF) are
+        // served from a 16 KB cache that is populated on-demand by calling this function.
+        //
+        // The callback receives a 16 KB buffer and the bank number to load, and must
+        // fill the buffer with the 16 KB block at offset (bankNum * 0x4000) in the ROM.
+        using BankLoader = std::function<void(uint8_t* buf, uint16_t bankNum)>;
+        void setBankLoader(BankLoader loader);
+        bool hasBankLoader() const { return bool(m_bankLoader); }
+#endif
+
     protected:
-        explicit Cartridge(std::vector<uint8_t> rom) : m_rom(std::move(rom)) {}
+        // Constructor is non-inline so Cartridge.cpp can initialise m_numRomBanks.
+        explicit Cartridge(std::vector<uint8_t> rom);
 
         std::vector<uint8_t> m_rom;
+
+        // Total number of 16 KB ROM banks derived from header byte 0x0148.
+        // Used by streaming MBC reads to mask the bank number correctly.
+        uint16_t m_numRomBanks = 0;
+
+#ifdef PICO_BUILD
+        // 16 KB cache for the current switchable bank (0x4000-0x7FFF).
+        // Declared mutable so const read() can populate it on demand.
+        mutable uint8_t  m_bankCache[0x4000]{};
+        mutable uint16_t m_cachedBank = 0xFFFFu; // 0xFFFF = invalid / not yet loaded
+        BankLoader m_bankLoader;
+
+        // Load bankNum into m_bankCache if it is not already cached.
+        void loadBank(uint16_t bankNum) const;
+#endif
     };
 
 }

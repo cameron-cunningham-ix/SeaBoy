@@ -8,8 +8,11 @@
 #include "display/ILI9225.hpp"
 #include "input/Buttons.hpp"
 #include "storage/SDCard.hpp"
+#include "storage/SDCardBankLoader.hpp"
 #include "src/core/GameBoy.hpp"
 #include "src/core/APU.hpp"
+#include "src/core/MMU.hpp"
+#include "src/cartridge/Cartridge.hpp"
 
 #include <cstdio>
 #include <cstring>
@@ -41,6 +44,20 @@ static I2SAudio  s_audio;
 // ROM file list
 static RomEntry s_romList[kMaxRomEntries];
 static unsigned int s_romCount = 0;
+
+// Bank streaming for ROMs that don't fit in SRAM.
+// Must outlive the GameBoy instance — static storage ensures this.
+static SDCardBankLoader s_bankLoader;
+
+// ROMs larger than this threshold are streamed bank-by-bank from the SD card
+// rather than loaded entirely into SRAM.
+// RP2040: 264 KB total, ~100 KB free after static allocations -> 64 KB headroom for ROM.
+// RP2350: 520 KB total, ~291 KB free                          -> 256 KB headroom for ROM.
+#if defined(PICO_RP2040)
+static constexpr uint32_t kRomStreamingThreshold = 64u * 1024u;
+#else
+static constexpr uint32_t kRomStreamingThreshold = 256u * 1024u;
+#endif
 
 // ---------------------------------------------------------------------------
 // Dual-core frame handoff
@@ -374,46 +391,101 @@ int main()
            s_romList[choice].name, s_romList[choice].size);
 
     // ---- Load ROM -----------------------------------------------------------
-    // Read the ROM file directly into a std::vector, then move it into the
-    // Cartridge. This avoids a double allocation (raw buffer + Cartridge copy)
-    // which would exhaust SRAM on RP2040.
     uint32_t romSize = s_romList[choice].size;
 
     char romPath[80];
     snprintf(romPath, sizeof(romPath), "0:/%s", s_romList[choice].name);
 
-    std::vector<uint8_t> romData;
-    romData.resize(romSize);
+    printf("ROM: %s (%lu bytes)\n",
+           s_romList[choice].name, static_cast<unsigned long>(romSize));
 
-    uint32_t bytesRead = s_sdcard.readFile(romPath, romData.data(), romSize);
-    if (bytesRead == 0)
+    if (romSize <= kRomStreamingThreshold)
     {
-        printf("ROM: read failed - halting\n");
-        s_display.fillScreen(0xF800);
-        while (true) tight_loop_contents();
+        printf("ROM: <= streaming threshold\n");
+        s_display.fillScreen(0x07e0);
+        // while (true) tight_loop_contents();
+
+        // // Small ROM: load entire image into SRAM.
+        std::vector<uint8_t> romData;
+        romData.resize(romSize);
+
+        uint32_t bytesRead = s_sdcard.readFile(romPath, romData.data(), romSize);
+        if (bytesRead == 0)
+        {
+            printf("ROM: read failed - halting\n");
+            s_display.fillScreen(0xF800);
+            while (true) tight_loop_contents();
+        }
+        s_display.fillScreen(0x07fd);
+
+        romData.resize(bytesRead);
+
+        s_display.fillScreen(0x011f);
+
+
+        if (!s_gameBoy.loadROM(std::move(romData)))
+        {
+            printf("ROM: GameBoy::loadROM failed - halting\n");
+            s_display.fillScreen(0xF800);
+            while (true) tight_loop_contents();
+        }
+        printf("ROM: full load OK, CGB=%d\n", s_gameBoy.isCGB());
+
+        s_display.fillScreen(0xd01f);
+
     }
-    romData.resize(bytesRead); // trim to actual bytes read
-
-    printf("ROM: read %lu bytes\n", static_cast<unsigned long>(bytesRead));
-
-    if (!s_gameBoy.loadROM(std::move(romData)))
+    else
     {
-        printf("ROM: GameBoy::loadROM failed - halting\n");
-        s_display.fillScreen(0xF800);
-        while (true) tight_loop_contents();
-    }
 
-    // romData has been moved into the Cartridge - no separate free needed.
-    printf("ROM: loaded OK, CGB=%d\n", s_gameBoy.isCGB());
+        printf("ROM: > streaming threshold\n");
+        s_display.fillScreen(0xf81f);   // pink
+        // while (true) tight_loop_contents();
+        // Large ROM: load only bank 0 (16 KB) + header into SRAM.
+        // The remaining banks are streamed from the SD card on demand via SDCardBankLoader.
+        constexpr uint32_t kBank0Size = 0x4000u; // 16 KB
+        std::vector<uint8_t> bank0(kBank0Size, 0xFF);
+        s_display.fillScreen(0x781f);   // purple
+
+        uint32_t bytesRead = s_sdcard.readFile(romPath, bank0.data(), kBank0Size);
+        s_display.fillScreen(0x003f);   // blue
+        if (bytesRead < 0x0150u) // need at least the ROM header
+        {
+            printf("ROM: bank0 read failed - halting\n");
+            s_display.fillScreen(0x1fe0);   // green
+            while (true) tight_loop_contents();
+        }
+
+        if (!s_gameBoy.loadROM(std::move(bank0)))
+        {
+            printf("ROM: GameBoy::loadROM(bank0) failed - halting\n");
+            s_display.fillScreen(0xff60);   // yellow
+            while (true) tight_loop_contents();
+        }
+
+        // // Install the bank loader so MBC switchable-bank reads hit the SD card.
+        if (!s_bankLoader.open(romPath))
+        {
+            printf("ROM: SDCardBankLoader::open failed - halting\n");
+            s_display.fillScreen(0x07fc);  // cyan
+            while (true) tight_loop_contents();
+        }
+
+        SeaBoy::Cartridge* cart = s_gameBoy.mmuMut().cartridge();
+        if (cart)
+            cart->setBankLoader(s_bankLoader.makeCallback());
+
+        printf("ROM: streaming OK (%lu KB), CGB=%d\n",
+               static_cast<unsigned long>(romSize / 1024), s_gameBoy.isCGB());
+    }
 
     // ---- Audio init ---------------------------------------------------------
 #if defined(PICO_RP2040)
-    s_audio.init(22050);
+    // s_audio.init(22050);
 #else
-    s_audio.init(48000);
+    // s_audio.init(48000);
 #endif
-    s_audio.setAPU(&s_gameBoy.apu());
-    s_audio.start();
+    // s_audio.setAPU(&s_gameBoy.apu());
+    // s_audio.start();
 
     // Clear display borders for game rendering
     s_display.fillScreen(0x0000);

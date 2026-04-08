@@ -33,8 +33,18 @@ namespace SeaBoy
         // GB-CTR 12: 0x4000-0x7FFF always uses BANK2:BANK1, masked to ROM size.
         if (addr <= 0x7FFFu)
         {
+            uint8_t bank = static_cast<uint8_t>((m_ramBank << 5u) | (m_romBank & 0x1Fu));
+#ifdef PICO_BUILD
+            if (m_bankLoader)
+            {
+                // Streaming path: mask against actual ROM bank count from header,
+                // load into cache on demand, then read from cache.
+                if (m_numRomBanks > 0) bank &= static_cast<uint8_t>(m_numRomBanks - 1u);
+                loadBank(bank);
+                return m_bankCache[addr - 0x4000u];
+            }
+#endif
             uint32_t numBanks = static_cast<uint32_t>(m_rom.size() / 0x4000u);
-            uint8_t  bank     = static_cast<uint8_t>((m_ramBank << 5u) | (m_romBank & 0x1Fu));
             if (numBanks > 0) bank &= static_cast<uint8_t>(numBanks - 1u);
             uint32_t offset   = static_cast<uint32_t>(bank) * 0x4000u
                               + static_cast<uint32_t>(addr - 0x4000u);

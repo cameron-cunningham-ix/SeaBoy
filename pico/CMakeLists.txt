@@ -21,6 +21,12 @@ if(NOT PICO_SDK_PATH)
         "Pass it with: cmake -DPICO_SDK_PATH=/path/to/pico-sdk ...")
 endif()
 
+# Default to Release so optimization flags apply unless explicitly overridden.
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (Debug/Release)" FORCE)
+    message(STATUS "SeaBoy: CMAKE_BUILD_TYPE defaulted to Release")
+endif()
+
 include(${PICO_SDK_PATH}/external/pico_sdk_import.cmake)
 
 project(SeaBoy_Pico C CXX ASM)
@@ -119,6 +125,8 @@ target_link_libraries(SeaBoy_pico PRIVATE
     hardware_gpio
     hardware_pio
     hardware_pwm
+    hardware_clocks   # clock_get_hz() used by I2SAudio + main
+    hardware_irq      # irq_set_exclusive_handler() used by I2SAudio DMA ISR
     FatFs_SPI
 )
 
@@ -136,6 +144,29 @@ target_compile_options(SeaBoy_pico PRIVATE
     -Wall
     -Wextra
     -Wno-unused-parameter   # common in stub/platform code
+
+    # Unconditional: the emulator core never throws exceptions or uses RTTI.
+    # Removing their runtime support shrinks the binary and avoids hidden overhead.
+    -fno-exceptions
+    -fno-rtti
+
+    # Release-only: full optimization + dead-code elimination.
+    # -O3 enables auto-vectorisation and more aggressive inlining that are
+    # particularly worthwhile for Timer::tick, PPU::tick, and APU::tick.
+    # Note: -flto is intentionally omitted. The Pico SDK uses --wrap=printf/puts/etc.
+    # to redirect stdio; LTO changes symbol-resolution order and breaks those wraps.
+    $<$<CONFIG:Release>:-O3>
+    $<$<CONFIG:Release>:-ffunction-sections>
+    $<$<CONFIG:Release>:-fdata-sections>
+)
+
+# ---------------------------------------------------------------------------
+# Linker flags for Release builds
+# ---------------------------------------------------------------------------
+target_link_options(SeaBoy_pico PRIVATE
+    # Remove any functions/data not reachable from the entry point.
+    # Requires -ffunction-sections / -fdata-sections above.
+    $<$<CONFIG:Release>:-Wl,--gc-sections>
 )
 
 # ---------------------------------------------------------------------------

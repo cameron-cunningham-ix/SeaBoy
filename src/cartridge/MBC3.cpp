@@ -29,6 +29,15 @@ namespace SeaBoy
         // 0x4000-0x7FFF: switchable ROM bank
         if (addr <= 0x7FFFu)
         {
+#ifdef PICO_BUILD
+            if (m_bankLoader)
+            {
+                uint8_t bank = m_romBank;
+                if (m_numRomBanks > 0) bank &= static_cast<uint8_t>(m_numRomBanks - 1u);
+                loadBank(bank);
+                return m_bankCache[addr - 0x4000u];
+            }
+#endif
             uint32_t offset = static_cast<uint32_t>(m_romBank) * 0x4000u
                             + static_cast<uint32_t>(addr - 0x4000u);
             return offset < m_rom.size() ? m_rom[offset] : 0xFFu;

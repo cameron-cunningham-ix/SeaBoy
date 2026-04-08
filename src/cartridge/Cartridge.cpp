@@ -9,6 +9,45 @@
 
 namespace SeaBoy
 {
+    // ---------------------------------------------------------------------------
+    // Cartridge base constructor
+    // ---------------------------------------------------------------------------
+
+    Cartridge::Cartridge(std::vector<uint8_t> rom)
+        : m_rom(std::move(rom))
+    {
+        // Determine total bank count from ROM header byte 0x0148.
+        // This is needed for streaming builds where m_rom may be truncated to 16 KB.
+        // PanDocs.16 - ROM Size
+        static constexpr uint32_t kBankCounts[] = {2,4,8,16,32,64,128,256,512};
+        if (m_rom.size() > 0x0148u)
+        {
+            uint8_t code = m_rom[0x0148];
+            m_numRomBanks = (code < 9)
+                ? static_cast<uint16_t>(kBankCounts[code])
+                : static_cast<uint16_t>(m_rom.size() / 0x4000u);
+        }
+        else
+        {
+            m_numRomBanks = static_cast<uint16_t>(m_rom.size() / 0x4000u);
+        }
+    }
+
+#ifdef PICO_BUILD
+    void Cartridge::setBankLoader(BankLoader loader)
+    {
+        m_bankLoader  = std::move(loader);
+        m_cachedBank  = 0xFFFFu; // invalidate cache so next read triggers a load
+    }
+
+    void Cartridge::loadBank(uint16_t bankNum) const
+    {
+        if (!m_bankLoader || m_cachedBank == bankNum) return;
+        m_bankLoader(m_bankCache, bankNum);
+        m_cachedBank = bankNum;
+    }
+#endif
+
     // PanDocs.16 - Cartridge type byte 0x0147 name mapping.
     const char* Cartridge::typeString(uint8_t code)
     {

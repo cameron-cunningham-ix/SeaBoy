@@ -109,16 +109,24 @@ uint32_t SDCard::readFile(const char* path, uint8_t* buf, uint32_t maxSize)
         return 0;
     }
 
-    UINT bytesRead = 0;
-    fr = f_read(&fil, buf, maxSize, &bytesRead);
-    f_close(&fil);
-
-    if (fr != FR_OK)
+    uint32_t totalRead = 0;
+    while (totalRead < maxSize)
     {
-        printf("SD: f_read failed: %s (%d)\n", FRESULT_str(fr), fr);
-        return 0;
+        UINT chunk = 0;
+        fr = f_read(&fil, buf + totalRead, maxSize - totalRead, &chunk);
+        if (fr != FR_OK)
+        {
+            printf("SD: f_read failed: %s (%d)\n", FRESULT_str(fr), fr);
+            f_close(&fil);
+            return 0;
+        }
+        if (chunk == 0)
+            break; // EOF
+        totalRead += chunk;
     }
 
-    printf("SD: read %u bytes from %s\n", bytesRead, path);
-    return static_cast<uint32_t>(bytesRead);
+    f_close(&fil);
+
+    printf("SD: read %lu bytes from %s\n", static_cast<unsigned long>(totalRead), path);
+    return totalRead;
 }
