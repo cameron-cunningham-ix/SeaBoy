@@ -50,6 +50,11 @@ namespace SeaBoy
         // Returns number of stereo pairs written (up to maxPairs).
         uint32_t drainSamples(float* outBuffer, uint32_t maxPairs);
 
+#if defined(PICO_RP2040)
+        // Integer variant: drains Q15 int16 pairs directly, avoiding soft-float.
+        uint32_t drainSamples(int16_t* outBuffer, uint32_t maxPairs);
+#endif
+
         // Save state serialization
         void serialize(BinaryWriter& w) const;
         void deserialize(BinaryReader& r);
@@ -100,8 +105,10 @@ namespace SeaBoy
         };
 
         DebugState getDebugState() const;
+#if !defined(PICO_BUILD)
         uint32_t   drainChannelSamples(float* ch0, float* ch1, float* ch2, float* ch3,
                                        uint32_t maxSamples);
+#endif
 
     private:
         // -- Duty cycle table --------------------------------------------
@@ -363,20 +370,32 @@ namespace SeaBoy
             4096
 #endif
             ;
+#if defined(PICO_RP2040)
+        int16_t  m_sampleBuffer[SAMPLE_BUFFER_SIZE * 2]{}; // interleaved L, R (Q15 int16)
+#else
         float    m_sampleBuffer[SAMPLE_BUFFER_SIZE * 2]{}; // interleaved L, R
+#endif
         uint32_t m_sampleWritePos = 0;
         uint32_t m_sampleReadPos  = 0;
         uint32_t m_sampleTimer    = 0; // fractional accumulator for downsampling
 
-        // High-pass filter state - PanDocs Audio Details - Mixer
+        // High-pass filter capacitor state - PanDocs Audio Details - Mixer
+        // On RP2040: Q15 fixed-point int32 (avoids soft-float); elsewhere: double.
+#if defined(PICO_RP2040)
+        int32_t m_hpfCapLeft  = 0;
+        int32_t m_hpfCapRight = 0;
+#else
         double m_hpfCapLeft  = 0.0;
         double m_hpfCapRight = 0.0;
+#endif
 
-        // Per-channel oscilloscope capture ring buffer (written each generated sample)
+#if !defined(PICO_BUILD)
+        // Per-channel oscilloscope capture ring buffer (desktop DebuggerUI only)
         static constexpr uint32_t CH_BUF_SIZE = 512;
         uint8_t  m_chBuf[4][CH_BUF_SIZE]{};
         uint32_t m_chBufWrite = 0;
         uint32_t m_chBufRead  = 0;
+#endif
     };
 
 }

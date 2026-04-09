@@ -95,8 +95,9 @@ namespace SeaBoy
         uint8_t     m_bgFifoHead = 0;
         uint8_t     m_bgFifoSize = 0;
 
-        // OBJ FIFO - 8-entry linear buffer
+        // OBJ FIFO - 8-entry circular buffer (mirrors BG FIFO layout)
         ObjFifoPixel m_objFifo[8]{};
+        uint8_t      m_objFifoHead = 0; // physical index of logical slot 0
         uint8_t      m_objFifoSize = 0;
 
         // --- Sprite fetch ---
@@ -146,6 +147,9 @@ namespace SeaBoy
         uint16_t winTileMapBase() const;
         uint16_t tileDataAddr(uint8_t tileIndex) const;
         uint32_t mixPixels(const BgFifoPixel& bg, const ObjFifoPixel& obj) const;
+#if defined(PICO_RP2040)
+        uint16_t mixPixelsRGB565(const BgFifoPixel& bg, const ObjFifoPixel& obj) const;
+#endif
 
         // BG FIFO helpers
         BgFifoPixel popBgFifo();

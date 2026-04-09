@@ -56,11 +56,6 @@ namespace SeaBoy
         m_ifReg = 0; // no pending interrupts; IF must not alias test RAM at 0xFF0F
     }
 
-    bool MMU::isDMAActive() const
-    {
-        return m_ppu && m_ppu->isDMAActive();
-    }
-
     // PanDocs.2 SVBK - CGB WRAM bank offset for 0xD000-0xDFFF region.
     // Bank 0 maps to 1. Returns byte offset into m_wram[].
     static inline uint32_t wramBankOffset(uint8_t svbk)
@@ -98,76 +93,149 @@ namespace SeaBoy
 
         uint8_t val = 0xFFu; // Open bus default
 
-        // ROM (bank 0 + switchable bank) and external RAM - delegated to Cartridge
-        if (addr <= ADDR_ROM_END)
-            val = m_cart ? m_cart->read(addr) : 0xFFu;
-        // 0x8000-0x9FFF: VRAM - routed to PPU
-        else if (addr >= 0x8000u && addr <= 0x9FFFu)
-            val = m_ppu ? m_ppu->readVRAM(addr) : 0xFFu;
-        else if (addr >= ADDR_ERAM_BASE && addr <= ADDR_ERAM_END)
-            val = m_cart ? m_cart->read(addr) : 0xFFu;
-        // WRAM: 0xC000-0xCFFF = bank 0, 0xD000-0xDFFF = switchable (SVBK) - PanDocs.2
-        else if (addr >= 0xC000u && addr <= 0xCFFFu)
-            val = m_wram[addr - 0xC000u];
-        else if (addr >= 0xD000u && addr <= 0xDFFFu)
-            val = m_wram[wramBankOffset(m_svbk) + (addr - 0xD000u)];
-        // Echo RAM: 0xE000-0xEFFF mirrors bank 0, 0xF000-0xFDFF mirrors switchable - PanDocs.2
-        else if (addr >= 0xE000u && addr <= 0xEFFFu)
-            val = m_wram[addr - 0xE000u];
-        else if (addr >= 0xF000u && addr <= 0xFDFFu)
-            val = m_wram[wramBankOffset(m_svbk) + (addr - 0xF000u)];
-        // 0xFE00-0xFE9F: OAM - routed to PPU
-        else if (addr >= 0xFE00u && addr <= 0xFE9Fu)
-            val = m_ppu ? m_ppu->readOAM(addr) : 0xFFu;
-        // Prohibited area: 0xFEA0-0xFEFF returns 0x00 on DMG - PanDocs.2
-        else if (addr >= 0xFEA0u && addr <= 0xFEFFu)
-            val = 0x00u;
-        // I/O registers (0xFF00-0xFF7F)
-        // Joypad P1 register - PanDocs.6 Joypad Input
-        else if (addr == ADDR_P1)
-            val = m_joypad ? m_joypad->read() : 0xFFu;
-        else if (addr == ADDR_IF)
-            val = m_ifReg | 0xE0u; // upper 3 bits always 1
-        else if (addr == 0xFF01u)
-            val = m_sb;
-        else if (addr == 0xFF02u)
-            val = m_sc | 0x7Eu;    // unused bits read as 1
-        // Timer registers - PanDocs.8 Timer and Divider Registers
-        else if (addr >= ADDR_DIV && addr <= ADDR_TAC)
-            val = m_timer ? m_timer->read(addr) : 0xFFu;
-        // APU registers - PanDocs Audio Registers
-        else if ((addr >= 0xFF10u && addr <= 0xFF26u) || (addr >= 0xFF30u && addr <= 0xFF3Fu))
-            val = m_apu ? m_apu->read(addr) : 0xFFu;
-        // LCD registers - routed to PPU (PanDocs.4 LCD I/O Registers)
-        else if (addr >= 0xFF40u && addr <= 0xFF4Bu)
-            val = m_ppu ? m_ppu->read(addr) : 0xFFu;
-        // CGB speed switching KEY1 (0xFF4D) - PanDocs.10
-        else if (addr == 0xFF4Du)
-            val = m_cgbMode ? (m_key1 | 0x7Eu) : 0xFFu; // only bits 0 and 7 meaningful
-        // CGB VRAM bank select (0xFF4F) - routed to PPU
-        else if (addr == 0xFF4Fu)
-            val = (m_cgbMode && m_ppu) ? m_ppu->read(addr) : 0xFFu;
-        // CGB HDMA registers (0xFF51-0xFF55) - routed to PPU
-        else if (addr >= 0xFF51u && addr <= 0xFF55u)
-            val = (m_cgbMode && m_ppu) ? m_ppu->read(addr) : 0xFFu;
-        // CGB IR - bits 2-5 always 1; bit 7 (write enable) and bit 0 (LED) are R/W; bit 1 = recieved signal = 0
-        else if (addr == 0xFF56u)
-            val = m_cgbMode ? ((m_rp & 0xC1u) | 0x3Eu) : 0xFFu;
-        // CGB palette registers - routed to PPU (PanDocs.4.7)
-        else if (addr >= 0xFF68u && addr <= 0xFF6Bu)
-            val = (m_cgbMode && m_ppu) ? m_ppu->read(addr) : 0xFFu;
-        // CGB object priority mode
-        else if (addr == 0xFF6Cu)
-            val = m_cgbMode ? ((m_opri & 0x01u) | 0xFEu) : 0xFFu;
-        // CGB WRAM bank select (0xFF70) - PanDocs.2 SVBK
-        else if (addr == 0xFF70u)
-            val = m_cgbMode ? (m_svbk | 0xF8u) : 0xFFu;
-        else if (addr >= ADDR_HRAM_BASE && addr <= ADDR_HRAM_END)
-            val = m_hram[addr - ADDR_HRAM_BASE];
-        else if (addr == ADDR_IE)
-            val = m_ie;
+        // PanDocs.2 - Memory Map routing.
+        // Outer switch dispatches on the page (addr >> 8), letting the compiler build a
+        // 256-entry jump table: O(1) dispatch regardless of address region.
+        switch (addr >> 8)
+        {
+            // 0x8000-0x9FFF: VRAM - routed to PPU
+            case 0x80: case 0x81: case 0x82: case 0x83:
+            case 0x84: case 0x85: case 0x86: case 0x87:
+            case 0x88: case 0x89: case 0x8A: case 0x8B:
+            case 0x8C: case 0x8D: case 0x8E: case 0x8F:
+            case 0x90: case 0x91: case 0x92: case 0x93:
+            case 0x94: case 0x95: case 0x96: case 0x97:
+            case 0x98: case 0x99: case 0x9A: case 0x9B:
+            case 0x9C: case 0x9D: case 0x9E: case 0x9F:
+                val = m_ppu ? m_ppu->readVRAM(addr) : 0xFFu;
+                break;
 
+            // 0xA000-0xBFFF: external RAM - delegated to Cartridge
+            case 0xA0: case 0xA1: case 0xA2: case 0xA3:
+            case 0xA4: case 0xA5: case 0xA6: case 0xA7:
+            case 0xA8: case 0xA9: case 0xAA: case 0xAB:
+            case 0xAC: case 0xAD: case 0xAE: case 0xAF:
+            case 0xB0: case 0xB1: case 0xB2: case 0xB3:
+            case 0xB4: case 0xB5: case 0xB6: case 0xB7:
+            case 0xB8: case 0xB9: case 0xBA: case 0xBB:
+            case 0xBC: case 0xBD: case 0xBE: case 0xBF:
+                val = m_cart ? m_cart->read(addr) : 0xFFu;
+                break;
+
+            // 0xC000-0xCFFF: WRAM bank 0 - PanDocs.2
+            case 0xC0: case 0xC1: case 0xC2: case 0xC3:
+            case 0xC4: case 0xC5: case 0xC6: case 0xC7:
+            case 0xC8: case 0xC9: case 0xCA: case 0xCB:
+            case 0xCC: case 0xCD: case 0xCE: case 0xCF:
+                val = m_wram[addr - 0xC000u];
+                break;
+
+            // 0xD000-0xDFFF: WRAM switchable (SVBK) - PanDocs.2
+            case 0xD0: case 0xD1: case 0xD2: case 0xD3:
+            case 0xD4: case 0xD5: case 0xD6: case 0xD7:
+            case 0xD8: case 0xD9: case 0xDA: case 0xDB:
+            case 0xDC: case 0xDD: case 0xDE: case 0xDF:
+                val = m_wram[wramBankOffset(m_svbk) + (addr - 0xD000u)];
+                break;
+
+            // 0xE000-0xEFFF: Echo RAM bank 0 - PanDocs.2
+            case 0xE0: case 0xE1: case 0xE2: case 0xE3:
+            case 0xE4: case 0xE5: case 0xE6: case 0xE7:
+            case 0xE8: case 0xE9: case 0xEA: case 0xEB:
+            case 0xEC: case 0xED: case 0xEE: case 0xEF:
+                val = m_wram[addr - 0xE000u];
+                break;
+
+            // 0xF000-0xFDFF: Echo RAM switchable - PanDocs.2
+            case 0xF0: case 0xF1: case 0xF2: case 0xF3:
+            case 0xF4: case 0xF5: case 0xF6: case 0xF7:
+            case 0xF8: case 0xF9: case 0xFA: case 0xFB:
+            case 0xFC: case 0xFD:
+                val = m_wram[wramBankOffset(m_svbk) + (addr - 0xF000u)];
+                break;
+
+            // 0xFE00-0xFEFF: OAM + prohibited area - PanDocs.2
+            case 0xFE:
+                if (addr <= 0xFE9Fu)
+                    val = m_ppu ? m_ppu->readOAM(addr) : 0xFFu;
+                else
+                    val = 0x00u; // 0xFEA0-0xFEFF prohibited, reads as 0x00 on DMG
+                break;
+
+            // 0xFF00-0xFFFF: I/O registers, HRAM, IE - PanDocs.2
+            case 0xFF:
+            {
+                const uint8_t lo = static_cast<uint8_t>(addr);
+                // HRAM (0xFF80-0xFFFE) - checked before I/O switch; stack accesses land here
+                if (lo >= 0x80u && lo < 0xFFu)
+                {
+                    val = m_hram[lo - 0x80u];
+                    break;
+                }
+                // Inner switch on I/O register low byte - also a jump table
+                switch (lo)
+                {
+                    // Joypad P1 - PanDocs.6
+                    case 0x00: val = m_joypad ? m_joypad->read() : 0xFFu; break;
+                    // Serial - PanDocs.7
+                    case 0x01: val = m_sb; break;
+                    case 0x02: val = m_sc | 0x7Eu; break; // unused bits read as 1
+                    // Timer - PanDocs.8
+                    case 0x04: case 0x05: case 0x06: case 0x07:
+                        val = m_timer ? m_timer->read(addr) : 0xFFu; break;
+                    // IF - PanDocs.9
+                    case 0x0F: val = m_ifReg | 0xE0u; break; // upper 3 bits always 1
+                    // APU NR registers 0xFF10-0xFF26 - PanDocs Audio
+                    case 0x10: case 0x11: case 0x12: case 0x13:
+                    case 0x14: case 0x15: case 0x16: case 0x17:
+                    case 0x18: case 0x19: case 0x1A: case 0x1B:
+                    case 0x1C: case 0x1D: case 0x1E: case 0x1F:
+                    case 0x20: case 0x21: case 0x22: case 0x23:
+                    case 0x24: case 0x25: case 0x26:
+                    // APU wave RAM 0xFF30-0xFF3F
+                    case 0x30: case 0x31: case 0x32: case 0x33:
+                    case 0x34: case 0x35: case 0x36: case 0x37:
+                    case 0x38: case 0x39: case 0x3A: case 0x3B:
+                    case 0x3C: case 0x3D: case 0x3E: case 0x3F:
+                        val = m_apu ? m_apu->read(addr) : 0xFFu; break;
+                    // LCD registers 0xFF40-0xFF4B - PanDocs.4
+                    case 0x40: case 0x41: case 0x42: case 0x43:
+                    case 0x44: case 0x45: case 0x46: case 0x47:
+                    case 0x48: case 0x49: case 0x4A: case 0x4B:
+                        val = m_ppu ? m_ppu->read(addr) : 0xFFu; break;
+                    // CGB speed switching KEY1 - PanDocs.10
+                    case 0x4D: val = m_cgbMode ? (m_key1 | 0x7Eu) : 0xFFu; break;
+                    // CGB VRAM bank select - PanDocs.2
+                    case 0x4F: val = (m_cgbMode && m_ppu) ? m_ppu->read(addr) : 0xFFu; break;
+                    // CGB HDMA registers 0xFF51-0xFF55 - PanDocs.10
+                    case 0x51: case 0x52: case 0x53: case 0x54: case 0x55:
+                        val = (m_cgbMode && m_ppu) ? m_ppu->read(addr) : 0xFFu; break;
+                    // CGB IR port - bits 2-5 always 1
+                    case 0x56: val = m_cgbMode ? ((m_rp & 0xC1u) | 0x3Eu) : 0xFFu; break;
+                    // CGB palette registers 0xFF68-0xFF6B - PanDocs.4.7
+                    case 0x68: case 0x69: case 0x6A: case 0x6B:
+                        val = (m_cgbMode && m_ppu) ? m_ppu->read(addr) : 0xFFu; break;
+                    // CGB object priority mode 0xFF6C
+                    case 0x6C: val = m_cgbMode ? ((m_opri & 0x01u) | 0xFEu) : 0xFFu; break;
+                    // CGB WRAM bank select SVBK 0xFF70 - PanDocs.2
+                    case 0x70: val = m_cgbMode ? (m_svbk | 0xF8u) : 0xFFu; break;
+                    // IE 0xFFFF
+                    case 0xFF: val = m_ie; break;
+                    default: break; // open bus for unmapped I/O
+                }
+                break;
+            }
+
+            // 0x0000-0x7FFF: ROM (default; largest range, handled last in source
+            // but first in jump table lookup)
+            default:
+                val = m_cart ? m_cart->read(addr) : 0xFFu;
+                break;
+        }
+
+#if !defined(PICO_BUILD)
         checkWatch(addr, WatchType::Read, val);
+#endif
         // Tick subsystems after each bus access (4 T-cycles per M-cycle)
         if (m_cycleFn) m_cycleFn(m_cycleCtx, 4);
         return val;
@@ -181,89 +249,158 @@ namespace SeaBoy
             return;
         }
 
+#if !defined(PICO_BUILD)
         // Capture previous value for write-trace before any routing modifies memory.
         const uint8_t prevVal = m_writeFn ? peek8(addr) : 0u;
+#endif
 
-        // ROM area: MBC register writes (bank switching etc.) - delegated to Cartridge
-        if (addr <= ADDR_ROM_END)
-            { if (m_cart) m_cart->write(addr, val); }
-        // 0x8000-0x9FFF: VRAM - routed to PPU
-        else if (addr >= 0x8000u && addr <= 0x9FFFu)
-            { if (m_ppu) m_ppu->writeVRAM(addr, val); }
-        // 0xA000-0xBFFF: external RAM writes - delegated to Cartridge
-        else if (addr >= ADDR_ERAM_BASE && addr <= ADDR_ERAM_END)
-            { if (m_cart) m_cart->write(addr, val); }
-        // WRAM: 0xC000-0xCFFF = bank 0, 0xD000-0xDFFF = switchable (SVBK) - PanDocs.2
-        else if (addr >= 0xC000u && addr <= 0xCFFFu)
-            m_wram[addr - 0xC000u] = val;
-        else if (addr >= 0xD000u && addr <= 0xDFFFu)
-            m_wram[wramBankOffset(m_svbk) + (addr - 0xD000u)] = val;
-        // Echo RAM: 0xE000-0xEFFF mirrors bank 0, 0xF000-0xFDFF mirrors switchable - PanDocs.2
-        else if (addr >= 0xE000u && addr <= 0xEFFFu)
-            m_wram[addr - 0xE000u] = val;
-        else if (addr >= 0xF000u && addr <= 0xFDFFu)
-            m_wram[wramBankOffset(m_svbk) + (addr - 0xF000u)] = val;
-        // 0xFE00-0xFE9F: OAM - routed to PPU
-        else if (addr >= 0xFE00u && addr <= 0xFE9Fu)
-            { if (m_ppu) m_ppu->writeOAM(addr, val); }
-        // Prohibited area: 0xFEA0-0xFEFF - writes ignored on DMG - PanDocs.2
-        else if (addr >= 0xFEA0u && addr <= 0xFEFFu)
-            { /* ignored */ }
-        // Joypad P1 register - PanDocs.6 Joypad Input
-        else if (addr == ADDR_P1)
-            { if (m_joypad) m_joypad->write(val); }
-        else if (addr == ADDR_IF)
-            m_ifReg = val & 0x1Fu; // only lower 5 bits are writable
-        // Timer registers - PanDocs.8 Timer and Divider Registers
-        else if (addr >= ADDR_DIV && addr <= ADDR_TAC)
-            { if (m_timer) m_timer->write(addr, val); }
-        // APU registers - PanDocs Audio Registers
-        else if ((addr >= 0xFF10u && addr <= 0xFF26u) || (addr >= 0xFF30u && addr <= 0xFF3Fu))
-            { if (m_apu) m_apu->write(addr, val); }
-        // LCD registers - routed to PPU (PanDocs.4 LCD I/O Registers)
-        else if (addr >= 0xFF40u && addr <= 0xFF4Bu)
-            { if (m_ppu) m_ppu->write(addr, val); }
-        // CGB speed switching KEY1 (0xFF4D) - PanDocs.10
-        else if (addr == 0xFF4Du)
-            { if (m_cgbMode) m_key1 = (m_key1 & 0x80u) | (val & 0x01u); } // only bit 0 writable
-        // CGB VRAM bank select (0xFF4F) - routed to PPU
-        else if (addr == 0xFF4Fu)
-            { if (m_ppu) m_ppu->write(addr, val); }
-        // CGB HDMA registers (0xFF51-0xFF55) - routed to PPU
-        else if (addr >= 0xFF51u && addr <= 0xFF55u)
-            { if (m_ppu) m_ppu->write(addr, val); }
-        // CGB IR
-        else if (addr == 0xFF56u)
-            { if (m_cgbMode) m_rp = val & 0xC1u; }  // only bits 7 and 0 writable
-        // CGB palette registers - routed to PPU (PanDocs.4.7)
-        else if (addr >= 0xFF68u && addr <= 0xFF6Bu)
-            { if (m_ppu) m_ppu->write(addr, val); }
-        // CGB object priority mode
-        else if (addr == 0xFF6Cu)
-            { if (m_cgbMode) m_opri = val & 0x01u; }
-        // CGB WRAM bank select (0xFF70) - PanDocs.2 SVBK
-        else if (addr == 0xFF70u)
-            { if (m_cgbMode) m_svbk = val & 0x07u; }
-        // Serial port - PanDocs.7 Serial Data Transfer
-        else if (addr == 0xFF01u)
-            m_sb = val;
-        else if (addr == 0xFF02u)
+        // PanDocs.2 - Memory Map routing (write path).
+        // Same page-dispatch approach as read8; builds a 256-entry jump table.
+        switch (addr >> 8)
         {
-            m_sc = val;
-            if (val & 0x80u) // Transfer start (internal clock)
-            {
-                m_serialOutput += static_cast<char>(m_sb);
-                m_sc &= ~0x80u; // Clear start bit - transfer completes "instantly"
-            }
-        }
-        else if (addr >= ADDR_HRAM_BASE && addr <= ADDR_HRAM_END)
-            m_hram[addr - ADDR_HRAM_BASE] = val;
-        else if (addr == ADDR_IE)
-            m_ie = val;
-        // else: writes to unmapped regions are silently ignored
+            // 0x8000-0x9FFF: VRAM - routed to PPU
+            case 0x80: case 0x81: case 0x82: case 0x83:
+            case 0x84: case 0x85: case 0x86: case 0x87:
+            case 0x88: case 0x89: case 0x8A: case 0x8B:
+            case 0x8C: case 0x8D: case 0x8E: case 0x8F:
+            case 0x90: case 0x91: case 0x92: case 0x93:
+            case 0x94: case 0x95: case 0x96: case 0x97:
+            case 0x98: case 0x99: case 0x9A: case 0x9B:
+            case 0x9C: case 0x9D: case 0x9E: case 0x9F:
+                if (m_ppu) m_ppu->writeVRAM(addr, val);
+                break;
 
+            // 0xA000-0xBFFF: external RAM - delegated to Cartridge
+            case 0xA0: case 0xA1: case 0xA2: case 0xA3:
+            case 0xA4: case 0xA5: case 0xA6: case 0xA7:
+            case 0xA8: case 0xA9: case 0xAA: case 0xAB:
+            case 0xAC: case 0xAD: case 0xAE: case 0xAF:
+            case 0xB0: case 0xB1: case 0xB2: case 0xB3:
+            case 0xB4: case 0xB5: case 0xB6: case 0xB7:
+            case 0xB8: case 0xB9: case 0xBA: case 0xBB:
+            case 0xBC: case 0xBD: case 0xBE: case 0xBF:
+                if (m_cart) m_cart->write(addr, val);
+                break;
+
+            // 0xC000-0xCFFF: WRAM bank 0 - PanDocs.2
+            case 0xC0: case 0xC1: case 0xC2: case 0xC3:
+            case 0xC4: case 0xC5: case 0xC6: case 0xC7:
+            case 0xC8: case 0xC9: case 0xCA: case 0xCB:
+            case 0xCC: case 0xCD: case 0xCE: case 0xCF:
+                m_wram[addr - 0xC000u] = val;
+                break;
+
+            // 0xD000-0xDFFF: WRAM switchable (SVBK) - PanDocs.2
+            case 0xD0: case 0xD1: case 0xD2: case 0xD3:
+            case 0xD4: case 0xD5: case 0xD6: case 0xD7:
+            case 0xD8: case 0xD9: case 0xDA: case 0xDB:
+            case 0xDC: case 0xDD: case 0xDE: case 0xDF:
+                m_wram[wramBankOffset(m_svbk) + (addr - 0xD000u)] = val;
+                break;
+
+            // 0xE000-0xEFFF: Echo RAM bank 0 - PanDocs.2
+            case 0xE0: case 0xE1: case 0xE2: case 0xE3:
+            case 0xE4: case 0xE5: case 0xE6: case 0xE7:
+            case 0xE8: case 0xE9: case 0xEA: case 0xEB:
+            case 0xEC: case 0xED: case 0xEE: case 0xEF:
+                m_wram[addr - 0xE000u] = val;
+                break;
+
+            // 0xF000-0xFDFF: Echo RAM switchable - PanDocs.2
+            case 0xF0: case 0xF1: case 0xF2: case 0xF3:
+            case 0xF4: case 0xF5: case 0xF6: case 0xF7:
+            case 0xF8: case 0xF9: case 0xFA: case 0xFB:
+            case 0xFC: case 0xFD:
+                m_wram[wramBankOffset(m_svbk) + (addr - 0xF000u)] = val;
+                break;
+
+            // 0xFE00-0xFEFF: OAM + prohibited area - PanDocs.2
+            case 0xFE:
+                if (addr <= 0xFE9Fu) { if (m_ppu) m_ppu->writeOAM(addr, val); }
+                // 0xFEA0-0xFEFF: writes ignored on DMG
+                break;
+
+            // 0xFF00-0xFFFF: I/O registers, HRAM, IE - PanDocs.2
+            case 0xFF:
+            {
+                const uint8_t lo = static_cast<uint8_t>(addr);
+                // HRAM (0xFF80-0xFFFE) - checked before I/O switch
+                if (lo >= 0x80u && lo < 0xFFu)
+                {
+                    m_hram[lo - 0x80u] = val;
+                    break;
+                }
+                switch (lo)
+                {
+                    // Joypad P1 - PanDocs.6
+                    case 0x00: if (m_joypad) m_joypad->write(val); break;
+                    // Serial port - PanDocs.7
+                    case 0x01: m_sb = val; break;
+                    case 0x02:
+                        m_sc = val;
+                        if (val & 0x80u) // transfer start (internal clock)
+                        {
+                            m_serialOutput += static_cast<char>(m_sb);
+                            m_sc &= ~0x80u; // clear start bit - transfer "instant"
+                        }
+                        break;
+                    // Timer 0xFF04-0xFF07 - PanDocs.8
+                    case 0x04: case 0x05: case 0x06: case 0x07:
+                        if (m_timer) m_timer->write(addr, val); break;
+                    // IF 0xFF0F - PanDocs.9
+                    case 0x0F: m_ifReg = val & 0x1Fu; break; // only lower 5 bits writable
+                    // APU NR registers 0xFF10-0xFF26 - PanDocs Audio
+                    case 0x10: case 0x11: case 0x12: case 0x13:
+                    case 0x14: case 0x15: case 0x16: case 0x17:
+                    case 0x18: case 0x19: case 0x1A: case 0x1B:
+                    case 0x1C: case 0x1D: case 0x1E: case 0x1F:
+                    case 0x20: case 0x21: case 0x22: case 0x23:
+                    case 0x24: case 0x25: case 0x26:
+                    // APU wave RAM 0xFF30-0xFF3F
+                    case 0x30: case 0x31: case 0x32: case 0x33:
+                    case 0x34: case 0x35: case 0x36: case 0x37:
+                    case 0x38: case 0x39: case 0x3A: case 0x3B:
+                    case 0x3C: case 0x3D: case 0x3E: case 0x3F:
+                        if (m_apu) m_apu->write(addr, val); break;
+                    // LCD registers 0xFF40-0xFF4B - PanDocs.4
+                    case 0x40: case 0x41: case 0x42: case 0x43:
+                    case 0x44: case 0x45: case 0x46: case 0x47:
+                    case 0x48: case 0x49: case 0x4A: case 0x4B:
+                        if (m_ppu) m_ppu->write(addr, val); break;
+                    // CGB speed switching KEY1 - PanDocs.10
+                    case 0x4D:
+                        if (m_cgbMode) m_key1 = (m_key1 & 0x80u) | (val & 0x01u); break;
+                    // CGB VRAM bank select 0xFF4F - PanDocs.2
+                    case 0x4F: if (m_ppu) m_ppu->write(addr, val); break;
+                    // CGB HDMA registers 0xFF51-0xFF55 - PanDocs.10
+                    case 0x51: case 0x52: case 0x53: case 0x54: case 0x55:
+                        if (m_ppu) m_ppu->write(addr, val); break;
+                    // CGB IR port
+                    case 0x56: if (m_cgbMode) m_rp = val & 0xC1u; break;
+                    // CGB palette registers 0xFF68-0xFF6B - PanDocs.4.7
+                    case 0x68: case 0x69: case 0x6A: case 0x6B:
+                        if (m_ppu) m_ppu->write(addr, val); break;
+                    // CGB object priority mode 0xFF6C
+                    case 0x6C: if (m_cgbMode) m_opri = val & 0x01u; break;
+                    // CGB WRAM bank select SVBK 0xFF70 - PanDocs.2
+                    case 0x70: if (m_cgbMode) m_svbk = val & 0x07u; break;
+                    // IE 0xFFFF
+                    case 0xFF: m_ie = val; break;
+                    default: break; // writes to unmapped I/O silently ignored
+                }
+                break;
+            }
+
+            // 0x0000-0x7FFF: ROM MBC register writes - delegated to Cartridge
+            default:
+                if (m_cart) m_cart->write(addr, val);
+                break;
+        }
+
+#if !defined(PICO_BUILD)
         if (m_writeFn) m_writeFn(m_writeCtx, addr, prevVal, val);
         checkWatch(addr, WatchType::Write, val);
+#endif
         // Tick subsystems after each bus access (4 T-cycles per M-cycle)
         if (m_cycleFn) m_cycleFn(m_cycleCtx, 4);
     }
@@ -384,7 +521,8 @@ namespace SeaBoy
         if (m_timer) m_timer->resetDIV();
     }
 
-    // -- Watchpoint implementation ----------------------------------------
+#if !defined(PICO_BUILD)
+    // -- Watchpoint implementation (desktop/debugger only) ----------------
 
     void MMU::checkWatch(uint16_t addr, WatchType accessType, uint8_t value)
     {
@@ -421,5 +559,6 @@ namespace SeaBoy
     {
         m_watchpoints.clear();
     }
+#endif // !PICO_BUILD
 
 }

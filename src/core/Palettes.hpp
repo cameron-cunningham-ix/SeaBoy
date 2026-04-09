@@ -32,9 +32,27 @@ namespace SeaBoy
         uint8_t readOBP0() const { return m_obp0; }
         uint8_t readOBP1() const { return m_obp1; }
 
-        void writeBGP(uint8_t val)  { m_bgp  = val; }
-        void writeOBP0(uint8_t val) { m_obp0 = val; }
-        void writeOBP1(uint8_t val) { m_obp1 = val; }
+        void writeBGP(uint8_t val)
+        {
+            m_bgp = val;
+#if defined(PICO_RP2040)
+            rebuildBGLUT();
+#endif
+        }
+        void writeOBP0(uint8_t val)
+        {
+            m_obp0 = val;
+#if defined(PICO_RP2040)
+            rebuildOBP0LUT();
+#endif
+        }
+        void writeOBP1(uint8_t val)
+        {
+            m_obp1 = val;
+#if defined(PICO_RP2040)
+            rebuildOBP1LUT();
+#endif
+        }
 
         // Resolve a 2-bit color ID to an RGBA8888 value (DMG).
         // PanDocs.4.7 Palettes - shade mapping through palette register
@@ -61,8 +79,34 @@ namespace SeaBoy
         void setShades(const uint32_t shades[4])
         {
             for (int i = 0; i < 4; ++i) m_shades[i] = shades[i];
+#if defined(PICO_RP2040)
+            rebuildBGLUT();
+            rebuildOBP0LUT();
+            rebuildOBP1LUT();
+#endif
         }
         const uint32_t* shades() const { return m_shades; }
+
+#if defined(PICO_RP2040)
+        // Pre-resolved RGB565 lookups (RP2040 only).
+        // Avoids runtime RGBA8888->RGB565 conversion per pixel.
+        uint16_t resolveBGRGB565(uint8_t colorID) const
+        {
+            return m_bgLUT[colorID & 3u];
+        }
+        uint16_t resolveOBJRGB565(uint8_t colorID, uint8_t paletteNum) const
+        {
+            return (paletteNum == 0u) ? m_obj0LUT[colorID & 3u] : m_obj1LUT[colorID & 3u];
+        }
+        uint16_t resolveBGCGBRGB565(uint8_t paletteIdx, uint8_t colorID) const
+        {
+            return m_bgcgbLUT[paletteIdx & 7u][colorID & 3u];
+        }
+        uint16_t resolveOBJCGBRGB565(uint8_t paletteIdx, uint8_t colorID) const
+        {
+            return m_objcgbLUT[paletteIdx & 7u][colorID & 3u];
+        }
+#endif
 
         // Save state serialization
         void serialize(BinaryWriter& w) const;
@@ -86,6 +130,30 @@ namespace SeaBoy
 
         // Convert CGB 15-bit RGB to RGBA8888
         static uint32_t cgbColorToRGBA(uint8_t lo, uint8_t hi);
+
+#if defined(PICO_RP2040)
+        // RGBA8888 -> RGB565 (used only to precompute LUT entries)
+        static uint16_t rgbaToRGB565(uint32_t rgba)
+        {
+            return static_cast<uint16_t>(
+                ((( rgba >> 24)        >> 3u) << 11u) |
+                (((( rgba >> 16) & 0xFFu) >> 2u) <<  5u) |
+                 (( rgba >>  8) & 0xFFu) >> 3u);
+        }
+        void rebuildBGLUT();
+        void rebuildOBP0LUT();
+        void rebuildOBP1LUT();
+        void rebuildAllLUTs();
+        void rebuildBGCGBLUT(uint8_t paletteIdx);
+        void rebuildOBJCGBLUT(uint8_t paletteIdx);
+
+        // Precomputed RGB565 per-color LUTs
+        uint16_t m_bgLUT[4]{};        // BGP colorID 0-3
+        uint16_t m_obj0LUT[4]{};      // OBP0 colorID 0-3
+        uint16_t m_obj1LUT[4]{};      // OBP1 colorID 0-3
+        uint16_t m_bgcgbLUT[8][4]{};  // CGB BG  palette [0-7][0-3]
+        uint16_t m_objcgbLUT[8][4]{}; // CGB OBJ palette [0-7][0-3]
+#endif
 
         // DMG palette registers
         uint8_t m_bgp  = 0xFC; // PanDocs.22 Power Up Sequence

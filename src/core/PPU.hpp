@@ -157,6 +157,10 @@ namespace SeaBoy
         void writeHDMA5(uint8_t val);
         void hdmaTransfer16();
 
+        // End-of-scanline bookkeeping: increment LY, change mode, arm LYC delay.
+        // Extracted to share between the fast-forward and per-T-cycle tick paths.
+        void advanceScanline();
+
         MMU&         m_mmu;
         Palettes     m_palettes;
         OAMScan      m_oamScan;

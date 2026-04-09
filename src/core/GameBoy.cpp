@@ -29,11 +29,13 @@ namespace SeaBoy
         // M-cycle callback: tick subsystems after every bus access / internal cycle.
         m_mmu.setCycleCallback(&GameBoy::onBusCycle, this);
 
+#if !defined(PICO_BUILD)
         // Watch callback: fired from MMU when a data breakpoint matches.
         m_mmu.setWatchCallback(&GameBoy::onWatchHit, this);
 
         // CPU event callback: forwards CPU-level events to the UI event log.
         m_cpu.setCPUEventCallback(&GameBoy::onCPUEvent, this);
+#endif
 
         m_cpu.reset();
         m_timer.reset();
@@ -159,6 +161,7 @@ namespace SeaBoy
 
     uint32_t GameBoy::tick()
     {
+#if !defined(PICO_BUILD)
         const uint16_t pc = m_cpu.registers().PC;
         // Latch current PC so WatchHit carries the instruction that triggered the watch.
         m_mmu.setWatchPC(pc);
@@ -178,9 +181,11 @@ namespace SeaBoy
         // Subsystems (timer, PPU, APU) are ticked at M-cycle granularity
         // via the onBusCycle callback during cpu.step(), not after.
         const uint8_t ifBefore = m_eventFn ? m_mmu.readIF() : m_prevIF;
+#endif
         const uint32_t cycles = m_cpu.step();
         m_totalCycles += cycles;
 
+#if !defined(PICO_BUILD)
         // Fire IntRequested for each IF bit newly set during this tick.
         if (m_eventFn)
         {
@@ -201,7 +206,7 @@ namespace SeaBoy
                 }
             }
         }
-
+#endif
         return cycles;
     }
 
@@ -217,6 +222,7 @@ namespace SeaBoy
         gb->m_apu.tick(ppuCycles, gb->m_timer.sysCounter());
     }
 
+#if !defined(PICO_BUILD)
     void GameBoy::onWatchHit(void* ctx, const WatchHit& hit)
     {
         auto* gb = static_cast<GameBoy*>(ctx);
@@ -234,6 +240,7 @@ namespace SeaBoy
         m_watchHitPending = false;
         return true;
     }
+#endif // !PICO_BUILD
 
     void GameBoy::onJoypadIRQ(void* ctx)
     {
@@ -262,6 +269,7 @@ namespace SeaBoy
         return SaveFile::load(*this, path);
     }
 
+#if !defined(PICO_BUILD)
     void GameBoy::onCPUEvent(void* ctx, const CPU::CPUEvent& ev)
     {
         auto* gb = static_cast<GameBoy*>(ctx);
@@ -286,5 +294,6 @@ namespace SeaBoy
 
         gb->m_eventFn(gb->m_eventCtx, gev);
     }
+#endif // !PICO_BUILD
 
 }

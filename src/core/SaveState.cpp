@@ -174,6 +174,7 @@ namespace SeaBoy
             w.writeBool(m_objFifo[i].bgPriority);
             w.writeBool(m_objFifo[i].occupied);
         }
+        w.write8(m_objFifoHead);
         w.write8(m_objFifoSize);
 
         // Sprite fetch state
@@ -230,6 +231,7 @@ namespace SeaBoy
             m_objFifo[i].bgPriority = r.readBool();
             m_objFifo[i].occupied   = r.readBool();
         }
+        m_objFifoHead = r.read8();
         m_objFifoSize = r.read8();
 
         m_spriteFetch  = r.readBool();
@@ -511,8 +513,8 @@ namespace SeaBoy
         m_sampleWritePos = 0;
         m_sampleReadPos  = 0;
         m_sampleTimer    = 0;
-        m_hpfCapLeft     = 0.0;
-        m_hpfCapRight    = 0.0;
+        m_hpfCapLeft     = 0; // int32_t on RP2040, double elsewhere — 0 is valid for both
+        m_hpfCapRight    = 0;
     }
 
     // ---- SaveState orchestration ----

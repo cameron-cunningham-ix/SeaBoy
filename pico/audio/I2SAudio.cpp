@@ -45,9 +45,27 @@ static void fillBuffer(uint32_t* buf)
         return;
     }
 
-    // Drain stereo float pairs from the APU ring buffer.
+    uint32_t count;
+
+#if defined(PICO_RP2040)
+    // Integer path: drain Q15 int16 pairs and mix to mono without any soft-float.
+    int16_t samples[kBufFrames * 2];
+    count = s_apu->drainSamples(samples, kBufFrames);
+
+    for (uint32_t i = 0; i < count; ++i)
+    {
+        // Mix stereo to mono: arithmetic right shift by 1 (rounds toward -inf, fine for audio)
+        int32_t mono = (static_cast<int32_t>(samples[i * 2]) + static_cast<int32_t>(samples[i * 2 + 1])) >> 1;
+        // Clamp to int16 range (overflow is theoretically impossible here but be safe)
+        if (mono >  32767) mono =  32767;
+        if (mono < -32767) mono = -32767;
+        uint16_t u = static_cast<uint16_t>(static_cast<int16_t>(mono));
+        buf[i] = (static_cast<uint32_t>(u) << 16) | u;
+    }
+#else
+    // Float path: used on RP2350 (hardware FPU) and any non-RP2040 Pico builds.
     float samples[kBufFrames * 2];
-    uint32_t count = s_apu->drainSamples(samples, kBufFrames);
+    count = s_apu->drainSamples(samples, kBufFrames);
 
     for (uint32_t i = 0; i < count; ++i)
     {
@@ -65,6 +83,7 @@ static void fillBuffer(uint32_t* buf)
         // Pack same value into both L and R channels
         buf[i] = (static_cast<uint32_t>(u) << 16) | u;
     }
+#endif
 
     // Zero-fill any remainder (underrun)
     for (uint32_t i = count; i < kBufFrames; ++i)

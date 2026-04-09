@@ -29,7 +29,8 @@
 
 namespace SeaBoy
 {
-    // -- Data watchpoint types -------------------------------------------
+#if !defined(PICO_BUILD)
+    // -- Data watchpoint types (desktop/debugger only) --------------------
 
     enum class WatchType : uint8_t { Read = 1, Write = 2, ReadWrite = 3 };
 
@@ -43,6 +44,7 @@ namespace SeaBoy
         uint8_t   value;  // byte value read or written
         uint16_t  pc;     // CPU PC latched by GameBoy before tick()
     };
+#endif // !PICO_BUILD
 
     // Named address constants
     constexpr uint16_t ADDR_P1        = 0xFF00; // Joypad / P1 register
@@ -102,6 +104,7 @@ namespace SeaBoy
         using CycleCallback = void(*)(void* ctx, uint32_t tCycles);
         void setCycleCallback(CycleCallback fn, void* ctx) { m_cycleFn = fn; m_cycleCtx = ctx; }
 
+#if !defined(PICO_BUILD)
         // Watchpoint callback - fired from read8/write8 when a data breakpoint matches.
         // Same decoupling pattern as CycleCallback: core holds a fn ptr, UI never imported.
         using WatchCallback = void(*)(void* ctx, const WatchHit& hit);
@@ -118,6 +121,7 @@ namespace SeaBoy
         void removeWatchpoint(uint16_t addr);
         void clearWatchpoints();
         bool hasWatchpoints() const { return !m_watchpoints.empty(); }
+#endif // !PICO_BUILD
 
         // Tick subsystems without a bus access (for CPU internal M-cycles).
         void tickCycle() { if (m_cycleFn) m_cycleFn(m_cycleCtx, 4); }
@@ -127,8 +131,11 @@ namespace SeaBoy
         void setPPU(PPU* p) { m_ppu = p; }
 
         // Returns true while an OAM DMA transfer is in progress (including startup delay).
-        // Used to enforce bus conflict: CPU may only access HRAM during DMA
-        bool isDMAActive() const;
+        // Cached locally so read8/write8 can test it with a single load, no PPU indirection.
+        bool isDMAActive() const { return m_dmaActive; }
+
+        // Called by PPU whenever its OAM DMA active flag changes.
+        void setDMAActive(bool active) { m_dmaActive = active; }
 
         // OAM corruption bug - PanDocs.25 OAM Corruption Bug
         // Delegates to PPU::triggerOAMCorrupt() when addr is in 0xFE00-0xFEFF.
@@ -223,21 +230,27 @@ namespace SeaBoy
         // Non-null only when test mode is active (heap-allocated to avoid 64 KB stack cost)
         std::unique_ptr<uint8_t[]> m_testRam;
 
+        // Cached DMA-active flag — mirrors PPU::m_dmaActive.
+        // Avoids a null-check + indirect call through m_ppu on every read8/write8.
+        bool m_dmaActive = false;
+
         // M-cycle callback (null until setCycleCallback is called)
         CycleCallback m_cycleFn  = nullptr;
         void*         m_cycleCtx = nullptr;
 
-        // Watchpoints - checked in read8/write8
+#if !defined(PICO_BUILD)
+        // Watchpoints - checked in read8/write8 (desktop/debugger only)
         std::vector<Watchpoint> m_watchpoints;
         WatchCallback           m_watchFn  = nullptr;
         void*                   m_watchCtx = nullptr;
         uint16_t                m_watchPC  = 0;
 
-        // Write-trace callback
+        // Write-trace callback (desktop/debugger only)
         WriteTraceCallback m_writeFn  = nullptr;
         void*              m_writeCtx = nullptr;
 
         void checkWatch(uint16_t addr, WatchType accessType, uint8_t value);
+#endif // !PICO_BUILD
 
     };
 

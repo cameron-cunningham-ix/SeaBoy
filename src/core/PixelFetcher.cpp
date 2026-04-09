@@ -74,6 +74,7 @@ namespace SeaBoy
 
         // Clear FIFOs
         clearBgFifo();
+        m_objFifoHead = 0;
         m_objFifoSize = 0;
         for (auto& p : m_objFifo) p = ObjFifoPixel{};
 
@@ -104,12 +105,15 @@ namespace SeaBoy
 
     void PixelFetcher::bgFetcherTick()
     {
+        // peanut_gb-style idle-step pairing: each even step (0,2,4,6) is a
+        // hardware "address setup" half-dot that does no useful work.  Fold it
+        // into the following active half so every T-cycle call performs one
+        // real operation, halving switch-dispatch overhead during Mode 3.
+        if ((m_bgStep & 1u) == 0)
+            ++m_bgStep; // consume idle half, fall through to active half below
+
         switch (m_bgStep)
         {
-        case 0: // GetTile: first half (idle)
-            ++m_bgStep;
-            break;
-
         case 1: // GetTile: second half - read tile index from tilemap
         {
             uint16_t mapBase = m_inWindow ? winTileMapBase() : bgTileMapBase();
@@ -128,10 +132,6 @@ namespace SeaBoy
             break;
         }
 
-        case 2: // GetTileLo: first half (idle)
-            ++m_bgStep;
-            break;
-
         case 3: // GetTileLo: second half - read lo byte of 2bpp tile row
         {
             uint16_t addr = tileDataAddr(m_fetchedTileIndex);
@@ -149,10 +149,6 @@ namespace SeaBoy
             break;
         }
 
-        case 4: // GetTileHi: first half (idle)
-            ++m_bgStep;
-            break;
-
         case 5: // GetTileHi: second half - read hi byte of 2bpp tile row
         {
             uint16_t addr = tileDataAddr(m_fetchedTileIndex);
@@ -169,10 +165,6 @@ namespace SeaBoy
             ++m_bgStep;
             break;
         }
-
-        case 6: // Sleep (idle dot between GetTileHi and Push)
-            ++m_bgStep;
-            break;
 
         case 7: // Push attempt - completes the 8-dot tile fetch cycle
             // PanDocs.4.8 Pixel FIFO: push 8 pixels when BG FIFO is empty,
@@ -194,8 +186,30 @@ namespace SeaBoy
 
     void PixelFetcher::pushToBgFifo()
     {
-        // CGB: horizontal flip (attr bit 5) reverses pixel order
-        bool hFlip = m_cgbMode && (m_fetchedAttr & 0x20u);
+        if (!m_cgbMode)
+        {
+            // DMG fast path (peanut_gb-style): pre-shift tile bytes left so each
+            // pixel is extracted with a fixed right-shift instead of a variable
+            // shift per bit, avoiding the (7 - bit) subtraction each iteration.
+            uint8_t lo = m_fetchedLo;
+            uint8_t hi = m_fetchedHi;
+            for (uint8_t i = 0; i < 8u; ++i)
+            {
+                uint8_t colorID = static_cast<uint8_t>(
+                    (((hi >> 7) & 1u) << 1u) | ((lo >> 7) & 1u));
+                uint8_t idx = (m_bgFifoHead + m_bgFifoSize) & 7u;
+                m_bgFifo[idx].colorID     = colorID;
+                m_bgFifo[idx].cgbPalette  = 0;
+                m_bgFifo[idx].cgbPriority = false;
+                ++m_bgFifoSize;
+                lo <<= 1;
+                hi <<= 1;
+            }
+            return;
+        }
+
+        // CGB path: horizontal flip (attr bit 5) reverses pixel order
+        bool hFlip = (m_fetchedAttr & 0x20u) != 0;
 
         // Push 8 pixels decoded from m_fetchedLo/m_fetchedHi
         for (uint8_t bit = 0; bit < 8; ++bit)
@@ -302,9 +316,12 @@ namespace SeaBoy
 
         int spriteLeft = static_cast<int>(sp.x) - 8;
 
-        // Ensure OBJ FIFO has at least 8 slots
+        // Ensure OBJ FIFO has at least 8 logical slots (fill tail of circular buffer)
         while (m_objFifoSize < 8)
-            m_objFifo[m_objFifoSize++] = ObjFifoPixel{};
+        {
+            m_objFifo[(m_objFifoHead + m_objFifoSize) & 7u] = ObjFifoPixel{};
+            ++m_objFifoSize;
+        }
 
         for (uint8_t px = 0; px < 8; ++px)
         {
@@ -321,12 +338,13 @@ namespace SeaBoy
                 ((m_objFetchedLo >> bit) & 1u));
 
             // Lower OAM index wins - don't overwrite occupied slots
-            if (colorID != 0 && !m_objFifo[fifoSlot].occupied)
+            uint8_t physSlot = (m_objFifoHead + static_cast<uint8_t>(fifoSlot)) & 7u;
+            if (colorID != 0 && !m_objFifo[physSlot].occupied)
             {
-                m_objFifo[fifoSlot].colorID    = colorID;
-                m_objFifo[fifoSlot].palette    = palNum;
-                m_objFifo[fifoSlot].bgPriority = bgPriority;
-                m_objFifo[fifoSlot].occupied   = true;
+                m_objFifo[physSlot].colorID    = colorID;
+                m_objFifo[physSlot].palette    = palNum;
+                m_objFifo[physSlot].bgPriority = bgPriority;
+                m_objFifo[physSlot].occupied   = true;
             }
         }
     }
@@ -420,15 +438,8 @@ namespace SeaBoy
         ObjFifoPixel obj = popObjFifo();
 
         // Mix and output
-#ifdef PICO_RP2040
-        {
-            // Convert RGBA8888 -> RGB565 at write time (saves 45 KB framebuffer)
-            uint32_t rgba = mixPixels(bg, obj);
-            uint8_t r = (rgba >> 24) & 0xFF;
-            uint8_t g = (rgba >> 16) & 0xFF;
-            uint8_t b = (rgba >>  8) & 0xFF;
-            m_fbLine[m_pixelX] = static_cast<uint16_t>(((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3));
-        }
+#if defined(PICO_RP2040)
+        m_fbLine[m_pixelX] = mixPixelsRGB565(bg, obj); // direct LUT lookup, no RGBA conversion
 #else
         m_fbLine[m_pixelX] = mixPixels(bg, obj);
 #endif
@@ -476,6 +487,32 @@ namespace SeaBoy
 
         return m_palettes->resolveOBJ(obj.colorID, obj.palette);
     }
+
+#if defined(PICO_RP2040)
+    // Direct RGB565 pixel mixer — identical priority logic to mixPixels() but
+    // resolves colours from pre-built LUTs instead of RGBA8888 + conversion.
+    uint16_t PixelFetcher::mixPixelsRGB565(const BgFifoPixel& bg,
+                                           const ObjFifoPixel& obj) const
+    {
+        if (m_cgbMode)
+        {
+            bool masterPriority = (m_lcdc & FetcherLCDC::BGEnable) != 0;
+            if (!obj.occupied || obj.colorID == 0)
+                return m_palettes->resolveBGCGBRGB565(bg.cgbPalette, bg.colorID);
+            if (masterPriority && (bg.cgbPriority || obj.bgPriority) && bg.colorID != 0)
+                return m_palettes->resolveBGCGBRGB565(bg.cgbPalette, bg.colorID);
+            return m_palettes->resolveOBJCGBRGB565(obj.palette, obj.colorID);
+        }
+
+        bool bgEnable = (m_lcdc & FetcherLCDC::BGEnable) != 0;
+        uint8_t effectiveBgColorID = bgEnable ? bg.colorID : 0u;
+        if (!obj.occupied || obj.colorID == 0)
+            return m_palettes->resolveBGRGB565(effectiveBgColorID);
+        if (bgEnable && obj.bgPriority && effectiveBgColorID != 0)
+            return m_palettes->resolveBGRGB565(bg.colorID);
+        return m_palettes->resolveOBJRGB565(obj.colorID, obj.palette);
+    }
+#endif
 
     // -----------------------------------------------------------------------
     // Tile addressing helpers
@@ -527,11 +564,10 @@ namespace SeaBoy
         if (m_objFifoSize == 0)
             return ObjFifoPixel{};
 
-        ObjFifoPixel p = m_objFifo[0];
-        for (uint8_t i = 0; i + 1u < m_objFifoSize; ++i)
-            m_objFifo[i] = m_objFifo[i + 1u];
+        ObjFifoPixel p = m_objFifo[m_objFifoHead];
+        m_objFifo[m_objFifoHead] = ObjFifoPixel{}; // clear vacated slot
+        m_objFifoHead = (m_objFifoHead + 1u) & 7u;
         --m_objFifoSize;
-        m_objFifo[m_objFifoSize] = ObjFifoPixel{}; // clear vacated slot
         return p;
     }
 

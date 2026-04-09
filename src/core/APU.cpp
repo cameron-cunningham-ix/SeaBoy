@@ -62,10 +62,12 @@ namespace SeaBoy
         m_sampleWritePos = 0;
         m_sampleReadPos  = 0;
         m_sampleTimer    = 0;
-        m_hpfCapLeft     = 0.0;
-        m_hpfCapRight    = 0.0;
+        m_hpfCapLeft     = 0;
+        m_hpfCapRight    = 0;
+#if !defined(PICO_BUILD)
         m_chBufWrite     = 0;
         m_chBufRead      = 0;
+#endif
     }
 
     // -- Tick ------------------------------------------------------------
@@ -85,63 +87,101 @@ namespace SeaBoy
 
         if (!m_powered) return;
 
-        // Tick channel period dividers.
+        // Batch-advance channel period dividers without a per-T-cycle loop.
+        // peanut_gb-style: compute how many clocks each channel receives and
+        // apply them arithmetically, saving ~3 loop iterations per M-cycle call.
+        //
         // Pulse channels: clocked at 1,048,576 Hz (once per 4 T-cycles).
         // Wave channel:   clocked at 2,097,152 Hz (once per 2 T-cycles).
-        // Noise channel:  clocked per T-cycle (internal timer).
-        for (uint32_t t = 0; t < tCycles; ++t)
+        // Noise channel:  clocked at variable rate via its own period divider.
+
+        // -- CH4 Noise: variable-rate LFSR clock --
+        // Each T-cycle: decrement freqTimer; when it hits 0, reload and tick LFSR.
+        // Special case: freqTimer=0 means "tick immediately without a prior decrement".
+        if (m_ch4.active)
         {
-            // Noise channel - per T-cycle
-            if (m_ch4.active)
+            uint8_t s = (m_ch4.nr43 >> 4) & 0x0Fu;
+            if (s < 14) // s=14,15 stops clocking - PanDocs Audio Registers NR43
             {
-                uint8_t s = (m_ch4.nr43 >> 4) & 0x0Fu;
-                if (s < 14) // s=14,15 stops clocking
+                uint32_t period = m_ch4.calcPeriod();
+                uint32_t t = tCycles;
+
+                // freqTimer=0: tick immediately (no prior decrement), then continue
+                if (m_ch4.freqTimer == 0)
                 {
-                    if (m_ch4.freqTimer > 0) --m_ch4.freqTimer;
-                    if (m_ch4.freqTimer == 0)
-                    {
-                        m_ch4.freqTimer = m_ch4.calcPeriod();
+                    m_ch4.freqTimer = period;
+                    m_ch4.tickLFSR();
+                    --t;
+                }
+                // freqTimer>0: count how many steps until it reaches 0 (= freqTimer steps)
+                if (t >= m_ch4.freqTimer)
+                {
+                    // First tick this batch
+                    t -= m_ch4.freqTimer;
+                    m_ch4.freqTimer = period;
+                    m_ch4.tickLFSR();
+                    // Additional ticks: one per full period in remaining t
+                    uint32_t extra = t / period;
+                    for (uint32_t i = 0; i < extra; ++i)
                         m_ch4.tickLFSR();
-                    }
+                    // Remainder: how far into the next period we are
+                    m_ch4.freqTimer = period - (t % period);
                 }
-            }
-
-            // Wave channel - every 2 T-cycles
-            // Decrement fetch timer every T-cycle for corruption detection
-            if (m_ch3.active && m_ch3.ticksUntilNextFetch > 0)
-                --m_ch3.ticksUntilNextFetch;
-
-            if ((t & 1) == 1 && m_ch3.active)
-            {
-                ++m_ch3.periodTimer;
-                if (m_ch3.periodTimer > 0x7FFu)
+                else
                 {
-                    m_ch3.periodTimer = m_ch3.period;
-                    // Reset fetch timer for next sample: (0x800 - period) * 2 T-cycles
-                    m_ch3.ticksUntilNextFetch = static_cast<uint16_t>((0x800u - m_ch3.period) << 1);
-                    m_ch3.sampleIndex = (m_ch3.sampleIndex + 1) & 31;
-                    uint8_t byteIdx = m_ch3.sampleIndex >> 1;
-                    uint8_t byte    = m_waveRam[byteIdx];
-                    m_ch3.sampleBuffer = (m_ch3.sampleIndex & 1)
-                        ? static_cast<uint8_t>(byte & 0x0Fu)
-                        : static_cast<uint8_t>(byte >> 4);
+                    m_ch4.freqTimer -= t;
                 }
             }
+        }
 
-            // Pulse channels - every 4 T-cycles
-            if ((t & 3) == 3)
-            {
-                if (m_ch1.active) m_ch1.tickPeriod();
-                if (m_ch2.active) m_ch2.tickPeriod();
-            }
+        // -- CH3 Wave: clocked at 2 MHz (every 2 T-cycles) --
+        if (m_ch3.active)
+        {
+            // ticksUntilNextFetch decrements every T-cycle (corruption tracking)
+            uint32_t fetchDec = std::min<uint32_t>(m_ch3.ticksUntilNextFetch, tCycles);
+            m_ch3.ticksUntilNextFetch -= static_cast<uint16_t>(fetchDec);
 
-            // Downsample to target sample rate - PanDocs Audio Details - Mixer
-            m_sampleTimer += SAMPLE_RATE;
-            if (m_sampleTimer >= 4194304)
+            // Period timer advances by tCycles/2 wave clocks
+            uint32_t waveTicks = tCycles / 2;
+            uint32_t toOverflow = 0x800u - m_ch3.periodTimer;
+            if (waveTicks >= toOverflow)
             {
-                m_sampleTimer -= 4194304;
-                generateSample();
+                // Advance to next sample
+                waveTicks -= toOverflow;
+                m_ch3.periodTimer = m_ch3.period;
+                m_ch3.ticksUntilNextFetch =
+                    static_cast<uint16_t>((0x800u - m_ch3.period) << 1);
+                m_ch3.sampleIndex = (m_ch3.sampleIndex + 1) & 31u;
+                uint8_t byteIdx        = m_ch3.sampleIndex >> 1;
+                uint8_t byte           = m_waveRam[byteIdx];
+                m_ch3.sampleBuffer = (m_ch3.sampleIndex & 1u)
+                    ? static_cast<uint8_t>(byte & 0x0Fu)
+                    : static_cast<uint8_t>(byte >> 4);
+                // Absorb remaining wave ticks after overflow (at most tCycles/2 - 1
+                // since toOverflow >= 1 and waveTicks -= toOverflow was done above)
+                m_ch3.periodTimer += static_cast<uint16_t>(waveTicks);
             }
+            else
+            {
+                m_ch3.periodTimer += static_cast<uint16_t>(waveTicks);
+            }
+        }
+
+        // -- CH1/CH2 Pulse: clocked at 1 MHz (once per 4 T-cycles) --
+        uint32_t pulseTicks = tCycles / 4;
+        for (uint32_t i = 0; i < pulseTicks; ++i)
+        {
+            if (m_ch1.active) m_ch1.tickPeriod();
+            if (m_ch2.active) m_ch2.tickPeriod();
+        }
+
+        // -- Downsample to target sample rate - PanDocs Audio Details - Mixer --
+        // Accumulate in one step; generate all due samples via while loop.
+        m_sampleTimer += SAMPLE_RATE * tCycles;
+        while (m_sampleTimer >= 4194304u)
+        {
+            m_sampleTimer -= 4194304u;
+            generateSample();
         }
     }
 
@@ -396,11 +436,82 @@ namespace SeaBoy
 
     void APU::generateSample()
     {
+#if defined(PICO_RP2040)
+        // ---- RP2040 fixed-point path (no soft-float) ----
+        //
+        // DAC LUT: digital 0-15 → Q15 [-32767, +32767].
+        // Formula: (15 - digital) / 7.5 - 1.0  =  (15 - 2*digital) / 15
+        // Scaled by 32767: kDacLUT[d] = round((15 - 2*d) * 32767 / 15)
         // PanDocs Audio Details - DACs
-        // Each channel's digital output (0-15) is converted by its DAC to an analog value.
-        // The slope is negative: digital 0 -> analog +1.0, digital 15 -> analog -1.0.
-        // Formula: analog = (15 - digital) / 7.5 - 1.0
-        // If the DAC is disabled the channel contributes no signal (analog 0).
+        static constexpr int16_t kDacLUT[16] = {
+             32767, 28398, 24029, 19660, 15291, 10922,  6553,  2184,
+             -2184, -6553,-10922,-15291,-19660,-24029,-28398,-32767
+        };
+
+        bool anyDacOn = m_ch1.dacEnabled() || m_ch2.dacEnabled()
+                     || m_ch3.dacEnabled() || m_ch4.dacEnabled();
+
+        int16_t ch1Q = m_ch1.dacEnabled() ? kDacLUT[m_ch1.output()] : 0;
+        int16_t ch2Q = m_ch2.dacEnabled() ? kDacLUT[m_ch2.output()] : 0;
+        int16_t ch3Q = m_ch3.dacEnabled() ? kDacLUT[m_ch3.output()] : 0;
+        int16_t ch4Q = m_ch4.dacEnabled() ? kDacLUT[m_ch4.output()] : 0;
+
+        // Mix per NR51 panning - PanDocs Audio Registers - NR51
+        // Sum of 4 int16 values fits in int32 with no overflow.
+        int32_t leftMix  = 0;
+        int32_t rightMix = 0;
+        if (m_nr51 & 0x10u) leftMix  += ch1Q;
+        if (m_nr51 & 0x20u) leftMix  += ch2Q;
+        if (m_nr51 & 0x40u) leftMix  += ch3Q;
+        if (m_nr51 & 0x80u) leftMix  += ch4Q;
+        if (m_nr51 & 0x01u) rightMix += ch1Q;
+        if (m_nr51 & 0x02u) rightMix += ch2Q;
+        if (m_nr51 & 0x04u) rightMix += ch3Q;
+        if (m_nr51 & 0x08u) rightMix += ch4Q;
+
+        // Master volume then normalize to Q15 - PanDocs Audio Registers - NR50
+        // max = 4 * 32767 * 8 / 32 = 32767 — result fits in int16.
+        int32_t leftVol  = static_cast<int32_t>((m_nr50 >> 4) & 0x07u) + 1;
+        int32_t rightVol = static_cast<int32_t>(m_nr50 & 0x07u) + 1;
+        int16_t leftQ  = static_cast<int16_t>((leftMix  * leftVol)  / 32);
+        int16_t rightQ = static_cast<int16_t>((rightMix * rightVol) / 32);
+
+        // High-pass filter - PanDocs Audio Details - Mixer
+        // Q15 charge factor: round(0.9920 * 32768) = 32506
+        // out = in - cap;  cap = in - out * chargeFactor
+        // When all DACs are off, capacitors are held (not updated).
+        static constexpr int32_t kChargeQ15 = 32506; // 0.9920 in Q15
+        int16_t outL, outR;
+        if (anyDacOn)
+        {
+            int32_t rawL = static_cast<int32_t>(leftQ)  - m_hpfCapLeft;
+            int32_t rawR = static_cast<int32_t>(rightQ) - m_hpfCapRight;
+            outL = rawL > 32767 ? int16_t(32767) : rawL < -32767 ? int16_t(-32767) : int16_t(rawL);
+            outR = rawR > 32767 ? int16_t(32767) : rawR < -32767 ? int16_t(-32767) : int16_t(rawR);
+            // cap update: product fits in int32 (max 32767 * 32506 < 2^30)
+            m_hpfCapLeft  = static_cast<int32_t>(leftQ)  - ((static_cast<int32_t>(outL) * kChargeQ15) >> 15);
+            m_hpfCapRight = static_cast<int32_t>(rightQ) - ((static_cast<int32_t>(outR) * kChargeQ15) >> 15);
+        }
+        else
+        {
+            outL = 0;
+            outR = 0;
+        }
+
+        // Push int16 stereo pair to ring buffer
+        uint32_t nextWrite = (m_sampleWritePos + 2) % (SAMPLE_BUFFER_SIZE * 2);
+        if (nextWrite != m_sampleReadPos)
+        {
+            m_sampleBuffer[m_sampleWritePos]     = outL;
+            m_sampleBuffer[m_sampleWritePos + 1] = outR;
+            m_sampleWritePos = nextWrite;
+        }
+
+#else
+        // ---- Desktop / RP2350 path — double-precision floating-point ----
+        //
+        // PanDocs Audio Details - DACs
+        // analog = (15 - digital) / 7.5 - 1.0
         auto dacConvert = [](int digital) -> double {
             return (15 - digital) / 7.5 - 1.0;
         };
@@ -408,7 +519,8 @@ namespace SeaBoy
         bool anyDacOn = m_ch1.dacEnabled() || m_ch2.dacEnabled()
                      || m_ch3.dacEnabled() || m_ch4.dacEnabled();
 
-        // Capture per-channel outputs for oscilloscope (DebuggerUI)
+#if !defined(PICO_BUILD)
+        // Capture per-channel outputs for oscilloscope (desktop DebuggerUI only)
         m_chBuf[0][m_chBufWrite] = m_ch1.output();
         m_chBuf[1][m_chBufWrite] = m_ch2.output();
         m_chBuf[2][m_chBufWrite] = m_ch3.output();
@@ -416,6 +528,7 @@ namespace SeaBoy
         m_chBufWrite = (m_chBufWrite + 1) % CH_BUF_SIZE;
         if (m_chBufWrite == m_chBufRead)
             m_chBufRead = (m_chBufRead + 1) % CH_BUF_SIZE;
+#endif
 
         double ch1Dac = m_ch1.dacEnabled() ? dacConvert(m_ch1.output()) : 0.0;
         double ch2Dac = m_ch2.dacEnabled() ? dacConvert(m_ch2.output()) : 0.0;
@@ -448,11 +561,7 @@ namespace SeaBoy
         // High-pass filter - PanDocs Audio Details - Mixer
         // When all DACs are off, output is 0 and capacitors are held (not updated).
         // Charge factor = 0.999958^(4194304/SAMPLE_RATE)
-#if defined(PICO_RP2040)
-        constexpr double kChargeFactor = 0.9920; // 0.999958^(4194304/22050)
-#else
         constexpr double kChargeFactor = 0.9963; // 0.999958^(4194304/48000)
-#endif
         float outL, outR;
         if (anyDacOn)
         {
@@ -467,17 +576,39 @@ namespace SeaBoy
             outR = 0.0f;
         }
 
-        // Push to ring buffer
+        // Push float stereo pair to ring buffer
         uint32_t nextWrite = (m_sampleWritePos + 2) % (SAMPLE_BUFFER_SIZE * 2);
-        if (nextWrite != m_sampleReadPos) // don't overwrite unread data
+        if (nextWrite != m_sampleReadPos)
         {
             m_sampleBuffer[m_sampleWritePos]     = outL;
             m_sampleBuffer[m_sampleWritePos + 1] = outR;
             m_sampleWritePos = nextWrite;
         }
+#endif // PICO_RP2040
     }
 
     uint32_t APU::drainSamples(float* outBuffer, uint32_t maxPairs)
+    {
+        uint32_t count = 0;
+        while (count < maxPairs && m_sampleReadPos != m_sampleWritePos)
+        {
+#if defined(PICO_RP2040)
+            // Convert Q15 int16 → float on drain (RP2040 path; called only by non-I2S consumers)
+            outBuffer[count * 2]     = static_cast<float>(m_sampleBuffer[m_sampleReadPos])     / 32767.0f;
+            outBuffer[count * 2 + 1] = static_cast<float>(m_sampleBuffer[m_sampleReadPos + 1]) / 32767.0f;
+#else
+            outBuffer[count * 2]     = m_sampleBuffer[m_sampleReadPos];
+            outBuffer[count * 2 + 1] = m_sampleBuffer[m_sampleReadPos + 1];
+#endif
+            m_sampleReadPos = (m_sampleReadPos + 2) % (SAMPLE_BUFFER_SIZE * 2);
+            ++count;
+        }
+        return count;
+    }
+
+#if defined(PICO_RP2040)
+    // Integer drain: avoids all soft-float on RP2040. Used by I2SAudio::fillBuffer.
+    uint32_t APU::drainSamples(int16_t* outBuffer, uint32_t maxPairs)
     {
         uint32_t count = 0;
         while (count < maxPairs && m_sampleReadPos != m_sampleWritePos)
@@ -489,6 +620,7 @@ namespace SeaBoy
         }
         return count;
     }
+#endif
 
     // -- Register read ---------------------------------------------------
 
@@ -894,6 +1026,7 @@ namespace SeaBoy
         return ds;
     }
 
+#if !defined(PICO_BUILD)
     uint32_t APU::drainChannelSamples(float* ch0, float* ch1, float* ch2, float* ch3,
                                       uint32_t maxSamples)
     {
@@ -909,5 +1042,6 @@ namespace SeaBoy
         }
         return count;
     }
+#endif
 
 }

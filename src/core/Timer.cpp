@@ -31,35 +31,50 @@ namespace SeaBoy
     void Timer::tick(uint32_t tCycles)
     {
         m_timaLocked = false; // clear lock from previous M-cycle's reload
-        const bool enable = (m_tac & 0x04u) != 0u;
-        const uint8_t bit = selectedBit();
 
-        for (uint32_t i = 0; i < tCycles; ++i)
+        const bool    enable = (m_tac & 0x04u) != 0u;
+        const uint8_t bit    = selectedBit();
+
+        // Slow path: an overflow reload is in-flight and must fire at the exact T-cycle.
+        // The ordering of delay-decrement vs. counter-advance vs. edge-check can affect
+        // the observable TIMA value if an edge also fires in this same batch.
+        // This branch is taken for at most 4 T-cycles per TIMA overflow (~0.1% of calls
+        // even at the fastest timer rate), so correctness is prioritised over speed here.
+        if (m_overflowDelay > 0)
         {
-            // 1. Overflow delay countdown (must run even if timer disabled - PanDocs)
-            if (m_overflowDelay > 0)
+            for (uint32_t i = 0; i < tCycles; ++i)
             {
-                if (--m_overflowDelay == 0)
+                // 1. Overflow delay countdown (must run even if timer disabled - PanDocs)
+                if (m_overflowDelay > 0 && --m_overflowDelay == 0)
                 {
-                    m_tima = m_tma;
+                    m_tima       = m_tma;
                     m_timaLocked = true; // lock for 1 M-cycle (PanDocs.8.1 Timer obscure)
                     // Set Timer interrupt (IF bit 2) - PanDocs.9.1 INT $50 Timer interrupt
                     m_mmu.writeIF(m_mmu.readIF() | 0x04u);
                 }
+                // 2. Advance counter; 3. check falling edge
+                const uint16_t old = m_counter++;
+                if (enable && ((old >> bit) & 1u) && !((m_counter >> bit) & 1u))
+                    if (++m_tima == 0u) m_overflowDelay = 4;
             }
+            return;
+        }
 
-            // 2. Advance internal counter (always runs, including when timer is stopped)
-            const uint16_t old = m_counter;
-            ++m_counter;
+        // Fast path: no overflow in flight; compute counter advance and falling-edge
+        // count arithmetically (no loop).
+        // With tCycles == 4 (always the case from bus-access callbacks) and the
+        // minimum half-period being 2^3 = 8 T-cycles, at most one falling edge fires
+        // per call, so the epoch comparison is an exact edge count.
+        // PanDocs.8 Timer and Divider Registers - clock select
+        const uint32_t old32 = m_counter;
+        const uint32_t new32 = old32 + tCycles;
+        m_counter = static_cast<uint16_t>(new32); // natural 16-bit wrap
 
-            // 3. TIMA increments on falling edge of (selected_counter_bit AND timer_enable)
-            const bool oldBit = enable && ((old       >> bit) & 1u) != 0u;
-            const bool newBit = enable && ((m_counter >> bit) & 1u) != 0u;
-            if (oldBit && !newBit)
-            {
-                if (++m_tima == 0u)
-                    m_overflowDelay = 4; // 4 T-cycle delay before TMA reload
-            }
+        if (enable && (new32 >> (bit + 1u)) != (old32 >> (bit + 1u)))
+        {
+            // Falling edge detected: TIMA increments once
+            if (++m_tima == 0u)
+                m_overflowDelay = 4; // 4 T-cycle delay before TMA reload
         }
     }
 

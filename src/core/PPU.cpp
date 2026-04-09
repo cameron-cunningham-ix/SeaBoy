@@ -69,6 +69,7 @@ namespace SeaBoy
         m_windowTriggered   = false;
         m_windowLineCounter = 0;
         m_dmaActive     = false;
+        m_mmu.setDMAActive(false);
         m_dmaStartDelay = 0;
         m_dmaSource     = 0;
         m_dmaByte       = 0;
@@ -109,6 +110,42 @@ namespace SeaBoy
         }
     }
 
+    // End-of-scanline bookkeeping: increment LY, change mode, arm LYC delay.
+    // Shared by the fast-forward path and the per-T-cycle slow path in tick().
+    void PPU::advanceScanline()
+    {
+        m_lineCycle = 0;
+        ++m_ly;
+
+        if (m_ly >= TOTAL_LINES)
+        {
+            m_ly = 0;
+            // Reset window state for the new frame - PanDocs.4.8.1
+            m_windowTriggered   = false;
+            m_windowLineCounter = 0;
+        }
+
+        if (m_ly < VISIBLE_LINES)
+        {
+            // Start Mode 2 (OAM Scan) for next visible line
+            m_mode = PPUMode::OAMScan;
+            startOAMScan();
+        }
+        else if (m_ly == VISIBLE_LINES)
+        {
+            // Enter VBlank - PanDocs.9.1 INT $40 VBlank interrupt
+            m_mode = PPUMode::VBlank;
+            m_mmu.writeIF(m_mmu.readIF() | 0x01u); // set IF bit 0
+        }
+        // Lines 145-153 stay in VBlank mode (no transition needed)
+
+        // PanDocs LYC: arm 4-dot delay for LYC==LY interrupt - Phase 2B
+        if (m_lyc == m_ly)
+            m_lycDelay = 4;
+
+        updateStatIRQ(); // mode changes fire immediately; LYC is suppressed
+    }
+
     void PPU::tick(uint32_t tCycles)
     {
         // OAM DMA: 1 byte per M-cycle (4 T-cycles), 160 bytes total = 640 T-cycles.
@@ -130,15 +167,60 @@ namespace SeaBoy
                 ++m_dmaByte;
             }
             if (m_dmaStartDelay == 0 && m_dmaByte >= 160)
+            {
                 m_dmaActive = false;
+                m_mmu.setDMAActive(false);
+            }
         }
 
         // LCD disabled: stay in a blanked state - PanDocs.4.4 LCDC.7
         if (!(m_lcdc & LCDC::LCDEnable))
             return;
 
-        for (uint32_t i = 0; i < tCycles; ++i)
+        uint32_t remaining = tCycles;
+        while (remaining > 0)
         {
+            // ------------------------------------------------------------------
+            // Fast path: bulk-advance T-cycles during non-Drawing modes when no
+            // LYC delay countdown is in flight.  Avoids per-T-cycle looping
+            // during OAM Scan, HBlank, and VBlank (the majority of frame time).
+            // ------------------------------------------------------------------
+            if (m_mode != PPUMode::Drawing && m_lycDelay <= 0)
+            {
+                if (m_mode == PPUMode::OAMScan && m_lineCycle < OAM_SCAN_DOTS)
+                {
+                    // Advance up to (but not including) dot 80.
+                    // Dot 80 triggers the Mode 2→3 transition + fetcher init,
+                    // which must happen in the per-T-cycle slow path below.
+                    uint32_t toTransition = OAM_SCAN_DOTS - 1u - m_lineCycle;
+                    if (toTransition > 0)
+                    {
+                        uint32_t advance = std::min(remaining, toTransition);
+                        m_lineCycle += advance;
+                        remaining   -= advance;
+                        continue; // re-evaluate; if at dot 79, fall to slow path
+                    }
+                    // At dot 79: fall through to slow path to handle dot 80
+                }
+                else
+                {
+                    // HBlank or VBlank: bulk-advance to end of scanline.
+                    uint32_t toEnd  = DOTS_PER_LINE - m_lineCycle;
+                    uint32_t advance = std::min(remaining, toEnd);
+                    m_lineCycle += advance;
+                    remaining   -= advance;
+
+                    if (m_lineCycle >= DOTS_PER_LINE)
+                        advanceScanline(); // resets lineCycle; may arm m_lycDelay
+
+                    continue;
+                }
+            }
+
+            // ------------------------------------------------------------------
+            // Slow path: per-T-cycle tick (Mode 3 Drawing or LYC delay active).
+            // ------------------------------------------------------------------
+
             // LYC coincidence interrupt fires 4 T-cycles after LY updates.
             // Count down each dot; fire when it reaches 0. - PanDocs LYC, Phase 2B
             if (m_lycDelay > 0)
@@ -201,38 +283,9 @@ namespace SeaBoy
 
             // End of scanline
             if (m_lineCycle >= DOTS_PER_LINE)
-            {
-                m_lineCycle = 0;
-                ++m_ly;
+                advanceScanline();
 
-                if (m_ly >= TOTAL_LINES)
-                {
-                    m_ly = 0;
-                    // Reset window state for the new frame - PanDocs.4.8.1
-                    m_windowTriggered   = false;
-                    m_windowLineCounter = 0;
-                }
-
-                if (m_ly < VISIBLE_LINES)
-                {
-                    // Start Mode 2 (OAM Scan) for next visible line
-                    m_mode = PPUMode::OAMScan;
-                    startOAMScan();
-                }
-                else if (m_ly == VISIBLE_LINES)
-                {
-                    // Enter VBlank - PanDocs.9.1 INT $40 VBlank interrupt
-                    m_mode = PPUMode::VBlank;
-                    m_mmu.writeIF(m_mmu.readIF() | 0x01u); // set IF bit 0
-                }
-                // Lines 145-153 stay in VBlank mode (no transition needed)
-
-                // PanDocs LYC: arm 4-dot delay for LYC==LY interrupt - Phase 2B
-                if (m_lyc == m_ly)
-                    m_lycDelay = 4;
-
-                updateStatIRQ(); // mode changes fire immediately; LYC is suppressed
-            }
+            --remaining;
         }
     }
 
@@ -419,6 +472,7 @@ namespace SeaBoy
             m_dmaWasRestart  = m_dmaActive;
             m_dmaStartDelay  = 8;
             m_dmaActive      = true;
+            m_mmu.setDMAActive(true);
             m_dmaSource      = static_cast<uint16_t>(val << 8);
             m_dmaByte        = 0;
             break;
