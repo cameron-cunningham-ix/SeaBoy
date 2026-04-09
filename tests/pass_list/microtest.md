@@ -1,5 +1,5 @@
 # gbmicrotest Results
-Results: 301 passed, 167 failed, 0 timeout, 0 skipped
+Results: 319 passed, 149 failed, 0 timeout, 0 skipped
 | Test Name | Pass/Fail (✅/❌) | Details |
 |-----------|------|---------|
 | div_inc_timing_a.gb | ✅ |  |
@@ -435,38 +435,38 @@ Results: 301 passed, 167 failed, 0 timeout, 0 skipped
 | vram_write_l1_c.gb | ✅ |  |
 | vram_write_l1_d.gb | ✅ |  |
 | win0_a.gb | ✅ |  |
-| win0_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win0_b.gb | ✅ |  |
 | win0_scx3_a.gb | ✅ |  |
-| win0_scx3_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win0_scx3_b.gb | ✅ |  |
 | win10_a.gb | ✅ |  |
-| win10_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win10_b.gb | ✅ |  |
 | win10_scx3_a.gb | ✅ |  |
-| win10_scx3_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win10_scx3_b.gb | ✅ |  |
 | win11_a.gb | ✅ |  |
-| win11_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win11_b.gb | ✅ |  |
 | win12_a.gb | ✅ |  |
-| win12_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win12_b.gb | ✅ |  |
 | win13_a.gb | ✅ |  |
-| win13_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win13_b.gb | ✅ |  |
 | win14_a.gb | ✅ |  |
-| win14_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win14_b.gb | ✅ |  |
 | win15_a.gb | ✅ |  |
-| win15_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win15_b.gb | ✅ |  |
 | win1_a.gb | ✅ |  |
-| win1_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win1_b.gb | ✅ |  |
 | win2_a.gb | ✅ |  |
-| win2_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win2_b.gb | ✅ |  |
 | win3_a.gb | ✅ |  |
-| win3_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win3_b.gb | ✅ |  |
 | win4_a.gb | ✅ |  |
-| win4_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win4_b.gb | ✅ |  |
 | win5_a.gb | ✅ |  |
-| win5_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win5_b.gb | ✅ |  |
 | win6_a.gb | ✅ |  |
-| win6_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win6_b.gb | ✅ |  |
 | win7_a.gb | ✅ |  |
-| win7_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win7_b.gb | ✅ |  |
 | win8_a.gb | ✅ |  |
-| win8_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win8_b.gb | ✅ |  |
 | win9_a.gb | ✅ |  |
-| win9_b.gb | ❌ | [actual=0x83 expected=0x80] |
+| win9_b.gb | ✅ |  |

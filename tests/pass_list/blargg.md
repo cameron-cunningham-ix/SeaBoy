@@ -26,7 +26,7 @@ Results: 40 passed, 12 failed, 0 skipped
 | cgb_sound/rom_singles/07-len sweep period sync.gb | ✅ |
 | cgb_sound/rom_singles/08-len ctr during power.gb | ✅ |
 | cgb_sound/rom_singles/09-wave read while on.gb | ❌ |
-| cgb_sound/rom_singles/10-wave trigger while on.gb | ❌ |
+| cgb_sound/rom_singles/10-wave trigger while on.gb | ✅ |
 | cgb_sound/rom_singles/11-regs after power.gb | ✅ |
 | cgb_sound/rom_singles/12-wave.gb | ❌ |
 | dmg_sound/dmg_sound.gb | ❌ |
@@ -39,7 +39,7 @@ Results: 40 passed, 12 failed, 0 skipped
 | dmg_sound/rom_singles/07-len sweep period sync.gb | ✅ |
 | dmg_sound/rom_singles/08-len ctr during power.gb | ✅ |
 | dmg_sound/rom_singles/09-wave read while on.gb | ❌ |
-| dmg_sound/rom_singles/10-wave trigger while on.gb | ✅ |
+| dmg_sound/rom_singles/10-wave trigger while on.gb | ❌ |
 | dmg_sound/rom_singles/11-regs after power.gb | ✅ |
 | dmg_sound/rom_singles/12-wave write while on.gb | ❌ |
 | oam_bug/1-lcd_sync.gb | ❌ |
